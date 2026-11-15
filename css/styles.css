@@ -996,7 +996,6 @@ details.more[open] > summary::before { content: '－ '; }
   .modal-wrap { align-items: center; }
   .modal { border-radius: 26px; padding: 22px 22px 20px; }
   .praise-items { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .picto-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (min-width: 780px) {
@@ -1010,17 +1009,18 @@ details.more[open] > summary::before { content: '－ '; }
   .mode-switch { width: auto; }
   .mode-btn { flex: none; padding: 9px 16px; font-size: 13px; }
   .tabs { top: 86px; gap: 8px; flex-wrap: wrap; overflow-x: visible; }
-  .tab { padding: 10px 16px; font-size: 14px; flex: 0 0 auto; }
+  .tab { padding: 9px 13px; font-size: 13px; flex: 0 0 auto; }
   .two-col { grid-template-columns: 1.15fr .85fr; align-items: start; }
   .praise-grid { grid-template-columns: 1.05fr .95fr; align-items: start; }
   .mail-layout { grid-template-columns: .95fr 1.05fr; align-items: start; }
+  .picto { font-size: 11px; letter-spacing: -.2px; }
   .tray-wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-grid .span-2 { grid-column: 1 / -1; }
-  .picto-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (min-width: 1020px) {
+  .picto-grid { grid-template-columns: repeat(4, 1fr); }
   .app { padding: 22px 24px 0; }
   .home-hero { grid-template-columns: 1.1fr 1.9fr; align-items: stretch; }
   .home-children { grid-template-columns: repeat(2, minmax(0, 1fr)); }
