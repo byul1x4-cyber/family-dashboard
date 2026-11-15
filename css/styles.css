@@ -1500,6 +1500,68 @@ details.more > summary { cursor: pointer; font-size: 12.5px; font-weight: 800; c
 .toggle-row.on .tg-state { background: var(--mint); color: #fff; }
 
 /* =========================================================
+   📲 폰·패드 잠금화면 알림 (ntfy) 카드
+   ========================================================= */
+.ntfy-card .card-head { margin-bottom: 4px; }
+.ntfy-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px;
+  border-radius: 16px;
+  border: 2px solid #F5E7D2;
+  background: #FFFDF8;
+  text-align: left;
+  width: 100%;
+  margin-top: 8px;
+}
+.ntfy-row .tg-ico { font-size: 19px; width: 26px; text-align: center; flex: none; }
+.ntfy-row .tg-txt { flex: 1; min-width: 0; display: grid; }
+.ntfy-row .tg-txt b { font-size: 13px; }
+.ntfy-row .tg-txt small { font-size: 11px; color: var(--ink-faint); }
+.ntfy-row .tg-state {
+  flex: none;
+  min-width: 52px;
+  text-align: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11.5px; font-weight: 800;
+  background: #F1EDE7; color: #9A8C7C;
+}
+.ntfy-row.on { border-color: #CFEBDD; background: #F3FBF7; }
+.ntfy-row.on .tg-state { background: var(--mint); color: #fff; }
+
+.ntfy-topic {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 2px dashed var(--line-strong);
+  background: #FFFBF6;
+}
+.ntfy-topic-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.ntfy-topic-head b { font-size: 12.5px; color: var(--ink); }
+.ntfy-topic-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ntfy-topic-line code {
+  flex: 1; min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px; font-weight: 700; letter-spacing: -.2px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: #fff;
+  border: 2px solid var(--line);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.ntfy-steps {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 7px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.ntfy-steps b { color: var(--ink); }
+
+/* =========================================================
    모달 · 토스트
    ========================================================= */
 .modal-wrap {

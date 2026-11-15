@@ -73,6 +73,8 @@
       parentStatus: {},
       /* 🛒 장보기: [{ id, text, done, by, ts }] */
       shopping: [],
+      /* 📲 폰·패드 잠금화면 알림(ntfy) 보내기 — 가족 전체 설정 (기본 켜짐) */
+      ntfyPush: true,
       /* 부모님이 고친 할 일 목록 (없으면 data.js 기본값을 씁니다) */
       customRoutines: {}
     };
@@ -149,6 +151,9 @@
       if (!text) return null;
       return { id: it.id || UI.uid('shop'), text: text.slice(0, 40), done: it.done ? 1 : 0, by: String(it.by || ''), ts: it.ts || 0 };
     }).filter(Boolean);
+
+    /* 📲 폰·패드 잠금화면 알림 — 값이 없으면 기본 켜짐 */
+    s.ntfyPush = raw.ntfyPush === false ? false : true;
 
     /* 부모님이 고친 할 일 (아침·저녁) */
     s.customRoutines = {};
@@ -234,6 +239,83 @@
       if (!('Notification' in window) || window.Notification.permission !== 'granted') return;
       new window.Notification(title, { body: body, tag: 'family-dashboard' });
     } catch (e) {}
+  }
+
+  /* ================= 📲 폰·패드 잠금화면 알림 (ntfy) =================
+     엄마 아이폰·아이들 갤럭시 패드의 ntfy 앱으로 잠금화면 알림을 보냅니다.
+     가족 토픽은 가족 열쇠 ID로만 만들어지고, 발송은 ntfy.sh JSON 발송을 씁니다.
+     발송이 실패해도 저장(Firestore)은 그대로 진행되도록 promise를 삼킵니다. */
+  var NT = window.Ntfy || null;
+  function ntfyOn() { return !S || S.ntfyPush !== false; }
+  function ntfyTopicName() { return NT ? NT.topic() : ''; }
+  function ntfyShort(text, n) {
+    var s = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+    n = n || 120;
+    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  }
+  function pushToPhones(title, body, extra) {
+    if (!NT) return Promise.resolve({ ok: false, error: 'ntfy 모듈 없음' });
+    if (!ntfyOn()) return Promise.resolve({ ok: false, skipped: 'off' });
+    var p;
+    try {
+      p = NT.notify(Object.assign({ title: title, message: body }, extra || {}));
+    } catch (e) {
+      return Promise.resolve({ ok: false, error: String((e && e.message) || e) });
+    }
+    return Promise.resolve(p).catch(function (e) {
+      return { ok: false, error: String((e && e.message) || e) };
+    });
+  }
+  /* ① 우체통 가족방에 새 메시지(그림 편지·답장)가 저장된 뒤에 부릅니다. */
+  function sendMailboxMessage(kind, data) {
+    data = data || {};
+    var to = data.toName ? ' → ' + data.toName : '';
+    if (kind === 'letter') {
+      var body = data.text ? ntfyShort(data.text, 80)
+        : (data.count ? '그림 ' + data.count + '개를 보냈어요' : '그림 편지를 보냈어요');
+      return pushToPhones('💌 ' + (data.fromName || '가족') + '이 편지를 보냈어요', body + to);
+    }
+    var who = data.by || '부모님';
+    return pushToPhones('💬 ' + who + '의 답장이 도착했어요', ntfyShort(data.text, 120) + to);
+  }
+  /* ② 📢 태블릿에 한마디 [띄우기] */
+  function sendBannerMessage(text, to) {
+    return pushToPhones('📢 ' + (S.actor || '부모님') + '의 한마디',
+      ntfyShort(text, 120) + ' · ' + bannerTargetLabel(to));
+  }
+  function toggleNtfyPush() {
+    if (!needParent('알림 설정은 부모님 모드에서 바꿀 수 있어요')) return;
+    if (!ntfyTopicName()) { UI.toast('가족 열쇠가 없어 알림 주소를 만들 수 없어요', { kind: 'warn' }); return; }
+    S.ntfyPush = !ntfyOn();
+    save();
+    render({ keepScroll: true });
+    UI.toast(S.ntfyPush ? '잠금화면 알림을 켰어요' : '잠금화면 알림을 껐어요',
+      { emoji: '📲', kind: S.ntfyPush ? 'good' : 'warn' });
+  }
+  function copyNtfyTopic() {
+    var t = ntfyTopicName();
+    if (!t) { UI.toast('아직 가족 열쇠가 없어요. 입장 코드를 먼저 넣어 주세요', { kind: 'warn' }); return; }
+    var okToast = function () {
+      UI.toast('알림 주소를 복사했어요. ntfy 앱에 붙여넣으세요', { emoji: '📋', kind: 'good', duration: 3600 });
+    };
+    var fail = function () {
+      UI.toast('자동 복사가 안 됐어요. 주소를 길게 눌러 복사해 주세요', { kind: 'warn', duration: 4200 });
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(okToast).catch(function () { if (legacyCopy(t)) okToast(); else fail(); });
+    } else if (legacyCopy(t)) okToast();
+    else fail();
+  }
+  function sendTestPush() {
+    if (!needParent('알림 테스트는 부모님 모드에서 보낼 수 있어요')) return;
+    if (!ntfyTopicName()) { UI.toast('가족 열쇠가 없어 알림 주소를 만들 수 없어요', { kind: 'warn' }); return; }
+    if (!ntfyOn()) { UI.toast('잠금화면 알림이 꺼져 있어요. 먼저 켜 주세요', { emoji: '📲', kind: 'warn' }); return; }
+    UI.toast('테스트 알림을 보내는 중...', { emoji: '📲', duration: 2200 });
+    pushToPhones('📲 우리집 다모아 테스트', '이 알림이 잠금화면에 보이면 연결 성공이에요!', { tags: ['bell'] })
+      .then(function (res) {
+        if (res && res.ok) UI.toast('보냈어요! 폰·패드 잠금화면을 확인해 주세요', { emoji: '🔔', kind: 'good', duration: 4200 });
+        else UI.toast('알림을 보내지 못했어요: ' + ((res && res.error) || '인터넷을 확인해 주세요'), { kind: 'warn', duration: 5000 });
+      });
   }
 
   /* ================= 엄마·아빠 지금 상태 ================= */
@@ -343,6 +425,8 @@
     render({ keepScroll: true });
     UI.confetti(16);
     UI.toast('태블릿에 띄웠어요 · ' + msg, { emoji: '📢', kind: 'good', duration: 3200 });
+    /* 📲 폰·패드 잠금화면에도 알림 (실패해도 저장은 이미 끝났어요) */
+    sendBannerMessage(msg, to || 'all');
     return true;
   }
   function sendBannerFromCompose() {
@@ -1269,6 +1353,37 @@
         }).join('') + '</div>' +
         stateHTML +
       '</div>';
+  }
+
+  /* ---- 📲 폰·패드 잠금화면 알림 카드 (설정 탭) ---- */
+  function ntfyCardHTML() {
+    var t = ntfyTopicName();
+    var on = ntfyOn();
+    return '<div class="card span-2 ntfy-card">' +
+      cardHead('📲', '폰·패드 잠금화면 알림', '앱을 꺼 두어도 잠금화면에 떠요 (ntfy)') +
+      '<button type="button" class="ntfy-row' + (on ? ' on' : '') + '" data-act="ntfy-toggle" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+        '<span class="tg-ico">🔔</span>' +
+        '<span class="tg-txt"><b>잠금화면 알림 보내기</b><small>가족방 새 편지·답장, 태블릿 한마디를 폰으로 보내요</small></span>' +
+        '<span class="tg-state">' + (on ? '켜짐' : '꺼짐') + '</span>' +
+      '</button>' +
+      '<div class="ntfy-topic">' +
+        '<div class="ntfy-topic-head"><b>우리 가족 전용 알림 주소</b><span class="badge mint">ntfy 토픽</span></div>' +
+        (t
+          ? '<div class="ntfy-topic-line">' +
+              '<code id="ntfyTopic">' + esc(t) + '</code>' +
+              '<button type="button" class="btn btn-soft btn-sm" data-act="copy-ntfy-topic">📋 복사</button>' +
+            '</div>' +
+            '<p class="help">가족 코드가 같으면 이 주소도 같아요. 이 주소를 아는 사람만 우리 가족 알림을 받을 수 있어요.</p>'
+          : '<p class="help">가족 입장 코드를 넣으면 우리 가족 전용 알림 주소가 여기에 생겨요.</p>') +
+      '</div>' +
+      '<div class="btn-row"><button type="button" class="btn btn-primary" data-act="ntfy-test">🔔 테스트 알림 보내기</button></div>' +
+      '<ol class="ntfy-steps">' +
+        '<li><b>앱 설치</b> — 아이폰은 <b>앱스토어</b>, 갤럭시 패드는 <b>플레이스토어</b>에서 <b>ntfy</b>를 받아요. (무료)</li>' +
+        '<li><b>주소 넣기</b> — 앱에서 <b>+</b> → <b>Subscribe to topic</b>에 위 주소를 붙여넣고 <b>Subscribe</b>를 눌러요.</li>' +
+        '<li><b>알림 허용</b> — 알림을 허용하면 잠금화면에 떠요. (아이폰은 설정 › 알림 › ntfy › 잠금 화면 표시 켜기)</li>' +
+      '</ol>' +
+      '<p class="help">폰마다 처음 한 번만 해 두면 돼요. 알림이 안 오면 ntfy 앱을 한 번 열어 주세요.</p>' +
+    '</div>';
   }
 
   function cardHead(ico, title, sub, right) {
@@ -2250,6 +2365,8 @@
     render({ keepScroll: true });
     UI.confetti(18);
     UI.toast(rec.name + '에게 편지를 보냈어요', { emoji: '💌', kind: 'good' });
+    /* 📲 가족 폰·패드 잠금화면 알림 */
+    sendMailboxMessage('letter', { fromName: sender.name, toName: rec.name, text: text, count: pictos.length });
   }
 
   function sendReply(id, text, emoji) {
@@ -2266,6 +2383,8 @@
     save();
     render({ keepScroll: true });
     UI.toast('답장을 보냈어요', { emoji: '💬', kind: 'good' });
+    /* 📲 가족 폰·패드 잠금화면 알림 */
+    sendMailboxMessage('reply', { by: S.actor || '부모님', text: t, emoji: emoji || '💬', toName: m.fromName });
   }
 
   function readLetter(id) {
@@ -2712,6 +2831,8 @@
         '<button type="button" class="btn btn-soft btn-sm" data-act="alert-test">🔔 알림 미리 듣기</button>' +
       '</div>' +
 
+      ntfyCardHTML() +
+
       '<div class="card">' +
         cardHead('🧰', '데이터 관리', '내보내기 · 가져오기') +
         '<p class="help">기기를 바꾸거나 백업할 때 써요.</p>' +
@@ -2989,6 +3110,9 @@
       case 'banner-quick': fillBannerInput(el.getAttribute('data-text')); break;
       case 'alert-toggle': toggleAlert(el.getAttribute('data-key')); break;
       case 'alert-test': chime(); UI.toast('이렇게 알려드릴게요', { emoji: '🔔' }); break;
+      case 'ntfy-toggle': toggleNtfyPush(); break;
+      case 'copy-ntfy-topic': copyNtfyTopic(); break;
+      case 'ntfy-test': sendTestPush(); break;
 
       case 'change-code': changeGateCode(); break;
       case 'copy-key': copyFamilyId(); break;
