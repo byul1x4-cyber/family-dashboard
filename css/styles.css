@@ -638,22 +638,23 @@ button.kid-card:focus-visible { outline: 4px solid var(--sun); outline-offset: 2
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 15px 15px 14px;
+  padding: 15px 13px 14px;
   border-radius: 26px;
   border: 3px solid #fff;
   box-shadow: var(--shadow);
-  text-align: left;
+  text-align: center;
   overflow: hidden;
   transition: transform .15s, box-shadow .2s;
-  min-height: 132px;
+  min-height: 140px;
 }
 .tile:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
 .tile:active { transform: scale(.99); }
 .tile strong { font-family: var(--font-round); font-weight: 400; font-size: 17px; letter-spacing: 0; color: #4B3A2B; }
 .tile small { font-size: 11.5px; font-weight: 700; color: #7C6C5C; line-height: 1.45; }
-.tile .tile-art { width: 50px; height: 50px; display: block; }
+.tile .tile-art { width: 50px; height: 50px; display: block; filter: drop-shadow(0 3px 4px rgba(150, 118, 78, .18)); }
 .tile.t-lav { background: linear-gradient(155deg, #F2EEFF, #FBF9FF 78%); }
 .tile.t-rose { background: linear-gradient(155deg, #FFEDF5, #FFFAFC 78%); }
 .tile.t-sun { background: linear-gradient(155deg, #FFF4D8, #FFFDF5 78%); }
@@ -671,7 +672,7 @@ button.kid-card:focus-visible { outline: 4px solid var(--sun); outline-offset: 2
   border-radius: 999px;
   box-shadow: 0 3px 8px rgba(255, 143, 174, .35);
 }
-.tile-kids { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.tile-kids { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
 .tk-badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px 2px 2px;
@@ -691,7 +692,7 @@ button.kid-card:focus-visible { outline: 4px solid var(--sun); outline-offset: 2
 .tk-badge.coral i { background: var(--coral-soft); }
 
 /* 이만큼 자랐어요 (그림 카드) */
-.tile.giraffe { padding: 0; justify-content: flex-end; }
+.tile.giraffe { padding: 0; justify-content: flex-end; align-items: stretch; text-align: left; }
 .tile.giraffe .giraffe-wrap { position: absolute; inset: 0; display: block; }
 .tile.giraffe .giraffe-svg { width: 100%; height: 100%; display: block; }
 .tile.giraffe .giraffe-txt {

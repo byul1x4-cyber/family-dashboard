@@ -186,31 +186,31 @@ window.Art = (function () {
   /* ---------- 타일 아이콘 그림 ---------- */
   function trayIcon() {
     return '<svg viewBox="0 0 64 64" class="tile-art" aria-hidden="true">' +
-      '<rect x="6" y="14" width="52" height="38" rx="12" fill="#fff" opacity=".92"/>' +
-      '<circle cx="24" cy="30" r="8" fill="#FFE7A3"/>' +
-      '<path d="M24 24a6 6 0 0 1 0 12z" fill="#FFC94F"/>' +
-      '<rect x="36" y="22" width="14" height="6" rx="3" fill="#9FD98F"/>' +
-      '<rect x="36" y="31" width="14" height="6" rx="3" fill="#FF9E8A"/>' +
-      '<rect x="16" y="42" width="32" height="5" rx="2.5" fill="#CDEBFF"/>' +
+      '<rect x="5" y="13" width="54" height="40" rx="13" fill="#FFFDF5" stroke="#EFD9AE" stroke-width="2.5"/>' +
+      '<circle cx="23" cy="29" r="8.5" fill="#FFD24D"/>' +
+      '<circle cx="23" cy="29" r="3.2" fill="#FFB01F"/>' +
+      '<rect x="35" y="21" width="16" height="7" rx="3.5" fill="#8FD47F"/>' +
+      '<rect x="35" y="31" width="16" height="7" rx="3.5" fill="#FF9A82"/>' +
+      '<rect x="14" y="41" width="36" height="6" rx="3" fill="#9FD3F5"/>' +
       '</svg>';
   }
   function mailboxIcon() {
     return '<svg viewBox="0 0 64 64" class="tile-art" aria-hidden="true">' +
-      '<rect x="10" y="22" width="34" height="24" rx="10" fill="#fff"/>' +
-      '<path d="M10 32h34" stroke="#FFB3CE" stroke-width="3"/>' +
-      '<rect x="40" y="18" width="5" height="28" rx="2.5" fill="#F58FBD"/>' +
-      '<path d="M42 18h8a4 4 0 0 1 0 8h-8z" fill="#FF7EB0"/>' +
-      '<circle cx="27" cy="38" r="3" fill="#FF7EB0"/>' +
+      '<rect x="9" y="23" width="36" height="24" rx="11" fill="#FFFDFB" stroke="#F3A6C6" stroke-width="2.5"/>' +
+      '<path d="M9 33h36" stroke="#F7BBD4" stroke-width="3"/>' +
+      '<rect x="40" y="17" width="6" height="30" rx="3" fill="#F58FBD"/>' +
+      '<path d="M43 17h9a4.5 4.5 0 0 1 0 9h-9z" fill="#F56CA8"/>' +
+      '<circle cx="26" cy="39" r="3.4" fill="#F56CA8"/>' +
       '</svg>';
   }
   function routineIcon() {
     return '<svg viewBox="0 0 64 64" class="tile-art" aria-hidden="true">' +
-      '<rect x="12" y="10" width="40" height="46" rx="12" fill="#fff"/>' +
-      '<rect x="20" y="20" width="16" height="5" rx="2.5" fill="#C7BDF0"/>' +
-      '<rect x="20" y="30" width="24" height="5" rx="2.5" fill="#DED8F6"/>' +
-      '<rect x="20" y="40" width="20" height="5" rx="2.5" fill="#DED8F6"/>' +
-      '<circle cx="45" cy="44" r="11" fill="#7FD3B0"/>' +
-      '<path d="M40 44l3.6 3.8L50 41" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<rect x="11" y="9" width="42" height="48" rx="13" fill="#FFFDFB" stroke="#DACFF6" stroke-width="2.5"/>' +
+      '<rect x="19" y="19" width="17" height="5" rx="2.5" fill="#B7A9EF"/>' +
+      '<rect x="19" y="29" width="26" height="5" rx="2.5" fill="#D8D0F4"/>' +
+      '<rect x="19" y="39" width="21" height="5" rx="2.5" fill="#D8D0F4"/>' +
+      '<circle cx="44" cy="44" r="12" fill="#5CC79C"/>' +
+      '<path d="M38.5 44l4 4.2L50 40.5" stroke="#fff" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
       '</svg>';
   }
   function pillIcon() {
