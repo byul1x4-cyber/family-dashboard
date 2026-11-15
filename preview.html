@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>미리보기 · 우리집 다모아</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<p id="boot" style="font:14px/1.6 sans-serif;padding:20px;color:#8a7a66">불러오는 중…</p>
+<script>
+/* 화면 확인용 미리보기: 가족 클라우드에 쓰지 않도록 Storage를 가짜로 끼웁니다. */
+window.__errors = [];
+window.addEventListener('error', function (e) { window.__errors.push(e.message); });
+window.scrollTo = function () {};
+window.__TEST_STATE = {
+  version: 1, introSeen: true, mode: 'parent', actor: '엄마',
+  routine: {}, celebrated: {},
+  stars: { minguk: 7, ijun: 4 },
+  praiseCount: { minguk: 5, ijun: 3 },
+  money: { minguk: 1200, ijun: 300 },
+  moneyLog: [],
+  praiseLog: [
+    { id: 'p1', childId: 'minguk', item: '스스로 했어요', emoji: '🙌', by: '엄마', ts: Date.now() - 600000 },
+    { id: 'p2', childId: 'ijun', item: '형제에게 친절했어요', emoji: '🤝', by: '아빠', ts: Date.now() - 3600000 }
+  ],
+  events: [
+    { id: 'e1', member: 'minguk', title: '태권도', date: window.__d(0), time: '17:00', note: '' },
+    { id: 'e2', member: 'mom', title: '엄마 회식', date: window.__d(3), time: '19:00', note: '' },
+    { id: 'e3', member: 'ijun', title: '유치원 소풍', date: window.__d(6), time: '09:00', note: '' }
+  ],
+  messages: [
+    { id: 'l1', fromId: 'minguk', fromName: '민국', toId: 'mom', toName: '엄마', pictos: ['g-hw', 'g-love'], text: '엄마 오늘 숙제 다 했어요', ts: Date.now() - 5400000, read: true, replies: [] },
+    { id: 'l2', fromId: 'ijun', fromName: '이준', toId: 'mom', toName: '엄마', pictos: ['g-miss'], text: '', ts: Date.now() - 3600000, read: false, replies: [
+      { id: 'r1', by: '엄마', text: '우리 이준이 보고 싶어', emoji: '🥰', ts: Date.now() - 3500000 }
+    ] },
+    { id: 'l3', fromId: 'minguk', fromName: '민국', toId: 'dad', toName: '아빠', pictos: ['g-play', 'g-meal'], text: '아빠 저녁 먹고 놀아줘요', ts: Date.now() - 1800000, read: false, replies: [] }
+  ],
+  meals: {}, meds: [{ id: 'm1', name: '유산균', memberId: 'minguk', memberName: '민국', time: 'evening' }], medLog: {},
+  growth: { minguk: [{ date: '2026-09-15', height: 126, weight: 26 }, { date: '2026-11-15', height: 128, weight: 27 }], ijun: [{ date: '2026-11-15', height: 104, weight: 17 }] },
+  schoolNotice: { title: '', date: '', message: '', items: [], updatedAt: 0 }
+};
+window.__d = function () { return ''; };
+window.__d = function (off) { var d = new Date(); d.setDate(d.getDate() + off); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+window.Storage = {
+  MIN_CODE_LEN: 4, mode: 'local',
+  status: { secure: true, mode: 'local', familyId: 'fam_preview', hasGate: true },
+  hasGate: function () { return true; }, familyId: function () { return 'fam_preview'; },
+  init: function () { return Promise.resolve({ mode: 'local', state: JSON.parse(JSON.stringify(window.__TEST_STATE)) }); },
+  save: function (s) { window.__saved = s; }, load: function () { return window.__TEST_STATE; },
+  watchLocal: function () {}, docIdFor: function () { return Promise.resolve('fam_preview'); },
+  enter: function () { return Promise.resolve({ id: 'fam_preview' }); }, lock: function () {},
+  changeCode: function () {}, enableFirebase: function () {}, disableFirebase: function () {}
+};
+(function () {
+  function load(src) {
+    return new Promise(function (res, rej) {
+      var s = document.createElement('script'); s.src = src;
+      s.onload = res; s.onerror = function () { rej(new Error(src)); };
+      document.body.appendChild(s);
+    });
+  }
+  (async function () {
+    var html = await (await fetch('index.html')).text();
+    var d = new DOMParser().parseFromString(html, 'text/html');
+    d.head.querySelectorAll('script').forEach(function (s) { s.remove(); });
+    document.head.insertAdjacentHTML('beforeend', d.head.innerHTML);
+    document.getElementById('boot').remove();
+    document.body.insertAdjacentHTML('beforeend', d.body.innerHTML);
+    try {
+      await load('js/data.js'); await load('js/ui.js'); await load('js/app.js');
+      var wanted = new URLSearchParams(location.search).get('view');
+      if (wanted) setTimeout(function () {
+        var t = document.querySelector('.tab[data-view="' + wanted + '"]');
+        if (t) t.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      }, 250);
+      await new Promise(function (r) { setTimeout(r, 500); });
+      window.__ready = true;
+    } catch (e) { window.__errors.push('boot ' + e.message); }
+  })();
+})();
+</script>
+</body>
+</html>
