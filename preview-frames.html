@@ -19,5 +19,16 @@
   <div class="frame"><b>태블릿 834px</b>
     <iframe src="preview.html?f=tablet" width="834" height="844"></iframe>
   </div>
+<script>
+  /* 주소에 붙인 조건(?view=routine 등)을 두 화면에 그대로 넘깁니다 */
+  (function () {
+    var q = (location.search || '').replace(/^\?/, '');
+    if (!q) return;
+    var frames = document.querySelectorAll('iframe');
+    for (var i = 0; i < frames.length; i++) {
+      frames[i].src = frames[i].getAttribute('src') + '&' + q;
+    }
+  })();
+</script>
 </body>
 </html>

@@ -1258,7 +1258,10 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-areas: "s1 s2 s3" "rice soup soup";
+  grid-template-rows: 1fr 1fr;
+  grid-auto-rows: 1fr;
   gap: 8px;
+  min-height: 220px;
 }
 .tray-slot {
   border-radius: 18px;
@@ -1707,6 +1710,14 @@ body.timer-ringing { overflow: hidden; }
 @media (max-width: 900px) {
   .tile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .home-top { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .wx-card { flex-wrap: wrap; row-gap: 6px; }
+  .wx-tip { margin-left: 0; order: 5; width: 100%; white-space: normal; }
+  .status-chip { padding: 8px 9px; }
+  .sc-time { display: none; }
+  .sc-txt small { white-space: normal; overflow: visible; line-height: 1.25; }
 }
 
 @media (max-width: 719px) {
