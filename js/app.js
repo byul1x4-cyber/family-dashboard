@@ -46,7 +46,9 @@
       meals: {},
       meds: [],
       medLog: {},
-      growth: g
+      growth: g,
+      /* 민국이 알림장 (엄마가 피클로 확인한 언주초 1-3 알림장을 적어 두는 곳) */
+      schoolNotice: { title: '', date: '', message: '', items: [], updatedAt: 0 }
     };
   }
 
@@ -63,6 +65,16 @@
     });
     s.growth = Object.assign({}, base.growth, (raw.growth && typeof raw.growth === 'object') ? raw.growth : {});
     D.children.forEach(function (c) { if (!Array.isArray(s.growth[c.id])) s.growth[c.id] = []; });
+    var notice = (raw.schoolNotice && typeof raw.schoolNotice === 'object') ? raw.schoolNotice : {};
+    s.schoolNotice = Object.assign({}, base.schoolNotice, notice);
+    if (!Array.isArray(s.schoolNotice.items)) s.schoolNotice.items = [];
+    s.schoolNotice.items = s.schoolNotice.items
+      .map(function (it) {
+        if (!it) return null;
+        if (typeof it === 'string') return { id: UI.uid('nt'), text: it, done: 0 };
+        return { id: it.id || UI.uid('nt'), text: String(it.text || ''), done: it.done || 0 };
+      })
+      .filter(function (it) { return it && it.text; });
     if (s.mode !== 'parent') s.mode = 'child';
     return s;
   }
@@ -322,6 +334,8 @@
         '<div class="home-children">' + D.children.map(kidCardHTML).join('') + '</div>' +
       '</div>' +
 
+      noticeCardHTML() +
+
       '<div class="quick-grid" style="margin-bottom:12px">' +
         tiles.map(function (t) {
           return '<button type="button" class="quick-tile ' + t.cls + '" data-act="' + t.act + '" data-view="' + t.view + '">' +
@@ -350,6 +364,117 @@
     return '<div class="card-head"><span class="ico">' + ico + '</span>' +
       '<div><h2>' + esc(title) + '</h2>' + (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') + '</div>' +
       '<div class="spacer"></div>' + (right || '') + '</div>';
+  }
+
+  /* ---------------- 민국이 알림장 ---------------- */
+  function noticeObj() {
+    return S.schoolNotice || { title: '', date: '', message: '', items: [], updatedAt: 0 };
+  }
+  function noticeHasContent(n) {
+    n = n || noticeObj();
+    return !!(String(n.title || '').trim() || String(n.message || '').trim() || (n.items && n.items.length));
+  }
+  function noticeCardHTML() {
+    var n = noticeObj();
+    var items = n.items || [];
+    var isParent = S.mode === 'parent';
+    var done = items.filter(function (i) { return i.done; }).length;
+    var sub = n.date ? UI.dateKo(n.date) : '서울언주초 1학년 3반';
+    var head = cardHead('🏫', '민국이 알림장', sub,
+      isParent ? '<button type="button" class="link-btn" data-act="edit-notice">✏️ 알림장 고치기</button>' : '');
+
+    if (!noticeHasContent(n)) {
+      return '<div class="card notice-card">' + head +
+        '<div class="empty notice-empty"><span class="big">🏫</span>' +
+          (isParent
+            ? '아직 등록된 알림장이 없어요.<br>위쪽 <b>알림장 고치기</b>를 눌러 적어 주세요.'
+            : '아직 등록된 알림장이 없어요.<br>엄마가 적으면 여기에 보여요.') +
+        '</div></div>';
+    }
+
+    var msg = String(n.message || '').trim();
+    return '<div class="card notice-card' + (isParent ? '' : ' kid') + '">' + head +
+      (String(n.title || '').trim() ? '<p class="notice-title">' + esc(n.title) + '</p>' : '') +
+      (msg ? '<p class="notice-msg">' + esc(msg) + '</p>' : '') +
+      '<div class="notice-list">' + items.map(function (it) {
+        return '<button type="button" class="notice-item' + (it.done ? ' done' : '') + '" data-act="notice-check" data-id="' + esc(it.id) + '">' +
+          '<span class="notice-check" aria-hidden="true">' + (it.done ? '✓' : '') + '</span>' +
+          '<span class="notice-text">' + esc(it.text) + '</span>' +
+        '</button>';
+      }).join('') + '</div>' +
+      '<div class="notice-foot">' +
+        '<span class="hint">' + (items.length ? done + '/' + items.length + '개 챙겼어요' : '') + '</span>' +
+        (n.updatedAt ? '<span class="hint">' + UI.ago(n.updatedAt) + '에 적었어요</span>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  function editNoticeModal() {
+    if (!needParent('알림장은 부모님 모드에서 적을 수 있어요')) return;
+    var n = noticeObj();
+    var lines = (n.items || []).map(function (it) { return it.text; }).join('\n');
+    UI.modal({
+      title: '🏫 민국이 알림장',
+      size: 'wide',
+      bodyHTML:
+        '<div class="field-row">' +
+          '<div class="field"><label>제목</label><input class="input" id="ntTitle" value="' + esc(n.title || '') + '" placeholder="예: 11/13(금) 알림장"></div>' +
+          '<div class="field"><label>알림장 날짜</label><input class="input" type="date" id="ntDate" value="' + esc(n.date || '') + '"></div>' +
+        '</div>' +
+        '<div class="field"><label>민국이에게 한 줄</label><input class="input" id="ntMsg" value="' + esc(n.message || '') + '" placeholder="예: 이번 주도 화이팅!"></div>' +
+        '<div class="field"><label>챙길 것 · 숙제 (한 줄에 하나씩)</label>' +
+          '<textarea class="input" id="ntItems" rows="8" placeholder="한 줄에 하나씩 적어 주세요">' + esc(lines) + '</textarea>' +
+        '</div>' +
+        '<p class="help">적은 내용은 민국이 홈 화면에 그대로 보여요. 다 챙긴 항목은 민국이가 직접 눌러 체크할 수 있어요.</p>' +
+        '<p class="help" style="margin-top:6px">내용을 모두 지우고 저장하면 알림장이 비워집니다.</p>',
+      actions: [
+        {
+          label: '저장', kind: 'primary', onClick: function (close) {
+            applyNotice({
+              title: ((document.getElementById('ntTitle') || {}).value || '').trim(),
+              date: ((document.getElementById('ntDate') || {}).value || '').trim(),
+              message: ((document.getElementById('ntMsg') || {}).value || '').trim(),
+              itemsText: ((document.getElementById('ntItems') || {}).value || '')
+            });
+            close();
+          }
+        },
+        { label: '취소', kind: 'ghost' }
+      ]
+    });
+  }
+
+  function applyNotice(data) {
+    var prev = noticeObj();
+    var items = String(data.itemsText || '').split('\n')
+      .map(function (s) { return s.trim(); })
+      .filter(Boolean)
+      .map(function (text) {
+        var old = (prev.items || []).filter(function (it) { return it.text === text; })[0];
+        return old ? { id: old.id, text: text, done: old.done || 0 } : { id: UI.uid('nt'), text: text, done: 0 };
+      });
+    S.schoolNotice = {
+      title: data.title || '',
+      date: data.date || '',
+      message: data.message || '',
+      items: items,
+      updatedAt: (data.title || data.message || items.length) ? Date.now() : 0
+    };
+    save();
+    render({ keepScroll: true });
+    UI.toast(noticeHasContent(S.schoolNotice) ? '민국이 알림장을 저장했어요' : '알림장을 비웠어요',
+      { emoji: '🏫', kind: 'good' });
+  }
+
+  function toggleNoticeItem(id) {
+    var n = S.schoolNotice;
+    if (!n || !Array.isArray(n.items)) return;
+    var it = n.items.filter(function (x) { return x.id === id; })[0];
+    if (!it) return;
+    it.done = it.done ? 0 : Date.now();
+    save();
+    render({ keepScroll: true });
+    if (it.done) UI.toast('챙겼어요! 👍', { emoji: '✅', kind: 'good', duration: 1600 });
   }
 
   function kidCardHTML(c) {
@@ -1581,6 +1706,9 @@
         break;
       }
       case 'growth-metric': growthMetric = el.getAttribute('data-metric'); render({ keepScroll: true }); break;
+
+      case 'edit-notice': editNoticeModal(); break;
+      case 'notice-check': toggleNoticeItem(el.getAttribute('data-id')); break;
 
       case 'change-code': changeGateCode(); break;
       case 'lock-device': lockDevice(); break;

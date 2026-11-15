@@ -1235,3 +1235,88 @@ body.gated .app { display: none; }
   .code-change .btn { width: 100%; }
   .gate-card { padding: 26px 16px 20px; }
 }
+
+/* =========================================================
+   민국이 알림장 카드
+   ========================================================= */
+.notice-card {
+  margin-bottom: 12px;
+  background: linear-gradient(160deg, #F4FbFF, #FFFFFF 55%);
+  border-color: #DCEBF8;
+  position: relative;
+  overflow: hidden;
+}
+.notice-card::after {
+  content: '';
+  position: absolute; right: -30px; top: -30px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(111, 168, 224, .16), transparent 70%);
+  pointer-events: none;
+}
+.notice-title {
+  font-family: var(--font-round);
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--sky-deep);
+  margin-bottom: 4px;
+}
+.notice-msg {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+.notice-list { display: grid; gap: 7px; }
+.notice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid #E4EFF8;
+  background: #FBFDFF;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background .16s, border-color .16s, transform .1s;
+}
+.notice-item:hover { background: #F3FAFF; border-color: #CFE4F5; }
+.notice-item:active { transform: scale(.995); }
+.notice-check {
+  flex: 0 0 auto;
+  width: 22px; height: 22px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 2px solid #BFD8EA;
+  background: #fff;
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 800; color: #fff;
+  line-height: 1;
+}
+.notice-item.done { background: #F2FBF6; border-color: #D6EEE2; }
+.notice-item.done .notice-check { background: var(--mint); border-color: var(--mint); }
+.notice-item.done .notice-text { color: var(--ink-faint); text-decoration: line-through; }
+.notice-text { word-break: keep-all; }
+.notice-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; flex-wrap: wrap;
+  margin-top: 9px;
+}
+.notice-foot .hint { font-size: 11px; color: var(--ink-faint); }
+.notice-empty { padding: 18px 10px; }
+
+/* 아이 모드: 더 크고 또렷하게 */
+.notice-card.kid .notice-title { font-size: 19px; }
+.notice-card.kid .notice-msg { font-size: 14px; }
+.notice-card.kid .notice-item { font-size: 16.5px; padding: 13px 14px; gap: 12px; border-radius: 16px; }
+.notice-card.kid .notice-check { width: 26px; height: 26px; font-size: 15px; }
+.notice-card.kid .notice-list { gap: 9px; }
+
+@media (max-width: 420px) {
+  .notice-card.kid .notice-item { font-size: 15.5px; padding: 12px; }
+}
