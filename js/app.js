@@ -1459,9 +1459,15 @@
           (isFb ? '☁️ 가족 클라우드와 실시간으로 연결돼 있어요' : '📱 지금은 이 기기에만 저장하고 있어요') +
         '</div>' +
         '<dl class="key-info">' +
-          '<div><dt>가족 열쇠 ID</dt><dd><code>' + esc(keyId) + '</code></dd></div>' +
+          '<div><dt>가족 열쇠 ID</dt><dd><code>' + esc(keyId) + '</code>' +
+            '<button type="button" class="link-btn copy-btn" data-act="copy-key">📋 전체 ID 복사</button>' +
+          '</dd></div>' +
           '<div><dt>마지막 동기화</dt><dd>' + esc(lastSync) + '</dd></div>' +
         '</dl>' +
+        '<div class="key-full" id="keyFull" hidden>' +
+          '<label for="keyFullText">전체 가족 열쇠 ID (상자를 길게 눌러 복사)</label>' +
+          '<input class="input" id="keyFullText" readonly value="' + esc(st.familyId || '') + '">' +
+        '</div>' +
         (st.error ? '<p class="help err-text">연결 오류: ' + esc(st.error) + '</p>' : '') +
         '<p class="help">같은 코드를 넣은 기기끼리 같은 집(같은 열쇠 ID)으로 연결돼요.<br>코드를 모르는 사람은 우리 가족 데이터가 있는 곳을 찾을 수도, 열어 볼 수도 없어요.</p>' +
         '<div class="code-change">' +
@@ -1519,6 +1525,57 @@
   }
 
   /* ---- 가족 입장 코드: 변경 / 이 기기 잠금 / 클라우드 재연결 ---- */
+  /* ---- 가족 열쇠 ID 전체 복사 ---- */
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '0';
+      ta.style.left = '0';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      var ok = document.execCommand('copy');
+      ta.remove();
+      return !!ok;
+    } catch (e) { return false; }
+  }
+
+  function showFullKey() {
+    var box = document.getElementById('keyFull');
+    var input = document.getElementById('keyFullText');
+    if (box) box.hidden = false;
+    return input;
+  }
+
+  function copyFamilyId() {
+    var id = Storage.familyId();
+    if (!id) {
+      UI.toast('아직 가족 열쇠가 없어요. 입장 코드를 먼저 넣어 주세요', { kind: 'warn' });
+      return;
+    }
+    var input = showFullKey();
+    var okToast = function () {
+      UI.toast('가족 열쇠 ID 전체를 복사했어요', { emoji: '📋', kind: 'good', duration: 2600 });
+    };
+    var fail = function () {
+      if (input) { try { input.focus(); input.select(); } catch (e) {} }
+      UI.toast('자동 복사가 안 됐어요. 아래 전체 ID 상자를 길게 눌러 복사해 주세요', { kind: 'warn', duration: 4500 });
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(id).then(okToast).catch(function () {
+        if (legacyCopy(id)) okToast(); else fail();
+      });
+    } else if (legacyCopy(id)) {
+      okToast();
+    } else {
+      fail();
+    }
+  }
+
   function changeGateCode() {
     var input = document.getElementById('newGateCode');
     var code = ((input && input.value) || '').trim();
@@ -1711,6 +1768,7 @@
       case 'notice-check': toggleNoticeItem(el.getAttribute('data-id')); break;
 
       case 'change-code': changeGateCode(); break;
+      case 'copy-key': copyFamilyId(); break;
       case 'lock-device': lockDevice(); break;
       case 'fb-retry': retryCloud(); break;
 

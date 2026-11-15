@@ -1320,3 +1320,35 @@ body.gated .app { display: none; }
 @media (max-width: 420px) {
   .notice-card.kid .notice-item { font-size: 15.5px; padding: 12px; }
 }
+
+/* 가족 열쇠 ID 전체 복사 */
+.copy-btn {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--lav-deep);
+  white-space: nowrap;
+}
+.key-full {
+  margin: 0 0 10px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: #FBFAFF;
+  border: 1px dashed #DED3F7;
+}
+.key-full label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  margin-bottom: 5px;
+}
+.key-full .input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  letter-spacing: 0;
+  background: #fff;
+  user-select: all;
+}
+.key-full[hidden] { display: none !important; }
