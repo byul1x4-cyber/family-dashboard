@@ -69,7 +69,7 @@ window.APP_DATA = {
     { id: 'p-eat',     label: '골고루 먹었어요',    emoji: '🥗' },
     { id: 'p-promise', label: '약속을 지켰어요',    emoji: '🤙' },
     { id: 'p-book',    label: '책을 읽었어요',      emoji: '📖' },
-    { id: 'p-help',    label: '동생을 도와줬어요',  emoji: '💛' },
+    { id: 'p-help',    label: '동생을 도와줬어요',  emoji: '💛', labels: { ijun: '형을 도와줬어요' } },
     { id: 'p-awesome', label: '오늘 아주 멋졌어요', emoji: '✨' }
   ],
 

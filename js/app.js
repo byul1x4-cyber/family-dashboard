@@ -1605,6 +1605,12 @@
     }
   }
 
+  /* 칭찬 항목 문구: 아이마다 다를 수 있어요 (이준은 형, 민국은 동생) */
+  function praiseLabel(item, childId) {
+    if (item && item.labels && item.labels[childId]) return item.labels[childId];
+    return item ? item.label : '';
+  }
+
   /* ================= 칭찬 ================= */
   function renderPraise() {
     var total = 0;
@@ -1628,7 +1634,7 @@
       '</div>' +
       '<div class="praise-items" style="margin-top:10px">' + D.praiseItems.map(function (p) {
         return '<button type="button" class="praise-item" data-act="praise" data-child="' + c.id + '" data-item="' + p.id + '">' +
-          '<span>' + p.emoji + '</span>' + esc(p.label) + '</button>';
+          '<span>' + p.emoji + '</span>' + esc(praiseLabel(p, c.id)) + '</button>';
       }).join('') + '</div>' +
     '</div>';
   }
@@ -1638,7 +1644,7 @@
     var item = D.praiseItems.filter(function (p) { return p.id === itemId; })[0];
     if (!item) return;
     S.praiseLog.unshift({
-      id: UI.uid('praise'), childId: childId, item: item.label, emoji: item.emoji, by: S.actor || '부모님', ts: Date.now()
+      id: UI.uid('praise'), childId: childId, item: praiseLabel(item, childId), emoji: item.emoji, by: S.actor || '부모님', ts: Date.now()
     });
     S.stars[childId] = (S.stars[childId] || 0) + 1;
     S.praiseCount[childId] = (S.praiseCount[childId] || 0) + 1;
