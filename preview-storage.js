@@ -40,13 +40,21 @@ window.Storage = (function () {
         { id: 'e1', member: 'mom', title: '카미유헤어 (원장 서희)', date: t, time: '15:30', note: '' },
         { id: 'e2', member: 'minguk', title: '태권도', date: dk(1), time: '17:00', note: '' },
         { id: 'e3', member: 'mom', title: 'KMA 시험', date: dk(6), time: '09:30', note: '신분증' },
-        { id: 'e4', member: 'ijun', title: '수영', date: dk(3), time: '16:00', note: '' }
+        { id: 'e4', member: 'minguk', title: '현장학습', date: dk(2), time: '09:00', note: '', type: 'school',
+          items: [{ id: 'pr1', text: '실내화', done: 0 }, { id: 'pr2', text: '색종이', done: Date.now() - 60000 }, { id: 'pr3', text: '물통', done: 0 }] }
       ],
-      messages: [{
-        id: 'l1', fromId: 'minguk', fromName: '민국', toId: 'mom', toName: '엄마',
-        pictos: ['g-miss', 'g-love'], text: '엄마 보고 싶어요', ts: Date.now() - 3600000, read: false,
-        replies: [{ id: 'r1', by: '엄마', text: '곧 갈게 ❤️', emoji: '❤️', ts: Date.now() - 3000000 }]
-      }],
+      messages: [
+        {
+          id: 'l1', fromId: 'minguk', fromName: '민국', toId: 'mom', toName: '엄마',
+          pictos: ['g-miss', 'g-love'], text: '엄마 보고 싶어요', ts: Date.now() - 3600000, read: false,
+          replies: [{ id: 'r1', by: '엄마', text: '곧 갈게', emoji: '🚗', ts: Date.now() - 3000000 }]
+        },
+        {
+          id: 'l2', fromId: 'ijun', fromName: '이준', toId: 'dad', toName: '아빠',
+          pictos: ['g-play'], text: '놀아주세요', ts: Date.now() - 600000, read: false,
+          replies: [{ id: 'r2', by: '아빠', text: '알았어', emoji: '👍', ts: Date.now() - 300000 }]
+        }
+      ],
       meals: (function () {
         var m = {}; m[t] = {
           minguk: { slots: [{ key: 'rice', dishId: 'rice', level: 'all' }, { key: 'soup', dishId: 'miyuk', level: 'half' }, { key: 'side1', dishId: 'eggroll', level: 'all' }] },

@@ -1086,8 +1086,37 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 .ev-main { flex: 1; min-width: 0; }
 .ev-title { font-weight: 800; font-size: 13.5px; }
 .ev-meta { font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.ev-type { font-size: 10.5px; font-weight: 800; color: #8A7358; background: #FBF2E4; border-radius: 999px; padding: 1px 7px; }
 .ev-dday { font-weight: 800; font-size: 12px; color: var(--mint-deep); white-space: nowrap; }
 .ev-dday.today { color: var(--coral-deep); }
+
+/* 🎒 준비물 */
+.prep-row { margin-top: 7px; display: grid; gap: 4px; }
+.prep-label { font-size: 10.5px; font-weight: 800; color: #A9711B; }
+.prep-label b { color: var(--mint-deep); margin-left: 3px; }
+.prep-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.prep-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 9px 4px 5px;
+  border-radius: 999px;
+  border: 2px solid #F6E4C6;
+  background: #FFFBF2;
+  font-size: 11.5px; font-weight: 800;
+  color: #7A5B25;
+  transition: background .14s, border-color .14s, transform .12s;
+}
+.prep-chip:hover { transform: translateY(-1px); border-color: #EFD3A4; }
+.prep-chip .prep-box {
+  width: 17px; height: 17px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 2px solid #EBD9B8;
+  background: #fff;
+  font-size: 10px; color: transparent;
+}
+.prep-chip.done { background: #F2FBF6; border-color: #CFEBDD; color: var(--mint-deep); }
+.prep-chip.done .prep-box { background: var(--mint); border-color: var(--mint); color: #fff; }
+.prep-chip.done { text-decoration: none; }
 
 /* =========================================================
    우체통
@@ -1180,6 +1209,26 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 .mail-compose-foot .counter { font-size: 11.5px; color: var(--ink-faint); flex: 1; }
 
 /* 가족방 말풍선 */
+.room-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.room-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 2px solid #F5E7D2;
+  background: #fff;
+  font-size: 12.5px; font-weight: 800;
+  color: var(--ink-soft);
+  transition: transform .12s, background .16s, border-color .16s;
+}
+.room-chip:hover { transform: translateY(-1px); }
+.room-chip i {
+  font-style: normal; font-size: 10.5px; font-weight: 800;
+  background: #F6EBDE; color: #9A8574;
+  border-radius: 999px; padding: 1px 6px;
+}
+.room-chip.active { background: linear-gradient(160deg, #FFE6F1, #FFD0E2); border-color: #FBB6D2; color: #8A3357; }
+.room-chip.active i { background: rgba(255, 255, 255, .85); color: #B4467A; }
+
 .chat-room { display: grid; gap: 14px; }
 .chat-group { display: grid; gap: 8px; }
 .chat-thread {
@@ -1201,7 +1250,23 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
   box-shadow: var(--shadow-sm);
 }
 .chat-ava.coral { background: var(--coral-soft); }
-.chat-col { max-width: 82%; display: grid; gap: 3px; }
+.chat-col { max-width: 86%; display: grid; gap: 3px; }
+.chat-arrow { color: #C9B9A5; font-weight: 800; font-size: 10.5px; }
+.chat-ava.parent { background: #FFF2E2; }
+.chat-thread.family { max-height: 540px; }
+.chat-quick { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.qreply {
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+  border: 1.5px solid #F3D9E5;
+  background: #FFF9FC;
+  color: #A2557A;
+  transition: background .14s, border-color .14s, transform .12s;
+}
+.qreply:hover { background: #FFEFF6; border-color: #F7C6DC; transform: translateY(-1px); }
+.qreply:active { transform: scale(.97); }
 .chat-col.right { justify-items: end; }
 .chat-meta { display: flex; gap: 5px; align-items: baseline; font-size: 11px; color: var(--ink-faint); }
 .chat-meta b { font-size: 11.5px; color: var(--ink-soft); }

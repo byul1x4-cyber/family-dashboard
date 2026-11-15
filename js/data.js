@@ -97,11 +97,11 @@ window.APP_DATA = {
   ],
   quickReplies: [
     { label: '사랑해',    emoji: '❤️' },
-    { label: '잘했어',    emoji: '👍' },
-    { label: '알았어',    emoji: '👌' },
+    { label: '알았어',    emoji: '👍' },
     { label: '곧 갈게',   emoji: '🚗' },
+    { label: '잘했어',    emoji: '👏' },
     { label: '전화할게',  emoji: '📞' },
-    { label: '보고 싶어', emoji: '🥰' }
+    { label: '안 돼',     emoji: '🙅' }
   ],
 
   /* 식판 그릇 */
@@ -153,6 +153,15 @@ window.APP_DATA = {
     { key: 'morning', label: '아침' },
     { key: 'lunch',   label: '점심' },
     { key: 'evening', label: '저녁' }
+  ],
+
+  /* 일정 종류 (달력 · 일정·준비물) */
+  eventTypes: [
+    { key: 'family',  label: '가족',  emoji: '🏠' },
+    { key: 'school',  label: '학교',  emoji: '🏫' },
+    { key: 'academy', label: '학원',  emoji: '📚' },
+    { key: 'prep',    label: '준비물', emoji: '🎒' },
+    { key: 'etc',     label: '기타',  emoji: '📌' }
   ],
 
   /* 엄마·아빠 지금 상태 (홈 상단 칩 → 부모님 모드에서 한 번에 변경) */

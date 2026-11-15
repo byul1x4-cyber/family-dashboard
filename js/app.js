@@ -21,6 +21,7 @@
   var growthMetric = 'height';
   var mailSender = D.children[0].id;
   var mailRecipient = D.mailRecipients[0].id;
+  var mailFilter = 'all';   // 우체통: 'all'(전체 가족방) | 아이 id
 
   /* 이 기기 이름 · 알림 설정 · 날씨 · 팝업 상태 */
   var DEV_KEY = 'family-dashboard-device';
@@ -83,9 +84,25 @@
     ['stars', 'praiseCount', 'money', 'routine', 'celebrated', 'meals', 'medLog'].forEach(function (k) {
       s[k] = Object.assign({}, base[k], (raw[k] && typeof raw[k] === 'object') ? raw[k] : {});
     });
-    ['moneyLog', 'praiseLog', 'events', 'messages', 'meds'].forEach(function (k) {
+    ['moneyLog', 'praiseLog', 'messages', 'meds'].forEach(function (k) {
       s[k] = Array.isArray(raw[k]) ? raw[k] : [];
     });
+
+    /* 일정: 종류(type)와 준비물(items)을 함께 보관합니다 */
+    s.events = (Array.isArray(raw.events) ? raw.events : []).map(function (e) {
+      if (!e || !e.id) return null;
+      var items = (Array.isArray(e.items) ? e.items : []).map(function (it) {
+        if (!it) return null;
+        if (typeof it === 'string') return { id: UI.uid('prep'), text: it, done: 0 };
+        var t = String(it.text || '').trim();
+        if (!t) return null;
+        return { id: it.id || UI.uid('prep'), text: t, done: it.done || 0 };
+      }).filter(Boolean);
+      return Object.assign({}, e, {
+        type: D.eventTypes.some(function (t) { return t.key === e.type; }) ? e.type : 'family',
+        items: items
+      });
+    }).filter(Boolean);
     s.growth = Object.assign({}, base.growth, (raw.growth && typeof raw.growth === 'object') ? raw.growth : {});
     D.children.forEach(function (c) { if (!Array.isArray(s.growth[c.id])) s.growth[c.id] = []; });
     var notice = (raw.schoolNotice && typeof raw.schoolNotice === 'object') ? raw.schoolNotice : {};
@@ -1342,21 +1359,52 @@
     '</button>';
   }
 
+  function eventTypeInfo(key) {
+    return D.eventTypes.filter(function (t) { return t.key === key; })[0] || D.eventTypes[0];
+  }
+  function eventPrepHTML(e, compact) {
+    var items = e.items || [];
+    if (!items.length) return '';
+    var done = items.filter(function (i) { return i.done; }).length;
+    var state = done >= items.length ? '다 챙겼어요 ✓' : done ? done + '/' + items.length : '';
+    return '<div class="prep-row">' +
+      '<div class="prep-label">🎒 준비물' + (state ? ' <b>' + state + '</b>' : '') + '</div>' +
+      '<div class="prep-chips">' + items.map(function (it) {
+        return '<button type="button" class="prep-chip' + (it.done ? ' done' : '') + '" data-act="prep-check" data-ev="' + e.id + '" data-id="' + esc(it.id) + '" aria-pressed="' + (it.done ? 'true' : 'false') + '">' +
+          '<span class="prep-box" aria-hidden="true">' + (it.done ? '✓' : '') + '</span>' + esc(it.text) + '</button>';
+      }).join('') + '</div>' +
+    '</div>';
+  }
+
   function evItemHTML(e, compact) {
     var color = memberColor(e.member);
-    return '<div class="ev-item ' + color + '">' +
+    var type = eventTypeInfo(e.type);
+    return '<div class="ev-item ' + color + ' ev-' + e.type + '">' +
       '<div class="ev-main">' +
         '<div class="ev-title">' + esc(e.title) + '</div>' +
         '<div class="ev-meta">' +
           '<span class="badge ' + color + '">' + esc(memberName(e.member)) + '</span>' +
+          '<span class="ev-type">' + type.emoji + ' ' + esc(type.label) + '</span>' +
           '<span>' + (compact ? UI.shortDateKo(e.date) : '') + (e.time ? ' ' + esc(e.time) : '') + '</span>' +
           (e.note ? '<span>· ' + esc(e.note) + '</span>' : '') +
         '</div>' +
+        eventPrepHTML(e, compact) +
       '</div>' +
       '<span class="ev-dday' + (dday(e.date) === '오늘' ? ' today' : '') + '">' + dday(e.date) + '</span>' +
       (S.mode === 'parent' && !compact
         ? '<button type="button" class="icon-btn" data-act="del-event" data-id="' + e.id + '" aria-label="일정 삭제">🗑</button>' : '') +
     '</div>';
+  }
+
+  function togglePrep(evId, itemId) {
+    var ev = S.events.filter(function (e) { return e.id === evId; })[0];
+    if (!ev || !Array.isArray(ev.items)) return;
+    var it = ev.items.filter(function (x) { return x.id === itemId; })[0];
+    if (!it) return;
+    it.done = it.done ? 0 : Date.now();
+    save();
+    render({ keepScroll: true });
+    if (it.done) UI.toast('챙겼어요! ' + it.text + ' ✓', { emoji: '🎒', kind: 'good', duration: 1600 });
   }
 
   /* 예전에 저장된 칭찬 기록도 아이에 맞는 문구로 보여 줍니다 (이준은 형) */
@@ -1704,7 +1752,7 @@
           '<strong style="font-size:13.5px">' + UI.dateKo(calSelected) + '</strong>' +
           '<span style="flex:1"></span>' +
           (S.mode === 'parent'
-            ? '<button type="button" class="btn btn-primary btn-sm" data-act="add-event">＋ 일정 추가</button>'
+            ? '<button type="button" class="btn btn-primary btn-sm" data-act="add-event">＋ 일정·준비물</button>'
             : '<span class="badge lav">🔒 추가는 부모님 모드</span>') +
         '</div>' +
         '<div class="ev-list" style="margin-top:10px">' +
@@ -1732,17 +1780,29 @@
   function addEventModal(presetDate) {
     if (!needParent('일정은 부모님 모드에서 추가할 수 있어요')) return;
     UI.modal({
-      title: '일정 추가',
-      bodyHTML: '<div class="field"><label>누구 일정인가요?</label><select class="select" id="evMember">' +
-          D.scheduleMembers.map(function (m) {
-            return '<option value="' + m.id + '">' + esc(m.name) + '</option>';
-          }).join('') + '</select></div>' +
-        '<div class="field"><label>일정 이름</label><input class="input" id="evTitle" placeholder="예: 수영 대회, 할머니 생신"></div>' +
+      title: '📅 일정 · 준비물 추가',
+      size: 'wide',
+      bodyHTML:
+        '<div class="field-row">' +
+          '<div class="field"><label>누구 일정인가요?</label><select class="select" id="evMember">' +
+            D.scheduleMembers.map(function (m) {
+              return '<option value="' + m.id + '">' + esc(m.name) + '</option>';
+            }).join('') + '</select></div>' +
+          '<div class="field"><label>종류</label><select class="select" id="evType">' +
+            D.eventTypes.map(function (t) {
+              return '<option value="' + t.key + '">' + t.emoji + ' ' + esc(t.label) + '</option>';
+            }).join('') + '</select></div>' +
+        '</div>' +
+        '<div class="field"><label>일정 이름</label><input class="input" id="evTitle" placeholder="예: 현장학습, 수영 대회"></div>' +
         '<div class="field-row">' +
           '<div class="field"><label>날짜</label><input class="input" id="evDate" type="date" value="' + (presetDate || calSelected) + '"></div>' +
           '<div class="field"><label>시간 (선택)</label><input class="input" id="evTime" type="time"></div>' +
         '</div>' +
-        '<div class="field"><label>메모 (선택)</label><input class="input" id="evNote" placeholder="준비물, 장소 등"></div>',
+        '<div class="field"><label>🎒 준비물 (한 줄에 하나씩)</label>' +
+          '<textarea class="input" id="evItems" rows="4" placeholder="예: 실내화\n색종이\n물통"></textarea>' +
+          '<p class="help">적어 두면 홈·달력 다가오는 일정에 <b>🎒 준비물</b> 칩으로 보이고, 챙길 때마다 누르면 체크돼요.</p>' +
+        '</div>' +
+        '<div class="field"><label>메모 (선택)</label><input class="input" id="evNote" placeholder="장소 등"></div>',
       actions: [
         {
           label: '추가하기', kind: 'primary', onClick: function (close) {
@@ -1750,12 +1810,17 @@
             var date = document.getElementById('evDate').value;
             if (!title) { UI.toast('일정 이름을 적어 주세요', { kind: 'warn' }); return false; }
             if (!date) { UI.toast('날짜를 골라 주세요', { kind: 'warn' }); return false; }
+            var items = String((document.getElementById('evItems') || {}).value || '')
+              .split('\n').map(function (s) { return s.trim(); }).filter(Boolean)
+              .map(function (text) { return { id: UI.uid('prep'), text: text.slice(0, 30), done: 0 }; });
             S.events.push({
               id: UI.uid('ev'),
               title: title,
               date: date,
               time: document.getElementById('evTime').value || '',
               member: document.getElementById('evMember').value,
+              type: (document.getElementById('evType') || {}).value || 'family',
+              items: items,
               note: document.getElementById('evNote').value.trim(),
               createdBy: S.actor || '부모님',
               ts: Date.now()
@@ -1765,7 +1830,7 @@
             save();
             close();
             render({ keepScroll: true });
-            UI.toast('일정을 추가했어요', { emoji: '📅', kind: 'good' });
+            UI.toast(items.length ? '일정과 준비물을 추가했어요' : '일정을 추가했어요', { emoji: '📅', kind: 'good' });
           }
         },
         { label: '취소', kind: 'ghost' }
@@ -1798,6 +1863,15 @@
 
     var hourAgo = Date.now() - 3600 * 1000;
     var sentLastHour = S.messages.filter(function (m) { return m.fromId === mailSender && m.ts > hourAgo; }).length;
+    var events = mailEvents();
+    var shown = events.filter(function (ev) {
+      return mailFilter === 'all' ? true : (ev.letter && ev.letter.fromId === mailFilter);
+    });
+    var isAll = mailFilter === 'all';
+    var roomTitle = isAll ? '전체 가족방' : (childById(mailFilter).name + '와 나눈 편지');
+    var roomSub = isAll
+      ? '엄마·아빠·민국·이준이 한 방에서 시간순으로 이야기해요'
+      : childById(mailFilter).name + '이 보낸 편지와 답장만 모아 봐요';
 
     return (S.mode === 'parent' ? bannerComposeHTML() : '') +
       '<div class="mail-layout">' +
@@ -1828,13 +1902,46 @@
       '</div>' +
 
       '<div class="card mail-room">' +
-        cardHead('📮', '가족방 편지', '아이 편지와 엄마·아빠 답장이 시간순으로 쌓여요') +
-        '<div class="chat-room">' +
-          D.mailRecipients.map(mailThreadHTML).join('') +
-        '</div>' +
+        cardHead('📮', roomTitle, roomSub,
+          '<span class="badge rose">' + shown.length + '개</span>') +
+        '<div class="room-filter">' + roomFilterHTML() + '</div>' +
+        (shown.length
+          ? '<div class="chat-thread family">' + shown.map(function (ev) { return ev.html; }).join('') + '</div>'
+          : '<div class="empty notice-empty"><span class="big">📭</span>' +
+              (isAll ? '아직 가족방에 편지가 없어요.<br>아이가 그림 편지를 보내면 여기에 쌓여요.'
+                     : childById(mailFilter).name + '의 편지가 아직 없어요.') + '</div>') +
         chatReplyBarHTML() +
       '</div>' +
     '</div>';
+  }
+
+  /* [전체 가족방] [민국] [이준] 필터 칩 */
+  function roomFilterHTML() {
+    var chips = [{ id: 'all', label: '전체 가족방', emoji: '💬' }].concat(D.children.map(function (c) {
+      return { id: c.id, label: c.name, emoji: c.emoji };
+    }));
+    return chips.map(function (c) {
+      var n = c.id === 'all' ? S.messages.length : S.messages.filter(function (m) { return m.fromId === c.id; }).length;
+      return '<button type="button" class="room-chip' + (mailFilter === c.id ? ' active' : '') + '" data-act="mail-filter" data-id="' + c.id + '" aria-pressed="' + (mailFilter === c.id ? 'true' : 'false') + '">' +
+        '<span>' + c.emoji + '</span>' + esc(c.label) + '<i>' + n + '</i></button>';
+    }).join('');
+  }
+
+  /* 전체 가족방: 모든 편지와 답장을 시간순으로 */
+  function mailEvents() {
+    var items = [];
+    S.messages.forEach(function (m) {
+      items.push({ ts: m.ts || 0, letter: m, html: letterBubbleHTML(m) });
+      (m.replies || []).forEach(function (r) {
+        items.push({ ts: r.ts || 0, letter: m, reply: r, html: replyBubbleHTML(m, r) });
+      });
+    });
+    items.sort(function (a, b) { return a.ts - b.ts; });
+    return items;
+  }
+
+  function parentFace(name) {
+    return name === '아빠' ? '👨' : name === '엄마' ? '👩' : '👪';
   }
 
   function pictoChatChips(m) {
@@ -1844,57 +1951,51 @@
     }).join('');
   }
 
-  /* 아이가 보낸 그림 편지 (왼쪽 말풍선) */
+  /* 아이가 보낸 그림 편지 (왼쪽 말풍선) + 바로 답장 버튼 */
   function letterBubbleHTML(m) {
     var from = childById(m.fromId);
     var pictos = pictoChatChips(m);
     return '<div class="chat-row them">' +
       '<span class="chat-ava ' + from.color + '">' + from.emoji + '</span>' +
       '<div class="chat-col">' +
-        '<div class="chat-meta"><b>' + esc(from.name) + '</b><span>→ ' + esc(m.toName) + '</span><span class="chat-time">' + UI.ago(m.ts) + '</span></div>' +
+        '<div class="chat-meta"><b>' + esc(from.name) + '</b><span class="chat-arrow">→</span><span>' + esc(m.toName) + '</span>' +
+          '<span class="chat-time">' + UI.ago(m.ts) + '</span></div>' +
         '<div class="chat-bubble them">' +
           (pictos ? '<div class="chat-pictos">' + pictos + '</div>' : '') +
           (m.text ? '<div class="chat-text">' + esc(m.text) + '</div>' : '') +
           '<button type="button" class="chat-speak" data-act="read-letter" data-id="' + m.id + '" aria-label="소리 내어 읽어주기" title="읽어주기">🔊</button>' +
         '</div>' +
+        quickReplyRowHTML(m) +
       '</div>' +
     '</div>';
   }
 
-  /* 부모님 답장 (오른쪽 말풍선) */
-  function replyBubbleHTML(r) {
+  /* 말풍선 아래 빠른 답장 (부모님 모드) */
+  function quickReplyRowHTML(m) {
+    if (S.mode !== 'parent') return '';
+    return '<div class="chat-quick">' + D.quickReplies.map(function (q) {
+      return '<button type="button" class="qreply" data-act="quick-reply" data-id="' + m.id + '" data-text="' + esc(q.label) + '" data-emoji="' + esc(q.emoji) + '">' +
+        q.emoji + ' ' + esc(q.label) + '</button>';
+    }).join('') + '</div>';
+  }
+
+  /* 부모님 답장 (오른쪽 말풍선) — 엄마 → 민국 처럼 방향을 함께 */
+  function replyBubbleHTML(m, r) {
+    var kid = childById(m && m.fromId);
     return '<div class="chat-row me">' +
       '<div class="chat-col right">' +
-        '<div class="chat-meta right"><span class="chat-time">' + UI.ago(r.ts) + '</span><b>' + esc(r.by) + '</b></div>' +
+        '<div class="chat-meta right"><span class="chat-time">' + UI.ago(r.ts) + '</span>' +
+          '<b>' + esc(r.by) + '</b><span class="chat-arrow">→</span><span>' + esc(kid.name) + '</span></div>' +
         '<div class="chat-bubble me">' + (r.emoji && r.emoji !== '💬' ? r.emoji + ' ' : '') + esc(r.text) + '</div>' +
       '</div>' +
+      '<span class="chat-ava parent">' + parentFace(r.by) + '</span>' +
     '</div>';
   }
-
-  /* 받는 사람 한 명과 주고받은 편지를 시간순 대화로 */
-  function mailThreadHTML(r) {
-    var letters = S.messages.filter(function (m) { return m.toId === r.id; });
-    var items = [];
-    letters.forEach(function (m) {
-      items.push({ ts: m.ts, html: letterBubbleHTML(m) });
-      (m.replies || []).forEach(function (rep) { items.push({ ts: rep.ts, html: replyBubbleHTML(rep) }); });
-    });
-    items.sort(function (a, b) { return a.ts - b.ts; });
-    return '<div class="chat-group ' + (r.id === 'mom' ? 'mom' : 'dad') + '">' +
-      '<div class="inbox-head ' + (r.id === 'mom' ? 'mom' : 'dad') + '">' +
-        '<span class="inbox-emoji">' + r.emoji + '</span>' +
-        '<strong>' + esc(r.name) + '에게 온 편지</strong>' +
-        '<span class="badge rose">' + letters.length + '통</span>' +
-      '</div>' +
-      (items.length
-        ? '<div class="chat-thread">' + items.map(function (i) { return i.html; }).join('') + '</div>'
-        : '<div class="empty inbox-empty"><span class="big">📭</span>' + esc(r.name) + '에게 온 편지가 아직 없어요.</div>') +
-    '</div>';
-  }
-
-  /* 가족방처럼 고정된 답장창 (가장 최근 편지에 답장) */
+  /* 가족방처럼 고정된 답장창 (지금 보고 있는 방의 가장 최근 편지에 답장) */
   function chatReplyBarHTML() {
-    var all = S.messages.slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+    var all = S.messages.slice()
+      .filter(function (m) { return mailFilter === 'all' || m.fromId === mailFilter; })
+      .sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
     var target = all[0] || null;
     if (!target) {
       return '<div class="chat-replybar"><p class="help">아이가 그림 편지를 보내면 여기서 바로 답장할 수 있어요.</p></div>';
@@ -2649,6 +2750,7 @@
       case 'mail-mic': mailMicToggle(); break;
       case 'pick-mail-sender': selectChild(el.getAttribute('data-id')); render({ keepScroll: true }); break;
       case 'pick-mail-recipient': mailRecipient = el.getAttribute('data-id'); render({ keepScroll: true }); break;
+      case 'mail-filter': mailFilter = el.getAttribute('data-id') || 'all'; render({ keepScroll: true }); break;
 
       case 'routine-check': {
         completeRoutine(el.getAttribute('data-child'), el.getAttribute('data-item'));
@@ -2664,6 +2766,7 @@
       case 'pick-day': calSelected = el.getAttribute('data-date'); render({ keepScroll: true }); break;
       case 'add-event': addEventModal(calSelected); break;
       case 'del-event': deleteEvent(el.getAttribute('data-id')); break;
+      case 'prep-check': togglePrep(el.getAttribute('data-ev'), el.getAttribute('data-id')); break;
 
       case 'pick-picto': {
         var pid = el.getAttribute('data-id');
