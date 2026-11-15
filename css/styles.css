@@ -55,6 +55,9 @@
 
 * { box-sizing: border-box; }
 
+/* hidden 속성은 어떤 display 규칙보다도 우선합니다 */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;
