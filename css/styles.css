@@ -584,15 +584,22 @@ button.kid-card:focus-visible { outline: 4px solid var(--sun); outline-offset: 2
 .kc-progress { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
 
 /* 오른쪽 동그란 진행 링 */
-.kc-ring {
+.kc-ring { 
   position: relative;
   width: 76px; height: 76px;
   flex: none;
   display: grid; place-items: center;
   color: #46B68C;
 }
-.kc-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
-.kc-ring .ring-bg { fill: none; stroke: rgba(255, 255, 255, .9); stroke-width: 8; }
+.kc-ring::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .72);
+}
+.kc-ring svg { position: relative; width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.kc-ring .ring-bg { fill: none; stroke: currentColor; stroke-width: 8; opacity: .16; }
 .kc-ring .ring-fg { fill: none; stroke: currentColor; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset .5s ease; }
 .kc-ring-txt { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; line-height: 1; gap: 2px; }
 .kc-ring-txt b { font-family: var(--font-round); font-weight: 400; font-size: 21px; color: #2C7A58; }
@@ -646,7 +653,7 @@ button.kid-card:focus-visible { outline: 4px solid var(--sun); outline-offset: 2
 .tile:active { transform: scale(.99); }
 .tile strong { font-family: var(--font-round); font-weight: 400; font-size: 17px; letter-spacing: 0; color: #4B3A2B; }
 .tile small { font-size: 11.5px; font-weight: 700; color: #7C6C5C; line-height: 1.45; }
-.tile .tile-art { width: 44px; height: 44px; display: block; }
+.tile .tile-art { width: 50px; height: 50px; display: block; }
 .tile.t-lav { background: linear-gradient(155deg, #F2EEFF, #FBF9FF 78%); }
 .tile.t-rose { background: linear-gradient(155deg, #FFEDF5, #FFFAFC 78%); }
 .tile.t-sun { background: linear-gradient(155deg, #FFF4D8, #FFFDF5 78%); }
