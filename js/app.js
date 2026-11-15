@@ -1047,7 +1047,8 @@
     return '<div class="tray">' + D.traySlots.map(function (slot, idx) {
       var st = slotOf(c.id, date, slot.key);
       var food = st.dishId ? foodById(st.dishId) : null;
-      var cls = 'tray-slot ' + (slot.key === 'rice' ? 'rice' : slot.key === 'soup' ? 'soup' : 's' + (idx));
+      var area = { rice: 'rice', soup: 'soup', side1: 's1', side2: 's2', side3: 's3' }[slot.key] || 's1';
+      var cls = 'tray-slot ' + area;
       return '<div class="' + cls + '">' +
         '<span class="slot-label">' + esc(slot.label) + '</span>' +
         '<button type="button" class="dish-btn" data-act="pick-dish" data-child="' + c.id + '" data-slot="' + slot.key + '">' +
