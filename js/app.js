@@ -1320,54 +1320,63 @@
 
   /* ================= 설정 ================= */
   function renderSettings() {
-    var cfg = Storage.config;
-    var isFb = Storage.mode === 'firebase';
+    var st = Storage.status;
+    var isFb = st.mode === 'firebase';
+    var keyId = st.familyId ? (st.familyId.slice(0, 10) + '…' + st.familyId.slice(-4)) : '—';
+    var lastSync = st.lastSyncAt ? UI.timeKo(st.lastSyncAt) : '아직 없어요';
+    var cfg = Storage.config || {};
+
     return '<div class="settings-grid">' +
-      '<div class="card span-2">' +
-        cardHead('💾', '저장 방식', '가족 데이터는 어디에 저장되나요?') +
+
+      '<div class="card span-2 soft-lav">' +
+        cardHead('🔐', '우리집 입장 코드', '가족만 들어오는 열쇠') +
         '<div class="status-line' + (isFb ? '' : ' local') + '">' +
-          (isFb ? '🔄 Firebase 실시간 동기화 연결됨' : '📱 이 기기 브라우저에 저장 중 (localStorage)') + '</div>' +
-        '<p class="help">기본은 이 기기에만 저장돼요. 아래 Firebase 값을 넣으면 엄마·아빠 폰과 태블릿이 같은 데이터를 실시간으로 함께 씁니다.</p>' +
-        '<details class="more"' + (isFb ? '' : '') + '><summary>Firebase 연동 준비 (5분)</summary>' +
-          '<ol class="steps">' +
-            '<li><a href="https://console.firebase.google.com/" target="_blank" rel="noopener">Firebase 콘솔</a>에서 새 프로젝트를 만듭니다.</li>' +
-            '<li>왼쪽 메뉴 <b>빌드 → Firestore Database</b>에서 데이터베이스를 만듭니다(테스트 모드로 시작).</li>' +
-            '<li><b>프로젝트 설정 → 내 앱 → 웹 앱 추가</b> 후 나오는 <code>firebaseConfig</code> 값을 복사합니다.</li>' +
-            '<li>아래 칸에 붙여 넣고 <b>연결하기</b>를 누릅니다.</li>' +
-            '<li>Firestore 보안 규칙은 가족만 쓰는 앱이므로 아래처럼 두면 됩니다.<br>' +
-              '<code>match /families/{doc} { allow read, write: if true; }</code><br>' +
-              '<span style="color:#C4533C">※ 규칙을 열어 두면 주소를 아는 사람은 접근할 수 있어요. 가족용으로만 쓰고, 민감한 개인정보는 넣지 마세요.</span></li>' +
-          '</ol>' +
-        '</details>' +
-        '<div class="field-row" style="margin-top:12px">' +
-          '<div class="field"><label>apiKey</label><input class="input" id="fbApiKey" value="' + esc(cfg && cfg.apiKey || '') + '" placeholder="AIza..."></div>' +
-          '<div class="field"><label>authDomain</label><input class="input" id="fbAuthDomain" value="' + esc(cfg && cfg.authDomain || '') + '" placeholder="my-app.firebaseapp.com"></div>' +
+          (isFb ? '☁️ 가족 클라우드와 실시간으로 연결돼 있어요' : '📱 지금은 이 기기에만 저장하고 있어요') +
         '</div>' +
-        '<div class="field-row">' +
-          '<div class="field"><label>projectId</label><input class="input" id="fbProjectId" value="' + esc(cfg && cfg.projectId || '') + '" placeholder="my-app"></div>' +
-          '<div class="field"><label>appId</label><input class="input" id="fbAppId" value="' + esc(cfg && cfg.appId || '') + '" placeholder="1:1234:web:abcd"></div>' +
+        '<dl class="key-info">' +
+          '<div><dt>가족 열쇠 ID</dt><dd><code>' + esc(keyId) + '</code></dd></div>' +
+          '<div><dt>마지막 동기화</dt><dd>' + esc(lastSync) + '</dd></div>' +
+        '</dl>' +
+        (st.error ? '<p class="help err-text">연결 오류: ' + esc(st.error) + '</p>' : '') +
+        '<p class="help">같은 코드를 넣은 기기끼리 같은 집(같은 열쇠 ID)으로 연결돼요.<br>코드를 모르는 사람은 우리 가족 데이터가 있는 곳을 찾을 수도, 열어 볼 수도 없어요.</p>' +
+        '<div class="code-change">' +
+          '<div class="field" style="margin:0"><label>새 가족 입장 코드</label>' +
+            '<input class="input" id="newGateCode" type="text" inputmode="text" autocomplete="off" placeholder="4자 이상 (숫자·단어)"></div>' +
+          '<button type="button" class="btn btn-lav" data-act="change-code">코드 바꾸기</button>' +
         '</div>' +
-        '<div class="field-row">' +
-          '<div class="field"><label>컬렉션 이름</label><input class="input" id="fbCollection" value="' + esc(cfg && cfg.collection || 'families') + '"></div>' +
-          '<div class="field"><label>가족 문서 ID</label><input class="input" id="fbFamilyId" value="' + esc(cfg && cfg.familyId || 'our-family') + '"></div>' +
-        '</div>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-          '<button type="button" class="btn btn-primary" data-act="fb-connect">' + (isFb ? '다시 연결' : '연결하기') + '</button>' +
-          (isFb ? '<button type="button" class="btn btn-danger" data-act="fb-disconnect">연결 해제</button>' : '') +
+        '<div class="btn-row">' +
+          '<button type="button" class="btn btn-ghost" data-act="lock-device">🔒 이 기기 잠그기 (로그아웃)</button>' +
+          (isFb ? '' : '<button type="button" class="btn btn-soft" data-act="fb-retry">☁️ 클라우드 다시 연결</button>') +
         '</div>' +
       '</div>' +
 
       '<div class="card">' +
-        cardHead('🔐', '개인정보 안내', '공개 저장소에 올라가는 앱') +
-        '<p class="help">이 앱에는 가족 이름(민국·이준·엄마·아빠)과 아이 키·몸무게만 들어 있어요.<br>' +
-        '집 주소, 전화번호, 이메일, 생년월일 같은 정보는 코드에 넣지 않았고, 앞으로도 넣지 마세요.<br>' +
-        '데이터는 이 기기(또는 연결한 Firebase)에만 저장되고 GitHub에는 올라가지 않아요.</p>' +
+        cardHead('💾', '저장 방식', isFb ? 'Firebase 실시간 동기화' : '이 기기 저장') +
+        '<p class="help">가족 데이터는 우리 가족 Firebase(' + esc(st.projectId || 'family-dashboard') + ') 한 곳에 모여 있어요.<br>' +
+        '태블릿·엄마 폰·아빠 폰이 같은 열쇠로 들어오면 바뀐 내용이 몇 초 안에 서로에게 나타나요.<br>' +
+        '잠깐 인터넷이 끊겨도 이 기기에 먼저 저장했다가 다시 연결되면 올려 보내요.</p>' +
+        '<details class="more"><summary>고급: Firebase 설정 직접 바꾸기</summary>' +
+          '<p class="help">보통은 건드릴 필요 없어요. 프로젝트를 옮길 때만 쓰세요.</p>' +
+          '<div class="field"><label>apiKey</label><input class="input" id="fbApiKey" value="' + esc(cfg.apiKey || '') + '"></div>' +
+          '<div class="field"><label>authDomain</label><input class="input" id="fbAuthDomain" value="' + esc(cfg.authDomain || '') + '"></div>' +
+          '<div class="field"><label>projectId</label><input class="input" id="fbProjectId" value="' + esc(cfg.projectId || '') + '"></div>' +
+          '<div class="field"><label>appId</label><input class="input" id="fbAppId" value="' + esc(cfg.appId || '') + '"></div>' +
+          '<button type="button" class="btn btn-soft btn-sm" data-act="fb-connect">이 설정으로 연결</button>' +
+        '</details>' +
+      '</div>' +
+
+      '<div class="card">' +
+        cardHead('🧭', '기기 잠금 안내', 'Public 저장소에 올라가는 앱') +
+        '<p class="help">앱 코드는 GitHub에 공개돼 있지만, 가족 데이터는 코드에 없어요.<br>' +
+        '가족 데이터는 <b>입장 코드로 만든 열쇠 ID</b>의 문서에만 들어 있고, 그 코드는 이 기기들에만 있어요.<br>' +
+        '태블릿을 잃어버리면 다른 기기에서 <b>코드를 바꾸기</b>만 해도 이전 열쇠로는 더 이상 들어올 수 없어요.</p>' +
+        '<p class="help" style="margin-top:8px">집 주소·전화번호·이메일·생년월일 같은 정보는 앱에 넣지 마세요. 이름과 아이 키·몸무게만 기록해요.</p>' +
       '</div>' +
 
       '<div class="card">' +
         cardHead('🧰', '데이터 관리', '내보내기 · 가져오기') +
         '<p class="help">기기를 바꾸거나 백업할 때 써요.</p>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
+        '<div class="btn-row">' +
           '<button type="button" class="btn btn-soft" data-act="export">내보내기 (JSON)</button>' +
           '<button type="button" class="btn btn-soft" data-act="import">가져오기</button>' +
           '<button type="button" class="btn btn-danger" data-act="reset">전체 초기화</button>' +
@@ -1376,12 +1385,94 @@
       '</div>' +
 
       '<div class="card span-2">' +
-        cardHead('🏡', '우리집 다모아', '가족 대시보드 v1') +
+        cardHead('🏡', '우리집 다모아', '가족 대시보드 v2') +
         '<p class="help">아이 루틴 · 칭찬과 돼지저금통 · 가족 일정 · 우체통 · 식판/약/성장 기록을 한 곳에 모은 웹앱이에요.<br>' +
-        '모드: ' + (S.mode === 'parent' ? '🔒 부모님 모드(' + esc(S.actor || '부모님') + ')' : '🧒 아이 모드') + ' · 저장: ' + (isFb ? 'Firebase' : '이 기기') + '</p>' +
+        '모드: ' + (S.mode === 'parent' ? '🔒 부모님 모드(' + esc(S.actor || '부모님') + ')' : '🧒 아이 모드') + ' · 연결: ' + (isFb ? '가족 클라우드' : '이 기기') + '</p>' +
         '<p class="help" style="margin-top:8px">앱 주소: ' + esc(location.origin + location.pathname) + '</p>' +
       '</div>' +
     '</div>';
+  }
+
+  /* ---- 가족 입장 코드: 변경 / 이 기기 잠금 / 클라우드 재연결 ---- */
+  function changeGateCode() {
+    var input = document.getElementById('newGateCode');
+    var code = ((input && input.value) || '').trim();
+    if (code.replace(/\s+/g, '').length < Storage.MIN_CODE_LEN) {
+      UI.toast('가족 입장 코드는 4자 이상으로 정해 주세요', { kind: 'warn' });
+      if (input) input.focus();
+      return;
+    }
+    UI.modal({
+      title: '가족 입장 코드를 바꿀까요?',
+      bodyHTML: '<p class="modal-text">코드를 바꾸면 <b>새 열쇠</b>가 만들어져요. 태블릿·가족 폰에는 <b>새 코드를 똑같이</b> 넣어 주셔야 다시 연결됩니다.<br><br>지금 기록은 어떻게 할까요?</p>',
+      actions: [
+        { label: '지금 기록 그대로 옮기기', kind: 'primary', onClick: function () { doChangeCode(code, true); } },
+        { label: '빈 집으로 새로 시작', kind: 'ghost', onClick: function () { doChangeCode(code, false); } }
+      ]
+    });
+  }
+
+  function doChangeCode(code, migrate) {
+    UI.toast('새 열쇠로 연결하는 중...', { emoji: '🔄', duration: 2200 });
+    Storage.changeCode(code).then(function () {
+      if (migrate) {
+        Storage.save(S, { immediate: true });
+      } else {
+        S = defaultState();
+        S.introSeen = true;
+        Storage.save(S, { immediate: true });
+      }
+      setSyncBanner(null);
+      render({ keepScroll: true });
+      UI.confetti(18);
+      UI.toast('가족 입장 코드를 바꿨어요. 다른 기기에도 새 코드를 넣어 주세요', { emoji: '🔑', kind: 'good', duration: 4200 });
+    }).catch(function (err) {
+      UI.toast('코드를 바꾸지 못했어요: ' + shortErr(err), { kind: 'warn', duration: 5000 });
+    });
+  }
+
+  function lockDevice() {
+    var isFb = Storage.mode === 'firebase';
+    UI.confirm(
+      '이 기기를 잠글까요?',
+      isFb
+        ? '이 기기에서 가족 열쇠를 지우고 저장된 기록도 지웁니다. 클라우드에 있는 가족 기록은 그대로 남아요. 다시 들어오려면 가족 입장 코드가 필요해요.'
+        : '이 기기에서 가족 열쇠를 지우고 저장된 기록도 지웁니다. 아직 클라우드에 올리지 못한 기록은 사라져요.',
+      '잠그기', 'danger'
+    ).then(function (ok) {
+      if (!ok) return;
+      Storage.lock({ clearLocal: true });
+      location.reload();
+    });
+  }
+
+  function retryCloud() {
+    UI.toast('가족 클라우드에 다시 연결하는 중...', { emoji: '🔄', duration: 2200 });
+    Storage.init(onRemoteState).then(function (res) {
+      if (res.mode === 'firebase') {
+        setSyncBanner(null);
+        S = normalize(res.state);
+        render({ keepScroll: true });
+        UI.toast('가족 클라우드에 연결됐어요', { emoji: '☁️', kind: 'good', duration: 3000 });
+      } else {
+        setSyncBanner(res.error || '연결 정보를 확인해 주세요');
+        render({ keepScroll: true });
+      }
+    });
+  }
+
+  function shortErr(err) {
+    var t = (err && (err.message || err.code)) || String(err || '알 수 없는 오류');
+    return t.length > 120 ? t.slice(0, 120) + '…' : t;
+  }
+
+  function setSyncBanner(err) {
+    var el = document.getElementById('syncBanner');
+    var txt = document.getElementById('syncBannerText');
+    if (!el || !txt) return;
+    if (!err) { el.hidden = true; txt.textContent = ''; return; }
+    txt.textContent = '☁️ 가족 클라우드에 연결하지 못했어요 — 지금 기록은 이 기기에만 저장돼요. (' + shortErr(err) + ')';
+    el.hidden = false;
   }
 
   /* ================= 이벤트 ================= */
@@ -1491,6 +1582,10 @@
       }
       case 'growth-metric': growthMetric = el.getAttribute('data-metric'); render({ keepScroll: true }); break;
 
+      case 'change-code': changeGateCode(); break;
+      case 'lock-device': lockDevice(); break;
+      case 'fb-retry': retryCloud(); break;
+
       case 'fb-connect': connectFirebaseUI(); break;
       case 'fb-disconnect': {
         UI.confirm('연결을 해제할까요?', '이 기기 저장 방식으로 돌아갑니다. Firestore에 있던 데이터는 그대로 남아요.', '해제', 'danger')
@@ -1529,8 +1624,6 @@
     var authDomain = (document.getElementById('fbAuthDomain') || {}).value || '';
     var projectId = (document.getElementById('fbProjectId') || {}).value || '';
     var appId = (document.getElementById('fbAppId') || {}).value || '';
-    var collection = (document.getElementById('fbCollection') || {}).value || 'families';
-    var familyId = (document.getElementById('fbFamilyId') || {}).value || 'our-family';
 
     if (!apiKey.trim() || !projectId.trim()) {
       UI.toast('apiKey와 projectId는 꼭 필요해요', { kind: 'warn' });
@@ -1539,7 +1632,7 @@
     UI.toast('Firebase에 연결하는 중...', { emoji: '🔄', duration: 1800 });
     Storage.enableFirebase({
       apiKey: apiKey.trim(), authDomain: authDomain.trim(), projectId: projectId.trim(),
-      appId: appId.trim(), collection: collection.trim(), familyId: familyId.trim()
+      appId: appId.trim()
     }).then(function (res) {
       if (res.remote) {
         UI.modal({
@@ -1571,8 +1664,9 @@
         UI.confetti(18);
         UI.toast('Firebase 실시간 동기화가 연결됐어요', { emoji: '☁️', kind: 'good', duration: 3400 });
       }
+      setSyncBanner(null);
     }).catch(function (err) {
-      UI.toast('연결 실패: ' + ((err && err.message) || '설정 값을 확인해 주세요'), { kind: 'warn', duration: 5000 });
+      UI.toast('연결 실패: ' + shortErr(err), { kind: 'warn', duration: 5000 });
     });
   }
 
@@ -1618,6 +1712,19 @@
     document.addEventListener('change', function (e) {
       if (e.target && e.target.id === 'importFile') onImportFile(e);
     });
+
+    var gateForm = document.getElementById('gateForm');
+    if (gateForm) gateForm.addEventListener('submit', onGateSubmit);
+    var eye = document.getElementById('gateEye');
+    if (eye) eye.addEventListener('click', function () {
+      var i = document.getElementById('gateInput');
+      if (!i) return;
+      i.type = i.type === 'password' ? 'text' : 'password';
+      eye.classList.toggle('on', i.type === 'text');
+      i.focus();
+    });
+    var retry = document.getElementById('syncBannerRetry');
+    if (retry) retry.addEventListener('click', retryCloud);
   }
 
   var VIEWS = {
@@ -1631,19 +1738,26 @@
   };
   window.__VIEWS = VIEWS;
 
-  async function init() {
-    bindChrome();
-    startClock();
-    var res = await Storage.init(function (remoteState) {
-      var keep = S ? { mode: S.mode, actor: S.actor } : null;
-      S = normalize(remoteState);
-      if (keep) { S.mode = keep.mode; S.actor = keep.actor; }
-      render({ keepScroll: true });
-      UI.toast('다른 기기에서 가족 데이터가 업데이트됐어요', { emoji: '🔄', duration: 2200 });
-    });
+  /* 다른 기기에서 바뀐 가족 데이터가 도착했을 때 */
+  function onRemoteState(state, err) {
+    if (err) { setSyncBanner(err); return; }
+    if (!state) return;
+    var keep = S ? { mode: S.mode, actor: S.actor } : null;
+    S = normalize(state);
+    if (keep) { S.mode = keep.mode; S.actor = keep.actor; }
+    render({ keepScroll: true });
+    UI.toast('다른 기기에서 가족 데이터가 업데이트됐어요', { emoji: '🔄', duration: 2200 });
+  }
+
+  /* 잠금을 풀었거나 열쇠가 있는 기기에서 대시보드를 엽니다 */
+  async function startApp() {
+    var res = await Storage.init(onRemoteState);
     S = normalize(res.state);
     if (res.error) {
-      UI.toast('Firebase 연결에 실패해 이 기기 저장으로 열었어요', { kind: 'warn', duration: 5000 });
+      setSyncBanner(res.error);
+      UI.toast('가족 클라우드 연결에 실패해 이 기기에만 저장해요', { kind: 'warn', duration: 5000 });
+    } else {
+      setSyncBanner(null);
     }
     Storage.watchLocal(function (state) {
       S = normalize(state);
@@ -1657,6 +1771,73 @@
     render();
     if (!S.introSeen) showIntro();
     save();
+  }
+
+  /* ---------- 가족 입장(잠금) 화면 ---------- */
+  function showGate() {
+    var gate = document.getElementById('gate');
+    var shell = document.getElementById('appShell');
+    if (shell) shell.hidden = true;
+    if (gate) gate.hidden = false;
+    document.body.classList.add('gated');
+    if (!Storage.status.secure) {
+      var w = document.getElementById('gateWarn');
+      if (w) {
+        w.hidden = false;
+        w.textContent = '⚠️ 지금 주소에서는 암호화 기능이 제한돼요. 기기끼리 열쇠를 맞추려면 https 주소(byul1x4-cyber.github.io)로 열어 주세요.';
+      }
+    }
+    setTimeout(function () {
+      var i = document.getElementById('gateInput');
+      if (i && window.innerWidth > 720) i.focus();
+    }, 120);
+  }
+
+  async function onGateSubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    var input = document.getElementById('gateInput');
+    var errEl = document.getElementById('gateErr');
+    var btn = document.getElementById('gateSubmit');
+    var warnEl = document.getElementById('gateWarn');
+    var code = ((input && input.value) || '').trim();
+
+    if (warnEl && !warnEl.textContent) warnEl.hidden = true;
+    if (errEl) errEl.hidden = true;
+
+    if (code.replace(/\s+/g, '').length < Storage.MIN_CODE_LEN) {
+      if (errEl) {
+        errEl.textContent = '가족 입장 코드는 ' + Storage.MIN_CODE_LEN + '자 이상으로 정해 주세요.';
+        errEl.hidden = false;
+      }
+      if (input) input.focus();
+      return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = '들어가는 중...'; }
+    try {
+      await Storage.enter(code);
+      var gate = document.getElementById('gate');
+      var shell = document.getElementById('appShell');
+      if (gate) gate.hidden = true;
+      document.body.classList.remove('gated');
+      if (shell) shell.hidden = false;
+      if (input) input.value = '';
+      await startApp();
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = '들어가지 못했어요: ' + shortErr(err);
+        errEl.hidden = false;
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '들어가기'; }
+    }
+  }
+
+  async function init() {
+    bindChrome();
+    startClock();
+    if (Storage.hasGate()) await startApp();
+    else showGate();
   }
 
   if (document.readyState === 'loading') {
