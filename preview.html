@@ -11,6 +11,7 @@
 window.__errors = [];
 window.addEventListener('error', function (e) { window.__errors.push(e.message); });
 window.scrollTo = function () {};
+window.__d = function (off) { var d = new Date(); d.setDate(d.getDate() + off); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 window.__TEST_STATE = {
   version: 1, introSeen: true, mode: 'parent', actor: '엄마',
   routine: {}, celebrated: {},
@@ -38,8 +39,6 @@ window.__TEST_STATE = {
   growth: { minguk: [{ date: '2026-09-15', height: 126, weight: 26 }, { date: '2026-11-15', height: 128, weight: 27 }], ijun: [{ date: '2026-11-15', height: 104, weight: 17 }] },
   schoolNotice: { title: '', date: '', message: '', items: [], updatedAt: 0 }
 };
-window.__d = function () { return ''; };
-window.__d = function (off) { var d = new Date(); d.setDate(d.getDate() + off); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 window.Storage = {
   MIN_CODE_LEN: 4, mode: 'local',
   status: { secure: true, mode: 'local', familyId: 'fam_preview', hasGate: true },
