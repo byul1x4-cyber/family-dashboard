@@ -152,5 +152,25 @@ window.APP_DATA = {
     { key: 'morning', label: '아침' },
     { key: 'lunch',   label: '점심' },
     { key: 'evening', label: '저녁' }
+  ],
+
+  /* 엄마·아빠 지금 상태 (홈 상단 칩 → 부모님 모드에서 한 번에 변경) */
+  statusOptions: [
+    { key: 'home',  label: '집에 있어요',   emoji: '🏠' },
+    { key: 'work',  label: '일하는 중',     emoji: '💼' },
+    { key: 'move',  label: '이동 중',       emoji: '🚗' },
+    { key: 'soon',  label: '곧 가요',       emoji: '⏰' },
+    { key: 'out',   label: '밖에 있어요',   emoji: '🌳' },
+    { key: 'busy',  label: '연락 어려워요', emoji: '🔕' },
+    { key: 'sleep', label: '자는 중',       emoji: '😴' }
+  ],
+
+  /* 📢 태블릿에 한마디 — 빠른 문구 */
+  bannerQuick: [
+    '오늘도 화이팅! 💛',
+    '이제 그만 자자 🌙',
+    '밥 먹고 양치하기!',
+    '엄마 곧 갈게 🚗',
+    '잘하고 있어요 👍'
   ]
 };

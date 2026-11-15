@@ -22,6 +22,16 @@
   var mailSender = D.children[0].id;
   var mailRecipient = D.mailRecipients[0].id;
 
+  /* 이 기기 이름 · 알림 설정 · 날씨 · 팝업 상태 */
+  var DEV_KEY = 'family-dashboard-device';
+  var ALERT_KEY = 'family-dashboard-alerts';
+  var ALERT_DEFAULT = { sound: true, speak: true, push: false };
+  var homeWeather = null;
+  var weatherAsked = false;
+  var shownBanner = null;      // 이번에 이미 띄운 빵! 메시지 id
+  var lastMsgAt = null;        // 마지막으로 알린 편지·답장 시각
+  var msgPopTimer = null;
+
   /* 아이 선택: 어느 화면에서 바꿔도 모든 탭이 같은 아이를 봅니다.
      아이 모드에서도 막지 않습니다 (부모님 모드 확인 문제와 무관). */
   function selectChild(id) {
@@ -55,7 +65,13 @@
       medLog: {},
       growth: g,
       /* 민국이 알림장 (엄마가 피클로 확인한 언주초 1-3 알림장을 적어 두는 곳) */
-      schoolNotice: { title: '', date: '', message: '', items: [], updatedAt: 0 }
+      schoolNotice: { title: '', date: '', message: '', items: [], updatedAt: 0 },
+      /* 📢 태블릿에 크게 띄우는 가족 메시지: { id, from, to, message, createdAt, ackedBy: [] } */
+      bannerPopup: null,
+      /* 엄마·아빠 지금 상태: { mom: { key, at, by }, dad: {...} } */
+      parentStatus: {},
+      /* 🛒 장보기: [{ id, text, done, by, ts }] */
+      shopping: []
     };
   }
 
@@ -83,6 +99,38 @@
       })
       .filter(function (it) { return it && it.text; });
     if (s.mode !== 'parent') s.mode = 'child';
+
+    /* 📢 빵! 메시지 */
+    var b = raw.bannerPopup;
+    if (b && typeof b === 'object' && b.id && String(b.message || '').trim()) {
+      s.bannerPopup = {
+        id: String(b.id),
+        from: String(b.from || '부모님'),
+        to: String(b.to || 'all'),
+        message: String(b.message).slice(0, 120),
+        createdAt: b.createdAt || Date.now(),
+        ackedBy: Array.isArray(b.ackedBy) ? b.ackedBy.filter(Boolean) : []
+      };
+    } else {
+      s.bannerPopup = null;
+    }
+
+    /* 엄마·아빠 상태 */
+    s.parentStatus = {};
+    D.parents.forEach(function (p) {
+      var cur = (raw.parentStatus && raw.parentStatus[p.id]) || null;
+      var ok = cur && cur.key && D.statusOptions.some(function (o) { return o.key === cur.key; });
+      if (ok) s.parentStatus[p.id] = { key: cur.key, at: cur.at || Date.now(), by: String(cur.by || '') };
+    });
+
+    /* 🛒 장보기 */
+    s.shopping = (Array.isArray(raw.shopping) ? raw.shopping : []).map(function (it) {
+      if (!it) return null;
+      var text = String(it.text || it.name || '').trim();
+      if (!text) return null;
+      return { id: it.id || UI.uid('shop'), text: text.slice(0, 40), done: it.done ? 1 : 0, by: String(it.by || ''), ts: it.ts || 0 };
+    }).filter(Boolean);
+
     return s;
   }
 
@@ -92,6 +140,318 @@
     if (S.mode === 'parent') return true;
     UI.toast(message || '부모님 모드에서 할 수 있어요', { emoji: '🔒', kind: 'warn' });
     return false;
+  }
+
+  /* ================= 이 기기 · 알림 설정 ================= */
+  function device() {
+    try {
+      var d = JSON.parse(localStorage.getItem(DEV_KEY) || 'null');
+      if (!d || !d.id) {
+        d = { id: 'dev-' + Math.random().toString(36).slice(2, 8), name: '이 기기' };
+        localStorage.setItem(DEV_KEY, JSON.stringify(d));
+      }
+      return d;
+    } catch (e) { return { id: 'dev', name: '이 기기' }; }
+  }
+  function deviceName() { return device().name || '이 기기'; }
+  function setDeviceName(name) {
+    var d = device();
+    d.name = String(name || '').trim().slice(0, 20) || '이 기기';
+    try { localStorage.setItem(DEV_KEY, JSON.stringify(d)); } catch (e) {}
+  }
+  function alerts() {
+    var a = null;
+    try { a = JSON.parse(localStorage.getItem(ALERT_KEY) || 'null'); } catch (e) {}
+    return Object.assign({}, ALERT_DEFAULT, a || {});
+  }
+  function setAlert(key, val) {
+    var a = alerts(); a[key] = !!val;
+    try { localStorage.setItem(ALERT_KEY, JSON.stringify(a)); } catch (e) {}
+  }
+  function chime() {
+    if (!alerts().sound) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      var ctx = new AC();
+      var t0 = ctx.currentTime;
+      [880, 1174].forEach(function (f, i) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t0 + i * 0.16);
+        g.gain.exponentialRampToValueAtTime(0.16, t0 + i * 0.16 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.16 + 0.34);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t0 + i * 0.16); o.stop(t0 + i * 0.16 + 0.4);
+      });
+      setTimeout(function () { try { ctx.close(); } catch (e) {} }, 1400);
+    } catch (e) {}
+  }
+  function speakAlert(text) {
+    if (!alerts().speak) return;
+    UI.speak(text);
+  }
+  function pushAlert(title, body) {
+    if (!alerts().push) return;
+    try {
+      if (!('Notification' in window) || window.Notification.permission !== 'granted') return;
+      new window.Notification(title, { body: body, tag: 'family-dashboard' });
+    } catch (e) {}
+  }
+
+  /* ================= 엄마·아빠 지금 상태 ================= */
+  function statusOf(id) { return (S.parentStatus && S.parentStatus[id]) || null; }
+  function statusOption(key) {
+    return D.statusOptions.filter(function (o) { return o.key === key; })[0] || null;
+  }
+  function setStatus(id, key) {
+    S.parentStatus = S.parentStatus || {};
+    if (!key) delete S.parentStatus[id];
+    else S.parentStatus[id] = { key: key, at: Date.now(), by: S.actor || '부모님' };
+    save();
+    render({ keepScroll: true });
+    var p = D.parents.filter(function (x) { return x.id === id; })[0] || { name: '부모님' };
+    var o = key ? statusOption(key) : null;
+    UI.toast(o ? (p.name + ' · ' + o.emoji + ' ' + o.label) : '상태를 지웠어요', { emoji: '📍', kind: 'good' });
+  }
+  function pickStatusModal(parentId) {
+    if (!needParent('상태는 부모님 모드에서 바꿀 수 있어요')) return;
+    var p = D.parents.filter(function (x) { return x.id === parentId; })[0];
+    if (!p) return;
+    var cur = statusOf(parentId);
+    UI.modal({
+      title: p.emoji + ' ' + p.name + '는 지금?',
+      bodyHTML: '<p class="help" style="margin-bottom:12px">한 번만 누르면 태블릿에도 몇 초 안에 보여요.</p>' +
+        '<div class="chip-row">' + D.statusOptions.map(function (o) {
+          return '<button type="button" class="chip ' + p.color + (cur && cur.key === o.key ? ' active' : '') + '" data-st="' + o.key + '">' + o.emoji + ' ' + esc(o.label) + '</button>';
+        }).join('') + '</div>' +
+        (cur ? '<button type="button" class="btn btn-ghost btn-sm" data-st="__clear" style="margin-top:14px">상태 지우기</button>' : ''),
+      actions: [{ label: '닫기', kind: 'ghost' }],
+      onOpen: function (wrap, close) {
+        wrap.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-st]');
+          if (!b) return;
+          var key = b.getAttribute('data-st');
+          close();
+          setStatus(parentId, key === '__clear' ? null : key);
+        });
+      }
+    });
+  }
+
+  /* ================= 🛒 장보기 ================= */
+  function addShopping(text) {
+    var t = String(text || '').trim();
+    if (!t) { UI.toast('품목을 적어 주세요', { emoji: '🛒', kind: 'warn' }); return false; }
+    S.shopping = S.shopping || [];
+    if (S.shopping.some(function (i) { return !i.done && i.text === t; })) {
+      UI.toast('이미 목록에 있어요', { emoji: '🛒' });
+      return false;
+    }
+    var by = S.mode === 'parent' ? (S.actor || '부모님') : childById(routineChild).name;
+    S.shopping.push({ id: UI.uid('shop'), text: t.slice(0, 30), done: 0, by: by, ts: Date.now() });
+    save();
+    render({ keepScroll: true });
+    UI.toast('장보기에 담았어요 · ' + t, { emoji: '🛒', kind: 'good' });
+    return true;
+  }
+  function addShoppingFromInput() {
+    var inp = document.getElementById('shopInput');
+    var ok = addShopping(inp ? inp.value : '');
+    if (ok) { var again = document.getElementById('shopInput'); if (again) again.focus(); }
+  }
+  function toggleShopping(id) {
+    var it = (S.shopping || []).filter(function (x) { return x.id === id; })[0];
+    if (!it) return;
+    it.done = it.done ? 0 : 1;
+    save();
+    render({ keepScroll: true });
+    UI.toast(it.done ? '샀어요! ' + it.text + ' ✓' : it.text + '를 다시 담았어요',
+      { emoji: it.done ? '🧺' : '🛒', kind: 'good', duration: 1600 });
+  }
+  function removeShopping(id) {
+    var it = (S.shopping || []).filter(function (x) { return x.id === id; })[0];
+    if (!it) return;
+    S.shopping = S.shopping.filter(function (x) { return x.id !== id; });
+    save();
+    render({ keepScroll: true });
+    UI.toast('목록에서 지웠어요', { emoji: '🗑️' });
+  }
+
+  /* ================= 📢 태블릿에 한마디 (빵! 메시지) ================= */
+  function bannerObj() { return (S && S.bannerPopup) || null; }
+  function bannerTargetLabel(to) {
+    if (!to || to === 'all') return '전체에게';
+    var c = D.children.filter(function (x) { return x.id === to; })[0];
+    return c ? c.name + '에게' : '전체에게';
+  }
+  function bannerAckNames(b) {
+    return ((b && b.ackedBy) || []).map(function (a) {
+      return typeof a === 'string' ? a : (a && a.name);
+    }).filter(Boolean);
+  }
+  function sendBanner(text, to) {
+    var msg = String(text || '').trim();
+    if (!msg) { UI.toast('한 줄 적어 주세요', { kind: 'warn' }); return false; }
+    S.bannerPopup = {
+      id: UI.uid('bn'),
+      from: S.actor || '부모님',
+      to: to || 'all',
+      message: msg.slice(0, 80),
+      createdAt: Date.now(),
+      ackedBy: []
+    };
+    shownBanner = S.bannerPopup.id;   // 보낸 기기에서는 바로 안 띄웁니다
+    save();
+    render({ keepScroll: true });
+    UI.confetti(16);
+    UI.toast('태블릿에 띄웠어요 · ' + msg, { emoji: '📢', kind: 'good', duration: 3200 });
+    return true;
+  }
+  function sendBannerFromCompose() {
+    if (!needParent()) return;
+    var inp = document.getElementById('bannerInput');
+    var sel = document.getElementById('bannerTo');
+    sendBanner(inp ? inp.value : '', sel ? sel.value : 'all');
+  }
+  function fillBannerInput(text) {
+    var inp = document.getElementById('bannerInput');
+    if (!inp) return;
+    inp.value = text;
+    try { inp.focus(); } catch (e) {}
+  }
+  function clearBanner() {
+    if (!needParent()) return;
+    if (!S.bannerPopup) { UI.toast('지금 떠 있는 메시지가 없어요', { emoji: '📴' }); return; }
+    S.bannerPopup = null;
+    save();
+    render({ keepScroll: true });
+    hideBannerPopup();
+    UI.toast('태블릿 메시지를 내렸어요', { emoji: '📴' });
+  }
+  function ackBanner() {
+    var b = S && S.bannerPopup;
+    if (!b) { hideBannerPopup(); return; }
+    var d = device();
+    var kid = b.to && b.to !== 'all' ? D.children.filter(function (c) { return c.id === b.to; })[0] : null;
+    var name = kid ? kid.name : d.name;
+    b.ackedBy = Array.isArray(b.ackedBy) ? b.ackedBy : [];
+    var already = b.ackedBy.some(function (a) { return a && a.dev === d.id; });
+    if (!already) b.ackedBy.push({ dev: d.id, name: name, at: Date.now() });
+    save();
+    render({ keepScroll: true });
+    hideBannerPopup();
+    UI.toast('확인했어요! 부모님께 알려드렸어요', { emoji: '✅', kind: 'good' });
+  }
+
+  /* ---- 팝업(빵! 메시지 · 새 편지) ---- */
+  function popupRoot() { return document.getElementById('popupRoot'); }
+  function hideBannerPopup() {
+    var el = document.querySelector('.bigpop-layer');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+  function showBannerPopup(b) {
+    hideBannerPopup();
+    var kid = b.to && b.to !== 'all' ? D.children.filter(function (c) { return c.id === b.to; })[0] : null;
+    var who = b.from || '부모님';
+    var line = kid ? (who + '가 ' + kid.name + '에게 보낸 메시지') : (who + '가 보낸 메시지');
+    var el = document.createElement('div');
+    el.className = 'bigpop-layer';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', '가족 메시지');
+    el.innerHTML = '<div class="bigpop">' +
+        '<div class="bp-ico" aria-hidden="true">💌</div>' +
+        '<p class="bp-from">' + esc(line) + '</p>' +
+        '<p class="bp-msg">' + esc(b.message) + '</p>' +
+        '<button type="button" class="bp-ok" data-pop="banner-ack">확인했어요</button>' +
+        '<p class="bp-help">누르면 부모님 화면에 읽음으로 표시돼요</p>' +
+      '</div>';
+    var root = popupRoot();
+    if (!root) return;
+    root.appendChild(el);
+    chime();
+    speakAlert(who + '가 보낸 메시지. ' + b.message);
+  }
+  function maybeShowBanner() {
+    var b = S && S.bannerPopup;
+    if (!b) { hideBannerPopup(); if (shownBanner) shownBanner = null; return; }
+    if (shownBanner === b.id) return;
+    shownBanner = b.id;
+    var d = device();
+    var acked = (b.ackedBy || []).some(function (a) { return a && a.dev === d.id; });
+    if (acked) return;
+    showBannerPopup(b);
+  }
+
+  /* 새 편지/답장 감지 */
+  function newestMessageEvent() {
+    var best = null;
+    (S.messages || []).forEach(function (m) {
+      if (!best || (m.ts || 0) > best.ts) best = { ts: m.ts || 0, kind: 'letter', msg: m };
+    });
+    (S.messages || []).forEach(function (m) {
+      (m.replies || []).forEach(function (r) {
+        if (!best || (r.ts || 0) > best.ts) best = { ts: r.ts || 0, kind: 'reply', msg: m, reply: r };
+      });
+    });
+    return best;
+  }
+  function messageEventTitle(ev) {
+    if (!ev) return '새 메시지';
+    if (ev.kind === 'reply') return (ev.reply.by || '부모님') + '의 새 답장';
+    return childById(ev.msg.fromId).name + '이 보낸 새 편지';
+  }
+  function messageEventBody(ev) {
+    if (!ev) return '';
+    if (ev.kind === 'reply') return String(ev.reply.text || '');
+    return messagePreview(ev.msg);
+  }
+  function hideMessagePopup() {
+    clearTimeout(msgPopTimer); msgPopTimer = null;
+    var el = document.querySelector('.msgpop');
+    if (!el) return;
+    el.classList.add('out');
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+  }
+  function showMessagePopup(ev) {
+    hideMessagePopup();
+    var root = popupRoot();
+    if (!root) return;
+    var el = document.createElement('div');
+    el.className = 'msgpop';
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<div class="mp-art" aria-hidden="true">💌</div>' +
+      '<div class="mp-body"><b>' + esc(messageEventTitle(ev)) + '</b><p>' + esc(messageEventBody(ev) || '내용을 보러 가 볼까요?') + '</p></div>' +
+      '<div class="mp-actions">' +
+        '<button type="button" class="btn btn-rose" data-pop="msg-goto">보기</button>' +
+        '<button type="button" class="icon-btn" data-pop="msg-close" aria-label="닫기">✕</button>' +
+      '</div>';
+    root.appendChild(el);
+    msgPopTimer = setTimeout(hideMessagePopup, 15000);
+  }
+  function checkNewMessages() {
+    var ev = newestMessageEvent();
+    if (!ev) return;
+    if (lastMsgAt == null) { lastMsgAt = ev.ts; return; }
+    if (ev.ts <= lastMsgAt + 600) return;
+    lastMsgAt = ev.ts;
+    showMessagePopup(ev);
+    pushAlert(messageEventTitle(ev), messageEventBody(ev));
+    chime();
+    speakAlert(messageEventTitle(ev) + '. ' + messageEventBody(ev));
+  }
+  function bindPopupRoot() {
+    var root = popupRoot();
+    if (!root || root.__bound) return;
+    root.__bound = true;
+    root.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-pop]');
+      if (!b) return;
+      var act = b.getAttribute('data-pop');
+      if (act === 'banner-ack') ackBanner();
+      else if (act === 'msg-close') hideMessagePopup();
+      else if (act === 'msg-goto') { hideMessagePopup(); setView('mailbox'); }
+    });
   }
 
   /* ---------------- 공통 계산 ---------------- */
@@ -470,6 +830,8 @@
     if (sub) sub.textContent = S.mode === 'parent' ? ((S.actor || '부모님') + ' 모드 · 관리 중') : '아이 모드 · 오늘도 다 같이!';
     var mailTabBtn = document.querySelector('.tab[data-view="mailbox"]');
     if (mailTabBtn) mailTabBtn.classList.toggle('has-dot', unreadTotal() > 0);
+    var bb = document.getElementById('bannerBtn');
+    if (bb) bb.hidden = S.mode !== 'parent';
   }
 
   /* ================= 홈 ================= */
@@ -543,68 +905,214 @@
 
   function renderHome() {
     var today = todayKey();
-    var hour = new Date().getHours();
-    var greet = hour < 11 ? '좋은 아침이에요' : hour < 17 ? '즐거운 오후예요' : hour < 21 ? '오늘 하루도 수고했어요' : '편안한 밤 보내세요';
-    var who = S.mode === 'parent' ? ((S.actor || '부모님') + '님') : '우리 가족';
-
     var doneTotal = 0, allTotal = 0;
     D.children.forEach(function (c) {
       var st = routineStats(c.id, today);
       doneTotal += st.done; allTotal += st.total;
     });
-
-    var upcoming = upcomingEvents(4, 60);
     var left = allTotal - doneTotal;
-    var bodyOf = bodySummary(routineChild);
-    var tiles = [
-      { view: 'routine', cls: 't-sun', ico: '✅', title: '할 일', sub: left > 0 ? left + '개 남았어요' : '오늘 다 했어요!', badge: left > 0 ? left : '' },
-      { view: 'mailbox', cls: 't-rose', ico: '📮', title: '우체통', sub: unreadTotal() > 0 ? '새 메시지 ' + unreadTotal() + '통 · ' + mailTileSub() : mailTileSub(), badge: unreadTotal() || '' },
-      { view: 'health', cls: 't-mint', ico: '🍱', title: '골고루 먹자', sub: mealsTodayCount() + '/' + D.children.length + '명 기록' },
-      { view: 'health', cls: 't-lav', ico: '📏', title: '이만큼 자랐어요', sub: bodyOf ? childById(routineChild).name + ' ' + bodyOf : '키·몸무게 기록 없음' },
-      { view: 'health', cls: 't-sky', ico: '💊', title: '약 먹고 있는 사람', sub: medNamesSub() }
-    ];
-
+    var upcoming = upcomingEvents(4, 60);
     var now = new Date();
     var monthLabel = now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월';
 
+    ensureWeather();
+
     return '' +
-      '<div class="home-hero">' +
-        '<div class="hello">' +
-          '<p class="hi">' + UI.dateKo(today) + '</p>' +
-          '<h2>' + esc(who) + ', ' + greet + ' 💛</h2>' +
-          '<div class="today-line">' +
-            '<span class="badge mint">오늘 할 일 ' + doneTotal + '/' + allTotal + '</span>' +
-            '<span class="badge sun">다가오는 일정 ' + upcomingEvents(99, 60).length + '개</span>' +
-            (unreadTotal() ? '<span class="badge rose">새 편지 ' + unreadTotal() + '통</span>' : '') +
-          '</div>' +
-        '</div>' +
-        '<div class="home-kids">' +
-          '<div class="home-children">' + D.children.map(kidCardHTML).join('') + '</div>' +
-          '<p class="home-hint">아이 카드를 누르면 그 아이의 할 일로 가요 (민국 ↔ 이준)</p>' +
-        '</div>' +
+      '<div class="home-top">' +
+        weatherCardHTML() +
+        '<div class="status-rail">' + D.parents.map(statusChipHTML).join('') + '</div>' +
       '</div>' +
 
-      '<div class="quick-grid" style="margin-bottom:12px">' +
-        tiles.map(function (t) {
-          return '<button type="button" class="quick-tile ' + t.cls + '" data-act="goto" data-view="' + t.view + '">' +
-            (t.badge ? '<span class="q-badge">' + t.badge + '</span>' : '') +
-            '<span class="q-ico">' + t.ico + '</span>' +
-            '<strong>' + esc(t.title) + '</strong>' +
-            '<small>' + esc(t.sub) + '</small>' +
-            '</button>';
-        }).join('') +
-      '</div>' +
+      '<div class="kids-row">' + D.children.map(kidCardHTML).join('') + '</div>' +
 
-      '<div class="home-bottom">' +
-        '<div class="card soft-sun home-cal-card">' +
-          cardHead('📅', '이번 달', monthLabel, '<button type="button" class="link-btn" data-act="goto" data-view="calendar">달력 보기</button>') +
-          miniCalendarHTML() +
-          '<p class="mini-sub">⏳ 다가오는 일정</p>' +
-          (upcoming.length
-            ? '<div class="ev-list">' + upcoming.map(function (e) { return evItemHTML(e, true); }).join('') + '</div>'
-            : '<div class="empty"><span class="big">🗓️</span>아직 등록된 일정이 없어요.<br>부모님 모드에서 일정을 추가해 보세요.</div>') +
+      '<div class="tile-grid">' + homeTilesHTML(left, upcoming) + '</div>' +
+
+      (S.mode === 'parent' ? bannerComposeHTML() : '') +
+
+      '<div class="home-grid">' +
+        '<div class="home-col">' + homeCalendarCardHTML(monthLabel, upcoming) + '</div>' +
+        '<div class="home-col">' + noticeCardHTML() + '</div>' +
+        '<div class="home-col home-side">' + medHomeCardHTML() + shoppingCardHTML() + '</div>' +
+      '</div>';
+  }
+
+  /* ---- 홈: 오늘 날씨 · 옷차림 ---- */
+  function weatherCardHTML() {
+    var w = homeWeather;
+    if (!w) {
+      return '<div class="wx-card loading"><span class="wx-load">🌤 오늘 날씨 불러오는 중…</span></div>';
+    }
+    var g = w.grade;
+    return '<div class="wx-card ' + (w.kind || 'cloud') + '">' +
+        '<span class="wx-art">' + Art.weatherArt(w.kind) + '</span>' +
+        '<div class="wx-main">' +
+          '<span class="wx-temp">' + (w.temp == null ? '—' : w.temp) + '<small>°</small></span>' +
+          '<span class="wx-meta">' + esc(w.label) +
+            (w.tmax != null ? '<br>' + w.tmin + '° / ' + w.tmax + '°' : '') +
+            (w.pop != null && w.pop > 0 ? ' · 비 ' + w.pop + '%' : '') +
+          '</span>' +
         '</div>' +
-        noticeCardHTML() +
+        (g ? '<div class="wx-dust ' + g.cls + '"><b>미세먼지</b><span>' + g.ico + ' ' + esc(g.label) + '</span></div>' : '') +
+        '<div class="wx-tip">' + esc(w.tip) + '</div>' +
+      '</div>';
+  }
+
+  function ensureWeather() {
+    if (weatherAsked || !window.Weather) return;
+    weatherAsked = true;
+    setTimeout(function () {
+      Weather.load(function (d) {
+        if (!d) return;
+        homeWeather = d;
+        if (view === 'home') render({ keepScroll: true });
+      });
+    }, 0);
+  }
+
+  /* ---- 홈: 엄마·아빠 지금 상태 ---- */
+  function statusChipHTML(p) {
+    var st = statusOf(p.id);
+    var opt = st ? statusOption(st.key) : null;
+    return '<button type="button" class="status-chip ' + p.id + (opt ? ' set' : '') + '" data-act="pick-status" data-id="' + p.id + '">' +
+        '<span class="sc-ava ' + p.color + '">' + p.emoji + '</span>' +
+        '<span class="sc-txt"><b>' + esc(p.name) + '는 지금</b>' +
+          '<small>' + (opt ? opt.emoji + ' ' + esc(opt.label) : '상태를 알려 주세요') + '</small>' +
+        '</span>' +
+        (st && st.at ? '<span class="sc-time">' + UI.ago(st.at) + '</span>' : '') +
+      '</button>';
+  }
+
+  /* ---- 홈: 타일 4개 ---- */
+  function homeTilesHTML(left, upcoming) {
+    var today = todayKey();
+    var kids = D.children.map(function (c) {
+      var st = routineStats(c.id, today);
+      var rest = st.total - st.done;
+      return '<span class="tk-badge ' + c.color + '"><i>' + c.emoji + '</i>' + esc(c.name) +
+        ' ' + (rest > 0 ? '오늘 ' + rest : '완료 ✓') + '</span>';
+    }).join('');
+    var body = bodySummary(routineChild);
+    var meals = mealsTodayCount();
+    var unread = unreadTotal();
+    return '' +
+      '<button type="button" class="tile t-lav" data-act="goto" data-view="routine">' +
+        (left ? '<span class="q-badge">' + left + '</span>' : '') +
+        Art.routineIcon() +
+        '<strong>할 일</strong>' +
+        '<small>' + (left > 0 ? '오늘 ' + left + '개 남았어요' : '오늘 다 했어요! 🎉') + '</small>' +
+        '<span class="tile-kids">' + kids + '</span>' +
+      '</button>' +
+      '<button type="button" class="tile t-rose" data-act="goto" data-view="mailbox">' +
+        (unread ? '<span class="q-badge">' + unread + '</span>' : '') +
+        Art.mailboxIcon() +
+        '<strong>우체통</strong>' +
+        '<small>' + esc(mailTileSub()) + '</small>' +
+      '</button>' +
+      '<button type="button" class="tile t-sun" data-act="goto" data-view="health">' +
+        Art.trayIcon() +
+        '<strong>골고루 먹자</strong>' +
+        '<small>' + meals + '/' + D.children.length + '명 기록' + (meals ? ' · 오늘 식판' : ' · 메뉴를 골라 주세요') + '</small>' +
+      '</button>' +
+      '<button type="button" class="tile giraffe t-sky" data-act="goto" data-view="health">' +
+        '<span class="giraffe-wrap">' + Art.giraffeCard() + '</span>' +
+        '<span class="giraffe-txt"><strong>이만큼 자랐어요!</strong>' +
+          '<small>' + esc(body ? childById(routineChild).name + ' ' + body : '키·몸무게 기록하기') + '</small>' +
+        '</span>' +
+      '</button>';
+  }
+
+  /* ---- 홈: 이번 달 일정 ---- */
+  function homeCalendarCardHTML(monthLabel, upcoming) {
+    return '<div class="card soft-sun home-cal-card">' +
+        cardHead('📅', '이번 달 우리 가족 일정', monthLabel,
+          '<button type="button" class="link-btn" data-act="goto" data-view="calendar">달력 크게</button>') +
+        miniCalendarHTML() +
+        '<p class="mini-sub">⏳ 다가오는 일정</p>' +
+        (upcoming.length
+          ? '<div class="ev-list">' + upcoming.map(function (e) { return evItemHTML(e, true); }).join('') + '</div>'
+          : '<div class="empty"><span class="big">🗓️</span>아직 등록된 일정이 없어요.<br>부모님 모드에서 일정을 추가해 보세요.</div>') +
+      '</div>';
+  }
+
+  /* ---- 홈: 약 먹고 있는 사람 ---- */
+  function medHomeCardHTML() {
+    var today = todayKey();
+    var pending = medPending();
+    var sub = S.meds.length ? (pending ? pending + '개 남았어요' : '다 챙겼어요 ✓') : '등록된 약이 없어요';
+    var head = cardHead('💊', '약 먹고 있는 사람', sub,
+      '<button type="button" class="link-btn" data-act="goto" data-view="health">보기</button>');
+    if (!S.meds.length) {
+      return '<div class="card med-home">' + head +
+        '<div class="empty notice-empty"><span class="big">💊</span>지금 먹는 약이 없어요.<br>필요하면 식판·건강에서 등록해요.</div></div>';
+    }
+    return '<div class="card med-home">' + head + '<div class="med-mini-list">' + S.meds.slice(0, 4).map(function (md) {
+      var done = !!(S.medLog[today] && S.medLog[today][md.id]);
+      var t = (D.medTimes.filter(function (x) { return x.key === md.time; })[0] || {}).label || '';
+      var face = md.memberId === 'mom' ? '👩' : md.memberId === 'dad' ? '👨' : md.memberId === 'ijun' ? '👦' : '🧒';
+      return '<div class="med-mini' + (done ? ' done' : '') + '">' +
+          '<span class="mm-ava">' + face + '</span>' +
+          '<span class="mm-name">' + esc(md.memberName || '가족') + ' · ' + esc(md.name) + '</span>' +
+          '<span class="mm-time">' + (done ? '✓ ' : '') + esc(t) + '</span>' +
+        '</div>';
+    }).join('') + '</div></div>';
+  }
+
+  /* ---- 홈: 장보기 ---- */
+  function shoppingCardHTML() {
+    var list = (S.shopping || []).slice().sort(function (a, b) {
+      return (a.done ? 1 : 0) - (b.done ? 1 : 0) || (a.ts || 0) - (b.ts || 0);
+    });
+    var left = list.filter(function (i) { return !i.done; }).length;
+    var sub = left ? left + '개 남았어요' : (list.length ? '다 샀어요! 🎉' : '필요한 걸 적어 두세요');
+    return '<div class="card shop-card">' +
+        cardHead('🛒', '장보기', sub, '') +
+        '<div class="shop-add">' +
+          '<input class="input" id="shopInput" maxlength="30" placeholder="예: 우유, 계란" aria-label="장보기 품목" enterkeyhint="done">' +
+          '<button type="button" class="btn btn-primary btn-sm" data-act="shop-add">추가</button>' +
+        '</div>' +
+        (list.length
+          ? '<div class="shop-list">' + list.map(function (it) {
+              return '<div class="shop-item' + (it.done ? ' done' : '') + '">' +
+                  '<button type="button" class="shop-check" data-act="shop-toggle" data-id="' + esc(it.id) + '" aria-label="' + (it.done ? '되돌리기' : '샀어요') + '">✓</button>' +
+                  '<span class="shop-text">' + esc(it.text) + '</span>' +
+                  (it.by ? '<span class="shop-by">' + esc(it.by) + '</span>' : '') +
+                  '<button type="button" class="shop-del" data-act="shop-del" data-id="' + esc(it.id) + '" aria-label="지우기">✕</button>' +
+                '</div>';
+            }).join('') + '</div>'
+          : '<div class="empty notice-empty"><span class="big">🛒</span>장보기 목록이 비어 있어요.<br>우유, 계란처럼 적어 두면 태블릿에도 같이 보여요.</div>') +
+      '</div>';
+  }
+
+  /* ---- 📢 태블릿에 한마디 (부모님) ---- */
+  function bannerComposeHTML() {
+    var b = bannerObj();
+    var names = bannerAckNames(b);
+    var stateHTML = b
+      ? '<div class="bc-state">📢 지금 떠 있어요: “' + esc(b.message) + '”' +
+          '<span class="badge rose">' + esc(bannerTargetLabel(b.to)) + '</span>' +
+          (names.length
+            ? '<span class="badge mint">읽음 ' + names.length + ' · ' + esc(names.slice(0, 3).join(', ')) + '</span>'
+            : '<span class="badge sun">아직 확인 전</span>') +
+        '</div>'
+      : '<div class="bc-state empty">아직 띄운 메시지가 없어요 · 한 줄 적고 <b>띄우기</b>를 눌러 보세요</div>';
+    return '<div class="card banner-compose">' +
+        '<div class="bc-head">' +
+          '<span class="bc-ico" aria-hidden="true">📢</span>' +
+          '<div><h2>태블릿에 한마디</h2><p>거실 태블릿에 크게 “빵!” 하고 떠요. 아이가 확인하면 읽음으로 표시돼요.</p></div>' +
+        '</div>' +
+        '<div class="bc-row">' +
+          '<select class="select" id="bannerTo" aria-label="받을 사람">' +
+            '<option value="all">전체에게</option>' +
+            D.children.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + '에게</option>'; }).join('') +
+          '</select>' +
+          '<input class="input" id="bannerInput" maxlength="60" placeholder="예: 이제 그만 자자 🌙" aria-label="띄울 한 줄" enterkeyhint="send">' +
+          '<button type="button" class="btn btn-sun" data-act="banner-send">띄우기</button>' +
+          '<button type="button" class="btn btn-ghost" data-act="banner-clear">내리기</button>' +
+        '</div>' +
+        '<div class="bc-quick">' + D.bannerQuick.map(function (q) {
+          return '<button type="button" class="chip" data-act="banner-quick" data-text="' + esc(q) + '">' + esc(q) + '</button>';
+        }).join('') + '</div>' +
+        stateHTML +
       '</div>';
   }
 
@@ -612,6 +1120,83 @@
     return '<div class="card-head"><span class="ico">' + ico + '</span>' +
       '<div><h2>' + esc(title) + '</h2>' + (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') + '</div>' +
       '<div class="spacer"></div>' + (right || '') + '</div>';
+  }
+
+  /* ---- 알림 설정 ---- */
+  function alertToggleHTML(key, ico, title, sub) {
+    var on = !!alerts()[key];
+    return '<button type="button" class="toggle-row' + (on ? ' on' : '') + '" data-act="alert-toggle" data-key="' + key + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+      '<span class="tg-ico">' + ico + '</span>' +
+      '<span class="tg-txt"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' +
+      '<span class="tg-state">' + (on ? '켜짐' : '꺼짐') + '</span>' +
+    '</button>';
+  }
+  function toggleAlert(key) {
+    var a = alerts();
+    if (key === 'push') {
+      if (a.push) {
+        setAlert('push', false); render({ keepScroll: true });
+        UI.toast('브라우저 알림을 껐어요', { emoji: '📱' });
+        return;
+      }
+      if (!('Notification' in window)) {
+        UI.toast('이 브라우저는 알림을 지원하지 않아요', { kind: 'warn' });
+        return;
+      }
+      var done = function (perm) {
+        if (perm === 'granted') {
+          setAlert('push', true); render({ keepScroll: true });
+          UI.toast('브라우저 알림을 켰어요', { emoji: '📱', kind: 'good' });
+          pushAlert('우리집 다모아', '이렇게 알려드릴게요 🔔');
+        } else {
+          UI.toast('알림 권한이 허용되지 않았어요. 브라우저 설정에서 허용해 주세요', { kind: 'warn', duration: 4400 });
+        }
+      };
+      try {
+        if (window.Notification.permission === 'granted') { done('granted'); return; }
+        var r = window.Notification.requestPermission(done);
+        if (r && r.then) r.then(done);
+      } catch (e) { UI.toast('알림을 켜지 못했어요', { kind: 'warn' }); }
+      return;
+    }
+    setAlert(key, !a[key]);
+    render({ keepScroll: true });
+    var label = key === 'sound' ? '알림 소리' : '소리 내어 읽기';
+    UI.toast(label + (alerts()[key] ? '를 켰어요' : '를 껐어요'), { emoji: key === 'sound' ? '🔔' : '🗣️' });
+    if (key === 'sound' && alerts()[key]) chime();
+  }
+
+  /* ---- 📢 한마디 (상단 버튼 → 모달) ---- */
+  function bannerComposeModal() {
+    if (!needParent('한마디는 부모님 모드에서 띄울 수 있어요')) return;
+    var b = bannerObj();
+    var names = bannerAckNames(b);
+    UI.modal({
+      title: '📢 태블릿에 한마디',
+      bodyHTML: '<p class="help">한 줄 적고 <b>띄우기</b>를 누르면 거실 태블릿 화면 가운데에 크게 “빵!” 하고 떠요.</p>' +
+        '<div class="field" style="margin-top:10px"><label>받을 사람</label>' +
+          '<select class="select" id="bnTo"><option value="all">전체에게</option>' +
+            D.children.map(function (c) {
+              return '<option value="' + c.id + '"' + (b && b.to === c.id ? ' selected' : '') + '>' + esc(c.name) + '에게</option>';
+            }).join('') +
+          '</select></div>' +
+        '<div class="field"><label>한 줄 메시지</label>' +
+          '<input class="input" id="bnMsg" maxlength="60" value="' + esc(b ? b.message : '') + '" placeholder="예: 이제 그만 자자 🌙"></div>' +
+        (b ? '<p class="help">지금 떠 있는 메시지 · ' + esc(bannerTargetLabel(b.to)) +
+          (names.length ? ' · 읽음 ' + names.length + '명' : ' · 아직 확인 전') + '</p>' : ''),
+      actions: [
+        {
+          label: '띄우기', kind: 'sun', onClick: function (close) {
+            var msg = ((document.getElementById('bnMsg') || {}).value) || '';
+            var to = ((document.getElementById('bnTo') || {}).value) || 'all';
+            if (sendBanner(msg, to)) close();
+            else return false;
+          }
+        },
+        { label: '내리기', kind: 'ghost', onClick: function (close) { close(); clearBanner(); } },
+        { label: '닫기', kind: 'ghost' }
+      ]
+    });
   }
 
   /* ---------------- 민국이 알림장 ---------------- */
@@ -732,18 +1317,20 @@
     var isActive = c.id === routineChild;
     var body = bodySummary(c.id);
     return '<button type="button" class="kid-card ' + c.color + (isActive ? ' is-active' : '') + '" data-act="pick-kid" data-id="' + c.id + '" aria-pressed="' + (isActive ? 'true' : 'false') + '">' +
-      '<div class="avatar ' + c.color + '">' + c.emoji + '</div>' +
-      '<div class="kid-main">' +
-        '<div class="kid-name"><strong>' + esc(c.name) + '</strong><span>' + esc(c.tag) + '</span></div>' +
-        '<div class="kid-stats">' +
-          '<span class="stat-pill sun">⭐ <b>' + (S.stars[c.id] || 0) + '</b></span>' +
-          '<span class="stat-pill rose">🏅 <b>' + (S.praiseCount[c.id] || 0) + '</b></span>' +
-        '</div>' +
-        '<div class="kid-body" title="키 · 몸무게"><span class="kb-ico">📏</span>' +
-          (body ? esc(body) : '<span class="kb-none">키·몸무게 기록 없음</span>') + '</div>' +
-        '<div class="progress ' + (c.color === 'coral' ? 'coral' : '') + '"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="progress-label"><span>오늘 할 일 ' + st.done + '/' + st.total + '</span><span>' + pct + '%</span></div>' +
-      '</div>' +
+      '<span class="kc-top">' +
+        '<span class="kc-ava">' + Art.kid(c.id) + '</span>' +
+        '<span class="kc-info">' +
+          '<span class="kc-name"><strong>' + esc(c.name) + '</strong><small>' + esc(c.tag) + '</small></span>' +
+          '<span class="kc-star">⭐ <span class="kc-star-num">' + (S.stars[c.id] || 0) + '</span></span>' +
+          '<span class="kc-body">📏 ' + (body ? esc(body) : '키·몸무게 기록 없음') + '</span>' +
+          '<span class="kc-progress"><span class="progress"><i style="width:' + pct + '%"></i></span>' +
+            '<span>' + st.done + '/' + st.total + '</span></span>' +
+        '</span>' +
+      '</span>' +
+      '<span class="kc-foot">' +
+        '<span>🏅 받은 칭찬 <b>' + (S.praiseCount[c.id] || 0) + '</b></span>' +
+        '<span class="kc-go">' + esc(c.name) + ' 할 일 보기 ›</span>' +
+      '</span>' +
     '</button>';
   }
 
@@ -788,22 +1375,53 @@
   }
 
   /* ================= 루틴 ================= */
+  function timeBannerHTML() {
+    var h = new Date().getHours();
+    var mood, art, title, sub;
+    if (h >= 5 && h < 11) {
+      mood = 'morning'; art = Art.morningArt(); title = '아침 루틴';
+      sub = '따뜻한 해처럼 기분 좋게 시작해요';
+    } else if (h >= 11 && h < 17) {
+      mood = 'day'; art = Art.dayArt(); title = '낮 루틴';
+      sub = '하나씩 차근차근 해 보아요';
+    } else if (h >= 17 && h < 22) {
+      mood = 'evening'; art = Art.nightArt(); title = '저녁 루틴';
+      sub = '달님이 지켜보고 있어요, 하나씩!';
+    } else {
+      mood = 'night'; art = Art.nightArt(); title = '밤 루틴';
+      sub = '이제 곧 잘 시간이에요';
+    }
+    var today = todayKey();
+    var pills = D.children.map(function (c) {
+      var st = routineStats(c.id, today);
+      return '<span class="tb-pill">' + c.emoji + ' ' + esc(c.name) + ' ' + st.done + '/' + st.total + '</span>';
+    }).join('');
+    return '<div class="time-banner ' + mood + '">' + art +
+        '<div class="tb-text"><b>' + title + '</b>' +
+          '<span>' + esc(UI.dateKo(today)) + ' · ' + sub + '</span></div>' +
+        '<div class="tb-right">' + pills + '</div>' +
+      '</div>';
+  }
+
   function renderRoutine() {
     var today = todayKey();
     var slots = [{ key: 'all', label: '전체' }, { key: 'morning', label: '🌅 아침' }, { key: 'evening', label: '🌙 저녁' }];
-    return '<div class="card soft-mint routine-card">' +
+    var doneTotal = 0, allTotal = 0;
+    D.children.forEach(function (k) {
+      var st = routineStats(k.id, today);
+      doneTotal += st.done; allTotal += st.total;
+    });
+    return timeBannerHTML() +
+      '<div class="card soft-mint routine-card">' +
         '<div class="routine-head">' +
-          '<strong style="font-size:15px">✅ 오늘 할 일</strong>' +
+          '<strong>✅ 오늘 할 일</strong>' +
           '<div class="growth-toggle">' + slots.map(function (s) {
             return '<button type="button" class="chip' + (routineSlot === s.key ? ' active' : '') + '" data-act="pick-routine-slot" data-slot="' + s.key + '">' + s.label + '</button>';
           }).join('') + '</div>' +
           '<span style="flex:1"></span>' +
-          D.children.map(function (k) {
-            var st = routineStats(k.id, today);
-            return '<span class="badge ' + (k.color === 'coral' ? 'rose' : 'mint') + '">' + k.emoji + ' ' + esc(k.name) + ' ' + st.done + '/' + st.total + '</span>';
-          }).join('') +
+          '<span class="badge sun">오늘 ' + doneTotal + '/' + allTotal + '</span>' +
         '</div>' +
-        '<p class="help" style="margin-top:8px">두 아이를 한 화면에서 바로 체크해요. ‘다 했어요!’를 누르면 바로 완료되고 별 ⭐ 1개가 쌓여요.</p>' +
+        '<p class="help">두 아이를 한 화면에서 바로 체크해요. 오른쪽 동그라미를 누르면 바로 완료되고 별 ⭐ 1개가 쌓여요.</p>' +
       '</div>' +
       '<div class="duo-grid">' + D.children.map(routineKidCardHTML).join('') + '</div>' +
       '<div class="lock-note">🔒 완료한 일은 부모님 모드에서 되돌릴 수 있어요. 완료할 때마다 별 ⭐ 1개가 쌓여요.</div>';
@@ -812,21 +1430,28 @@
   function routineGroupHTML(c, title, emoji, list) {
     if (!list.length) return '';
     var today = todayKey();
+    var doneCnt = list.filter(function (i) { return isDone(i.id, today); }).length;
     return '<div class="routine-group">' +
-      '<h3><span>' + emoji + '</span>' + esc(title) + ' <span class="badge mint" style="margin-left:4px">' +
-        list.filter(function (i) { return isDone(i.id, today); }).length + '/' + list.length + '</span></h3>' +
+      '<div class="rg-head"><span class="ico">' + emoji + '</span>' + esc(title) +
+        ' <span class="badge mint" style="margin-left:4px">' + doneCnt + '/' + list.length + '</span></div>' +
       '<div class="routine-list">' + list.map(function (i) {
         var done = isDone(i.id, today);
         var ts = done ? S.routine[today][i.id] : null;
-        return '<div class="routine-item' + (done ? ' done' : '') + '">' +
-          '<div class="r-emoji">' + i.emoji + '</div>' +
-          '<div class="r-label">' + esc(i.label) +
-            (done ? '<div class="r-time">' + UI.timeKo(ts) + ' 완료</div>' : '') + '</div>' +
-          (done
-            ? '<button type="button" class="routine-check" aria-label="완료함">✓</button>' +
-              (S.mode === 'parent' ? '<button type="button" class="icon-btn" data-act="routine-undo" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="되돌리기">↩</button>' : '')
-            : '<button type="button" class="btn btn-soft btn-sm" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '">다 했어요!</button>') +
-        '</div>';
+        if (done) {
+          return '<div class="routine-item done">' +
+              '<span class="r-emoji">' + i.emoji + '</span>' +
+              '<span class="r-label">' + esc(i.label) +
+                '<span class="r-time">' + (ts ? UI.timeKo(ts) + ' 완료' : '완료') + '</span></span>' +
+              (S.mode === 'parent'
+                ? '<button type="button" class="icon-btn" data-act="routine-undo" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="되돌리기">↩</button>' : '') +
+              '<span class="routine-check on" aria-label="완료함">✓</span>' +
+            '</div>';
+        }
+        return '<button type="button" class="routine-item" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '">' +
+            '<span class="r-emoji">' + i.emoji + '</span>' +
+            '<span class="r-label">' + esc(i.label) + '</span>' +
+            '<span class="routine-check" aria-hidden="true"></span>' +
+          '</button>';
       }).join('') + '</div>' +
     '</div>';
   }
@@ -845,9 +1470,9 @@
         '<strong>' + esc(c.name) + '</strong>' +
         '<span class="badge sun">⭐ ' + (S.stars[c.id] || 0) + '</span>' +
         '<span class="rk-spacer"></span>' +
-        '<span class="badge mint">' + st.done + '/' + st.total + ' · ' + pct + '%</span>' +
+        '<span class="rk-done">' + st.done + '/' + st.total + ' · ' + pct + '%</span>' +
       '</div>' +
-      '<div class="progress" style="margin-top:8px"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="progress" style="margin-top:9px"><i style="width:' + pct + '%"></i></div>' +
       body +
     '</div>';
   }
@@ -1153,8 +1778,9 @@
     var hourAgo = Date.now() - 3600 * 1000;
     var sentLastHour = S.messages.filter(function (m) { return m.fromId === mailSender && m.ts > hourAgo; }).length;
 
-    return '<div class="mail-layout">' +
-      '<div class="card soft-rose">' +
+    return (S.mode === 'parent' ? bannerComposeHTML() : '') +
+      '<div class="mail-layout">' +
+      '<div class="card soft-rose mail-compose-card">' +
         cardHead('✏️', '그림 편지 쓰기', '누구에게, 무슨 말을 할까요?') +
         '<div class="pick-child">' + D.children.map(function (k) {
           return '<button type="button" class="' + (k.id === mailSender ? 'active ' + (k.color === 'coral' ? 'coral' : '') : '') + '" data-act="pick-mail-sender" data-id="' + k.id + '">' +
@@ -1352,6 +1978,7 @@
       ts: Date.now(), read: false, replies: []
     });
     window.__pictos = [];
+    lastMsgAt = Date.now();
     save();
     render({ keepScroll: true });
     UI.confetti(18);
@@ -1368,6 +1995,7 @@
     if (!t) { UI.toast('답장 내용을 적어 주세요', { kind: 'warn' }); return; }
     m.replies = m.replies || [];
     m.replies.push({ id: UI.uid('reply'), by: S.actor || '부모님', text: t, emoji: emoji || '💬', ts: Date.now() });
+    lastMsgAt = Date.now();
     save();
     render({ keepScroll: true });
     UI.toast('답장을 보냈어요', { emoji: '💬', kind: 'good' });
@@ -1804,6 +2432,20 @@
       '</div>' +
 
       '<div class="card">' +
+        cardHead('🔔', '알림 · 소리', '메시지가 오면 알려 주는 방법') +
+        '<div class="toggle-list">' +
+          alertToggleHTML('sound', '🔔', '알림 소리', '새 편지·태블릿 메시지가 오면 딩동') +
+          alertToggleHTML('speak', '🗣️', '소리 내어 읽기', '받은 메시지를 한국어로 읽어 줘요') +
+          alertToggleHTML('push', '📱', '브라우저 알림', '화면 밖에서도 알림 (권한 허용 필요)') +
+        '</div>' +
+        '<div class="field" style="margin-top:12px"><label>이 기기 이름</label>' +
+          '<input class="input" id="deviceName" value="' + esc(deviceName()) + '" maxlength="20" placeholder="예: 거실 태블릿, 엄마 폰">' +
+          '<p class="help">태블릿 메시지를 확인하면 이 이름이 부모님 화면에 보여요.</p>' +
+        '</div>' +
+        '<button type="button" class="btn btn-soft btn-sm" data-act="alert-test">🔔 알림 미리 듣기</button>' +
+      '</div>' +
+
+      '<div class="card">' +
         cardHead('🧰', '데이터 관리', '내보내기 · 가져오기') +
         '<p class="help">기기를 바꾸거나 백업할 때 써요.</p>' +
         '<div class="btn-row">' +
@@ -2070,6 +2712,16 @@
       case 'edit-notice': editNoticeModal(); break;
       case 'notice-check': toggleNoticeItem(el.getAttribute('data-id')); break;
 
+      case 'pick-status': pickStatusModal(el.getAttribute('data-id')); break;
+      case 'shop-add': addShoppingFromInput(); break;
+      case 'shop-toggle': toggleShopping(el.getAttribute('data-id')); break;
+      case 'shop-del': removeShopping(el.getAttribute('data-id')); break;
+      case 'banner-send': sendBannerFromCompose(); break;
+      case 'banner-clear': clearBanner(); break;
+      case 'banner-quick': fillBannerInput(el.getAttribute('data-text')); break;
+      case 'alert-toggle': toggleAlert(el.getAttribute('data-key')); break;
+      case 'alert-test': chime(); UI.toast('이렇게 알려드릴게요', { emoji: '🔔' }); break;
+
       case 'change-code': changeGateCode(); break;
       case 'copy-key': copyFamilyId(); break;
       case 'lock-device': lockDevice(); break;
@@ -2200,6 +2852,15 @@
     document.getElementById('view').addEventListener('click', onViewClick);
     document.addEventListener('change', function (e) {
       if (e.target && e.target.id === 'importFile') onImportFile(e);
+      if (e.target && e.target.id === 'deviceName') {
+        setDeviceName(e.target.value);
+        UI.toast('이 기기 이름을 저장했어요', { emoji: '📱', kind: 'good' });
+      }
+    });
+    document.getElementById('view').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || !e.target) return;
+      if (e.target.id === 'shopInput') { e.preventDefault(); addShoppingFromInput(); }
+      else if (e.target.id === 'bannerInput') { e.preventDefault(); sendBannerFromCompose(); }
     });
 
     var gateForm = document.getElementById('gateForm');
@@ -2214,6 +2875,9 @@
     });
     var retry = document.getElementById('syncBannerRetry');
     if (retry) retry.addEventListener('click', retryCloud);
+    var bannerBtn = document.getElementById('bannerBtn');
+    if (bannerBtn) bannerBtn.addEventListener('click', bannerComposeModal);
+    bindPopupRoot();
   }
 
   var VIEWS = {
@@ -2232,23 +2896,19 @@
     if (err) { setSyncBanner(err); return; }
     if (!state) return;
     var keep = S ? { mode: S.mode, actor: S.actor } : null;
-    var prevNewest = S ? newestMessage() : null;
     S = normalize(state);
     if (keep) { S.mode = keep.mode; S.actor = keep.actor; }
     render({ keepScroll: true });
-    var nowNewest = newestMessage();
-    if (nowNewest && (!prevNewest || nowNewest.id !== prevNewest.id || (nowNewest.replies || []).length !== (prevNewest.replies || []).length)) {
-      var who = childById(nowNewest.fromId);
-      UI.toast('새 메시지 도착 · ' + who.name + ' ' + messagePreview(nowNewest), { emoji: '💌', kind: 'good', duration: 4200 });
-    } else {
-      UI.toast('다른 기기에서 가족 데이터가 업데이트됐어요', { emoji: '🔄', duration: 2200 });
-    }
+    maybeShowBanner();
+    checkNewMessages();
   }
 
   /* 잠금을 풀었거나 열쇠가 있는 기기에서 대시보드를 엽니다 */
   async function startApp() {
     var res = await Storage.init(onRemoteState);
     S = normalize(res.state);
+    var bootEv = newestMessageEvent();
+    lastMsgAt = bootEv ? bootEv.ts : Date.now();
     if (res.error) {
       setSyncBanner(res.error);
       UI.toast('가족 클라우드 연결에 실패해 이 기기에만 저장해요', { kind: 'warn', duration: 5000 });
@@ -2267,6 +2927,7 @@
     render();
     if (!S.introSeen) showIntro();
     save();
+    maybeShowBanner();
   }
 
   /* ---------- 가족 입장(잠금) 화면 ---------- */
