@@ -582,6 +582,24 @@ button.kid-card:focus-visible { outline: 4px solid var(--sun); outline-offset: 2
 .kc-star em, .kc-star-num { font-style: normal; }
 .kc-body { font-size: 11.5px; font-weight: 800; color: #7A6552; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kc-progress { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+
+/* 오른쪽 동그란 진행 링 */
+.kc-ring {
+  position: relative;
+  width: 76px; height: 76px;
+  flex: none;
+  display: grid; place-items: center;
+  color: #46B68C;
+}
+.kc-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.kc-ring .ring-bg { fill: none; stroke: rgba(255, 255, 255, .9); stroke-width: 8; }
+.kc-ring .ring-fg { fill: none; stroke: currentColor; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset .5s ease; }
+.kc-ring-txt { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; line-height: 1; gap: 2px; }
+.kc-ring-txt b { font-family: var(--font-round); font-weight: 400; font-size: 21px; color: #2C7A58; }
+.kc-ring-txt small { font-size: 9.5px; font-weight: 800; color: #6C8D7C; }
+.kid-card.coral .kc-ring { color: #F0AE3D; }
+.kid-card.coral .kc-ring-txt b { color: #9A6511; }
+.kid-card.coral .kc-ring-txt small { color: #9A7B4A; }
 .kc-progress .progress { flex: 1; margin: 0; height: 9px; background: rgba(255, 255, 255, .8); }
 .kc-progress span { font-size: 10.5px; font-weight: 800; color: #7A6552; white-space: nowrap; }
 .kc-foot {
@@ -1141,7 +1159,7 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
   background: #fff;
   box-shadow: 0 4px 10px rgba(180, 70, 120, .22);
 }
-.mic-btn .mic-text { display: grid; gap: 1px; }
+.mic-btn .mic-text { display: grid; gap: 1px; text-align: left; }
 .mic-btn .mic-text b { font-family: var(--font-round); font-weight: 400; font-size: 20px; letter-spacing: 0; color: #7A2E4C; }
 .mic-btn .mic-text small { font-size: 11.5px; color: #A2557A; font-weight: 700; }
 .mic-btn.on { animation: micPulse 1.2s infinite; }

@@ -1316,6 +1316,15 @@
     var pct = st.total ? Math.round(st.done / st.total * 100) : 0;
     var isActive = c.id === routineChild;
     var body = bodySummary(c.id);
+    var C = 2 * Math.PI * 30;
+    var rest = st.total - st.done;
+    var ring = '<span class="kc-ring" aria-hidden="true">' +
+        '<svg viewBox="0 0 72 72">' +
+          '<circle class="ring-bg" cx="36" cy="36" r="30"/>' +
+          '<circle class="ring-fg" cx="36" cy="36" r="30" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - pct / 100)).toFixed(1) + '"/>' +
+        '</svg>' +
+        '<span class="kc-ring-txt"><b>' + (rest > 0 ? rest : '✓') + '</b><small>' + (rest > 0 ? '개 남음' : '다 했어요') + '</small></span>' +
+      '</span>';
     return '<button type="button" class="kid-card ' + c.color + (isActive ? ' is-active' : '') + '" data-act="pick-kid" data-id="' + c.id + '" aria-pressed="' + (isActive ? 'true' : 'false') + '">' +
       '<span class="kc-top">' +
         '<span class="kc-ava">' + Art.kid(c.id) + '</span>' +
@@ -1323,9 +1332,8 @@
           '<span class="kc-name"><strong>' + esc(c.name) + '</strong><small>' + esc(c.tag) + '</small></span>' +
           '<span class="kc-star">⭐ <span class="kc-star-num">' + (S.stars[c.id] || 0) + '</span></span>' +
           '<span class="kc-body">📏 ' + (body ? esc(body) : '키·몸무게 기록 없음') + '</span>' +
-          '<span class="kc-progress"><span class="progress"><i style="width:' + pct + '%"></i></span>' +
-            '<span>' + st.done + '/' + st.total + '</span></span>' +
         '</span>' +
+        ring +
       '</span>' +
       '<span class="kc-foot">' +
         '<span>🏅 받은 칭찬 <b>' + (S.praiseCount[c.id] || 0) + '</b></span>' +

@@ -1,7 +1,8 @@
 /* 화면 확인용 임시 저장소 (배포 전 점검용 · 실제 가족 데이터/Firestore를 건드리지 않습니다) */
 window.Storage = (function () {
   'use strict';
-  var KEY = 'family-dashboard-preview-v2';
+  var QS = (function () { try { return location.search || ''; } catch (e) { return ''; } })();
+  var KEY = 'family-dashboard-preview-v3' + (QS ? ':' + QS : '');
   var cb = null;
   var saveCount = 0;
 
@@ -85,6 +86,7 @@ window.Storage = (function () {
       var v = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (v && v.version) return v;
     } catch (e) {}
+    try { localStorage.removeItem(KEY); } catch (e) {}
     var s = seed();
     try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
     return s;
