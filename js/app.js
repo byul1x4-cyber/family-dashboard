@@ -72,7 +72,9 @@
       /* 엄마·아빠 지금 상태: { mom: { key, at, by }, dad: {...} } */
       parentStatus: {},
       /* 🛒 장보기: [{ id, text, done, by, ts }] */
-      shopping: []
+      shopping: [],
+      /* 부모님이 고친 할 일 목록 (없으면 data.js 기본값을 씁니다) */
+      customRoutines: {}
     };
   }
 
@@ -147,6 +149,24 @@
       if (!text) return null;
       return { id: it.id || UI.uid('shop'), text: text.slice(0, 40), done: it.done ? 1 : 0, by: String(it.by || ''), ts: it.ts || 0 };
     }).filter(Boolean);
+
+    /* 부모님이 고친 할 일 (아침·저녁) */
+    s.customRoutines = {};
+    D.children.forEach(function (c) {
+      var cur = raw.customRoutines && raw.customRoutines[c.id];
+      if (!cur || typeof cur !== 'object') return;
+      if (!Array.isArray(cur.morning) && !Array.isArray(cur.evening)) return;
+      var norm = function (arr) {
+        return (Array.isArray(arr) ? arr : []).map(function (it) {
+          if (!it) return null;
+          if (typeof it === 'string') return { id: UI.uid('rt'), label: it, emoji: '⭐' };
+          var label = String(it.label || '').trim();
+          if (!label) return null;
+          return { id: it.id || UI.uid('rt'), label: label.slice(0, 24), emoji: String(it.emoji || '⭐').slice(0, 4) };
+        }).filter(Boolean);
+      };
+      s.customRoutines[c.id] = { morning: norm(cur.morning), evening: norm(cur.evening) };
+    });
 
     return s;
   }
@@ -484,8 +504,126 @@
     return m ? m.name : '가족';
   }
   function routineItems(childId) {
+    var custom = S && S.customRoutines && S.customRoutines[childId];
+    if (custom && (Array.isArray(custom.morning) || Array.isArray(custom.evening))) {
+      return { morning: custom.morning || [], evening: custom.evening || [] };
+    }
     var r = D.routines[childId] || { morning: [], evening: [] };
-    return { morning: r.morning || [], evening: r.evening || [] };
+    return { morning: (r.morning || []).slice(), evening: (r.evening || []).slice() };
+  }
+
+  /* 부모님이 할 일을 고치면 그 아이 목록을 이 가족 문서에 저장합니다 */
+  function ensureRoutineCustom(childId) {
+    S.customRoutines = S.customRoutines || {};
+    if (!S.customRoutines[childId]) {
+      var cur = routineItems(childId);
+      S.customRoutines[childId] = {
+        morning: cur.morning.map(function (i) { return { id: i.id, label: i.label, emoji: i.emoji }; }),
+        evening: cur.evening.map(function (i) { return { id: i.id, label: i.label, emoji: i.emoji }; })
+      };
+    }
+    return S.customRoutines[childId];
+  }
+
+  function addRoutineItem(childIds, slot, emoji, label) {
+    if (!needParent('할 일은 부모님 모드에서 고칠 수 있어요')) return false;
+    var text = String(label || '').trim().slice(0, 20);
+    if (!text) { UI.toast('할 일을 적어 주세요', { emoji: '✏️', kind: 'warn' }); return false; }
+    var skipped = [];
+    childIds.forEach(function (cid) {
+      var lists = ensureRoutineCustom(cid);
+      var list = slot === 'morning' ? lists.morning : lists.evening;
+      if (list.some(function (i) { return i.label === text; })) { skipped.push(childById(cid).name); return; }
+      var item = { id: UI.uid('rt'), label: text, emoji: emoji || '⭐' };
+      var bedIdx = -1;
+      for (var i = 0; i < list.length; i++) { if (/자기|잠/.test(list[i].label)) { bedIdx = i; break; } }
+      if (bedIdx >= 0) list.splice(bedIdx, 0, item); else list.push(item);
+    });
+    save();
+    render({ keepScroll: true });
+    var who = childIds.map(function (cid) { return childById(cid).name; }).join('·');
+    UI.toast(skipped.length && skipped.length === childIds.length
+      ? '이미 있는 할 일이에요'
+      : who + ' 할 일에 넣었어요 · ' + text,
+      { emoji: '✅', kind: 'good' });
+    return true;
+  }
+
+  function removeRoutineItem(childId, itemId) {
+    if (!needParent('할 일은 부모님 모드에서 고칠 수 있어요')) return;
+    var lists = routineItems(childId);
+    var all = lists.morning.concat(lists.evening);
+    var item = all.filter(function (i) { return i.id === itemId; })[0];
+    if (!item) return;
+    UI.confirm('할 일을 뺄까요?', '“' + item.label + '”을(를) ' + childById(childId).name + ' 할 일 목록에서 뺍니다.\n오늘 체크한 기록과 별은 그대로 남아요.', '빼기', 'danger')
+      .then(function (ok) {
+        if (!ok) return;
+        var custom = ensureRoutineCustom(childId);
+        custom.morning = custom.morning.filter(function (i) { return i.id !== itemId; });
+        custom.evening = custom.evening.filter(function (i) { return i.id !== itemId; });
+        save();
+        render({ keepScroll: true });
+        UI.toast('할 일에서 뺐어요', { emoji: '🗑️' });
+      });
+  }
+
+  var ROUTINE_EMOJIS = ['🎒', '🧸', '📚', '✏️', '🪥', '🧼', '🍚', '🥛', '🧦', '🧹', '🛏️', '🎹', '⚽', '🐶', '🌙', '⭐'];
+
+  function addRoutineModal(childId) {
+    if (!needParent('할 일은 부모님 모드에서 고칠 수 있어요')) return;
+    var c = childById(childId);
+    UI.modal({
+      title: '✅ ' + c.name + ' 할 일 추가',
+      bodyHTML:
+        '<div class="field-row">' +
+          '<div class="field"><label>누구에게</label><select class="select" id="rtWho">' +
+            '<option value="' + c.id + '">' + esc(c.name) + '</option>' +
+            D.children.filter(function (k) { return k.id !== c.id; }).map(function (k) {
+              return '<option value="' + k.id + '">' + esc(k.name) + '</option>';
+            }).join('') +
+            '<option value="both">민국·이준 둘 다</option>' +
+          '</select></div>' +
+          '<div class="field"><label>언제</label><select class="select" id="rtSlot">' +
+            '<option value="morning">🌅 아침</option>' +
+            '<option value="evening" selected>🌙 저녁</option>' +
+          '</select></div>' +
+        '</div>' +
+        '<div class="field"><label>할 일</label><input class="input" id="rtLabel" maxlength="20" placeholder="예: 신발 정리하기"></div>' +
+        '<div class="field"><label>아이콘 (골라도 되고 직접 적어도 돼요)</label>' +
+          '<div class="rt-emoji-row">' + ROUTINE_EMOJIS.map(function (e) {
+            return '<button type="button" class="rt-emoji" data-emoji="' + e + '">' + e + '</button>';
+          }).join('') + '</div>' +
+          '<input class="input" id="rtEmoji" maxlength="4" value="⭐" style="margin-top:6px;text-align:center;font-size:18px">' +
+        '</div>' +
+        '<p class="help">추가하면 바로 할 일에 들어가고, 태블릿·폰에도 함께 보여요.</p>',
+      actions: [
+        {
+          label: '추가하기', kind: 'primary', onClick: function (close) {
+            var who = (document.getElementById('rtWho') || {}).value || c.id;
+            var slot = (document.getElementById('rtSlot') || {}).value || 'evening';
+            var emoji = ((document.getElementById('rtEmoji') || {}).value || '⭐').trim() || '⭐';
+            var label = (document.getElementById('rtLabel') || {}).value || '';
+            var ids = who === 'both' ? D.children.map(function (k) { return k.id; }) : [who];
+            if (addRoutineItem(ids, slot, emoji, label)) close();
+            else return false;
+          }
+        },
+        { label: '취소', kind: 'ghost' }
+      ],
+      onOpen: function (wrap) {
+        wrap.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-emoji]');
+          if (!b) return;
+          e.preventDefault();
+          var inp = document.getElementById('rtEmoji');
+          if (inp) inp.value = b.getAttribute('data-emoji');
+        });
+        setTimeout(function () {
+          var l = document.getElementById('rtLabel');
+          if (l) l.focus();
+        }, 120);
+      }
+    });
   }
   function routineStats(childId, date) {
     var items = routineItems(childId);
@@ -1491,8 +1629,14 @@
   }
 
   function routineGroupHTML(c, title, emoji, list) {
-    if (!list.length) return '';
+    if (!list.length) {
+      return S.mode === 'parent'
+        ? '<div class="routine-group"><div class="rg-head"><span class="ico">' + emoji + '</span>' + esc(title) + '</div>' +
+            '<div class="empty notice-empty" style="padding:10px">아직 ' + esc(title) + ' 할 일이 없어요. <b>＋ 할 일 추가</b>로 넣어 보세요.</div></div>'
+        : '';
+    }
     var today = todayKey();
+    var parent = S.mode === 'parent';
     var doneCnt = list.filter(function (i) { return isDone(i.id, today); }).length;
     return '<div class="routine-group">' +
       '<div class="rg-head"><span class="ico">' + emoji + '</span>' + esc(title) +
@@ -1500,14 +1644,28 @@
       '<div class="routine-list">' + list.map(function (i) {
         var done = isDone(i.id, today);
         var ts = done ? S.routine[today][i.id] : null;
+        var del = parent
+          ? '<button type="button" class="r-del" data-act="routine-del" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="' + esc(i.label) + ' 지우기" title="목록에서 지우기">🗑️</button>'
+          : '';
         if (done) {
           return '<div class="routine-item done">' +
               '<span class="r-emoji">' + i.emoji + '</span>' +
               '<span class="r-label">' + esc(i.label) +
                 '<span class="r-time">' + (ts ? UI.timeKo(ts) + ' 완료' : '완료') + '</span></span>' +
-              (S.mode === 'parent'
+              (parent
                 ? '<button type="button" class="icon-btn" data-act="routine-undo" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="되돌리기">↩</button>' : '') +
               '<span class="routine-check on" aria-label="완료함">✓</span>' +
+              del +
+            '</div>';
+        }
+        if (parent) {
+          return '<div class="routine-item">' +
+              '<button type="button" class="r-main" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '">' +
+                '<span class="r-emoji">' + i.emoji + '</span>' +
+                '<span class="r-label">' + esc(i.label) + '</span>' +
+              '</button>' +
+              '<button type="button" class="routine-check" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="' + esc(i.label) + ' 완료"></button>' +
+              del +
             '</div>';
         }
         return '<button type="button" class="routine-item" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '">' +
@@ -1537,6 +1695,9 @@
       '</div>' +
       '<div class="progress" style="margin-top:9px"><i style="width:' + pct + '%"></i></div>' +
       body +
+      (S.mode === 'parent'
+        ? '<button type="button" class="btn btn-soft btn-sm routine-add-btn" data-act="add-routine" data-child="' + c.id + '">＋ ' + esc(c.name) + ' 할 일 추가</button>'
+        : '') +
     '</div>';
   }
 
@@ -2757,6 +2918,8 @@
         break;
       }
       case 'routine-undo': undoRoutine(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
+      case 'add-routine': addRoutineModal(el.getAttribute('data-child')); break;
+      case 'routine-del': removeRoutineItem(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
 
       case 'praise': addPraise(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
 
