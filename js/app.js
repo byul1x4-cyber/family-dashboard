@@ -1924,15 +1924,7 @@
 
       '<div class="card">' +
         cardHead('⏰', '다가오는 일정', '앞으로 3개월') +
-        (upcoming.length ? '<div class="ev-list">' + upcoming.map(function (e) {
-          return '<div class="ev-item ' + memberColor(e.member) + '">' +
-            '<div class="ev-main"><div class="ev-title">' + esc(e.title) + '</div>' +
-            '<div class="ev-meta"><span class="badge ' + memberColor(e.member) + '">' + esc(memberName(e.member)) + '</span>' +
-            '<span>' + UI.shortDateKo(e.date) + (e.time ? ' ' + esc(e.time) : '') + '</span></div></div>' +
-            '<span class="ev-dday' + (dday(e.date) === '오늘' ? ' today' : '') + '">' + dday(e.date) + '</span>' +
-            (S.mode === 'parent' ? '<button type="button" class="icon-btn" data-act="del-event" data-id="' + e.id + '" aria-label="일정 삭제">🗑</button>' : '') +
-          '</div>';
-        }).join('') + '</div>'
+        (upcoming.length ? '<div class="ev-list">' + upcoming.map(function (e) { return evItemHTML(e, false); }).join('') + '</div>'
           : '<div class="empty"><span class="big">🗓️</span>등록된 일정이 없어요.<br>달력에서 날짜를 고르고 추가해 보세요.</div>') +
       '</div>' +
     '</div>';
