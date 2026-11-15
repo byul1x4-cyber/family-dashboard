@@ -161,6 +161,8 @@ window.Storage = (function () {
     }
     var remoteDoc = snap.exists() ? snap.data() : null;
     var remoteState = (remoteDoc && remoteDoc.state) ? remoteDoc.state : null;
+    /* 첫 구독 알림은 방금 읽은 그 내용이므로 '다른 기기에서 업데이트' 알림을 띄우지 않습니다 */
+    if (remoteDoc && remoteDoc.updatedAt) lastSaved = remoteDoc.updatedAt;
 
     /* 성공한 뒤에야 이전 연결을 내리고 새 연결로 교체 */
     if (unsub) { try { unsub(); } catch (e) {} }
