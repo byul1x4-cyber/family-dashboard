@@ -92,9 +92,7 @@ window.APP_DATA = {
   /* 받는 사람 */
   mailRecipients: [
     { id: 'mom',    name: '엄마',   emoji: '👩' },
-    { id: 'dad',    name: '아빠',   emoji: '👨' },
-    { id: 'grandma',name: '할머니', emoji: '👵' },
-    { id: 'grandpa',name: '할아버지', emoji: '👴' }
+    { id: 'dad',    name: '아빠',   emoji: '👨' }
   ],
   quickReplies: [
     { label: '사랑해',    emoji: '❤️' },
@@ -147,14 +145,6 @@ window.APP_DATA = {
     { id: 'milk',    name: '우유',        emoji: '🥛', ingredients: ['우유'] },
     { id: 'yogurt',  name: '요구르트',    emoji: '🥤', ingredients: ['우유'] },
     { id: 'cheese',  name: '치즈',        emoji: '🧀', ingredients: ['우유'] }
-  ],
-
-  /* 돼지저금통 버튼 */
-  moneyActions: [
-    { key: 'plus100', label: '+100원',  delta: 100 },
-    { key: 'plus500', label: '+500원',  delta: 500 },
-    { key: 'minus100',label: '-100원',  delta: -100 },
-    { key: 'cash',    label: '현금 줬어요' }
   ],
 
   /* 약 시간대 */

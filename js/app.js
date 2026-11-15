@@ -16,13 +16,18 @@
   var calCursor = new Date();
   var calSelected = todayKey();
   var routineChild = D.children[0].id;
-  var praiseChild = D.children[0].id;
-  var mealChild = D.children[0].id;
+  var routineSlot = 'all';
   var growthChild = D.children[0].id;
   var growthMetric = 'height';
-  var mailTab = D.mailRecipients[0].id;
   var mailSender = D.children[0].id;
   var mailRecipient = D.mailRecipients[0].id;
+
+  /* 아이 선택: 어느 화면에서 바꿔도 모든 탭이 같은 아이를 봅니다.
+     아이 모드에서도 막지 않습니다 (부모님 모드 확인 문제와 무관). */
+  function selectChild(id) {
+    if (!id) return;
+    routineChild = id; growthChild = id; mailSender = id;
+  }
 
   function defaultState() {
     var g = {};
@@ -38,6 +43,8 @@
       celebrated: {},
       stars: { minguk: 0, ijun: 0 },
       praiseCount: { minguk: 0, ijun: 0 },
+      /* 돼지저금통은 화면에서 뺐습니다. 예전 가족 클라우드 문서와 충돌하지 않도록
+         money / moneyLog 값은 손대지 않고 그대로 저장·복원만 합니다. */
       money: { minguk: 0, ijun: 0 },
       moneyLog: [],
       praiseLog: [],
@@ -173,6 +180,165 @@
   }
 
   /* ---------------- 시간/모드 ---------------- */
+  /* ================= ⏰ 그만! 알림 (화면 시간 타이머) =================
+     끝나는 시각만 이 기기에 저장합니다(가족 클라우드에는 안 올림).
+     시간이 되면 전체 화면으로 알려 주고, 소리 내어 읽어 줍니다. */
+  var STOP_KEY = 'family-dashboard-stop-timer';
+  var STOP_TEXT = '이제 그만 볼 시간이에요! 화면을 꺼 주세요.';
+  var stopTimer = null;        // { endsAt }
+  var stopOverlay = null;
+  var stopSpeakTimer = null;
+  var stopSpeakCount = 0;
+
+  function readStopTimer() {
+    try {
+      var v = JSON.parse(localStorage.getItem(STOP_KEY) || 'null');
+      if (v && typeof v.endsAt === 'number') return v;
+    } catch (e) {}
+    return null;
+  }
+  function writeStopTimer(v) {
+    try {
+      if (v) localStorage.setItem(STOP_KEY, JSON.stringify(v));
+      else localStorage.removeItem(STOP_KEY);
+    } catch (e) {}
+  }
+  function stopRemainMs() { return stopTimer ? Math.max(0, stopTimer.endsAt - Date.now()) : 0; }
+  function formatRemain(ms) {
+    var total = Math.max(0, Math.ceil(ms / 1000));
+    var h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+    return h ? (h + ':' + UI.pad(m) + ':' + UI.pad(s)) : (UI.pad(m) + ':' + UI.pad(s));
+  }
+  function stopLabel() {
+    var btn = document.getElementById('stopTimerBtn');
+    var lab = document.getElementById('stopTimerLabel');
+    if (!btn || !lab) return;
+    var running = !!(stopTimer && stopRemainMs() > 0);
+    btn.classList.toggle('running', running);
+    lab.textContent = running ? formatRemain(stopRemainMs()) : '그만! 알림';
+    btn.setAttribute('aria-label', running ? ('그만! 알림 ' + lab.textContent + ' 남음') : '그만! 알림');
+  }
+  function startStopTimer(ms) {
+    if (!(ms > 0)) { UI.toast('시간을 다시 골라 주세요', { kind: 'warn' }); return; }
+    stopTimer = { endsAt: Date.now() + ms };
+    writeStopTimer(stopTimer);
+    stopLabel();
+    var mins = Math.round(ms / 60000);
+    UI.toast(mins >= 60 ? (Math.round(mins / 60 * 10) / 10) + '시간 뒤에 알려드릴게요' : mins + '분 뒤에 알려드릴게요',
+      { emoji: '⏰', kind: 'good', duration: 2600 });
+  }
+  function cancelStopTimer(silent) {
+    stopTimer = null;
+    writeStopTimer(null);
+    stopLabel();
+    if (!silent) UI.toast('그만! 알림을 꺼어요', { emoji: '⏰' });
+  }
+
+  function stopTimerModal() {
+    var running = !!(stopTimer && stopRemainMs() > 0);
+    var d = new Date(Date.now() + 30 * 60000);
+    var def = UI.pad(d.getHours()) + ':' + UI.pad(d.getMinutes());
+    UI.modal({
+      title: '⏰ 그만! 알림',
+      bodyHTML:
+        '<p class="modal-text">정한 시간이 되면 큰 화면으로 알려 주고, 소리 내어 읽어 줘요.</p>' +
+        (running ? '<p class="help">지금 ' + formatRemain(stopRemainMs()) + ' 남았어요.</p>' : '') +
+        '<div class="timer-quick">' +
+          [5, 10, 15, 30].map(function (m) {
+            return '<button type="button" class="btn btn-soft" data-min="' + m + '"><b>' + m + '</b>분 뒤</button>';
+          }).join('') +
+        '</div>' +
+        '<div class="timer-custom">' +
+          '<div class="field" style="flex:1"><label>끝내는 시간 직접 정하기</label>' +
+            '<input class="input" type="time" id="stopTime" value="' + def + '" aria-label="끝내는 시간"></div>' +
+          '<button type="button" class="btn btn-primary" id="stopTimeGo">이 시간에 멈추기</button>' +
+        '</div>' +
+        (running ? '<button type="button" class="btn btn-danger btn-block" id="stopOff" style="margin-top:10px">지금 그만! 알림 끄기</button>' : ''),
+      actions: [{ label: '닫기', kind: 'ghost' }],
+      onOpen: function (wrap, close) {
+        wrap.addEventListener('click', function (e) {
+          var q = e.target.closest('[data-min]');
+          if (q) { startStopTimer(Number(q.getAttribute('data-min')) * 60000); close(); return; }
+          if (e.target.closest('#stopTimeGo')) {
+            var v = ((document.getElementById('stopTime') || {}).value || '').trim();
+            var p = v.split(':');
+            if (p.length !== 2 || !p[0] || !p[1]) { UI.toast('시간을 골라 주세요', { kind: 'warn' }); return; }
+            var now = new Date();
+            var target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(p[0]), Number(p[1]), 0, 0);
+            if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);   // 이미 지난 시각이면 내일
+            startStopTimer(target.getTime() - now.getTime());
+            close();
+            return;
+          }
+          if (e.target.closest('#stopOff')) { cancelStopTimer(); close(); }
+        });
+      }
+    });
+  }
+
+  function speakStop() {
+    UI.speak(STOP_TEXT);
+  }
+  function showStopOverlay() {
+    if (stopOverlay) return;
+    var el = document.createElement('div');
+    el.className = 'stop-overlay';
+    el.setAttribute('role', 'alertdialog');
+    el.setAttribute('aria-label', '그만! 시간이에요');
+    el.innerHTML = '<div class="stop-overlay-card">' +
+        '<div class="so-ico">⏰</div>' +
+        '<h2>그만! 시간이에요!</h2>' +
+        '<p class="so-msg">이제 그만 볼 시간이에요.<br>화면을 꺼 주세요.</p>' +
+        '<button type="button" class="btn btn-primary so-ok" id="stopOverlayOk">확인했어요</button>' +
+        '<p class="so-help">부모님과 함께 끄면 더 좋아요 💛</p>' +
+      '</div>';
+    document.body.appendChild(el);
+    document.body.classList.add('timer-ringing');
+    stopOverlay = el;
+    el.querySelector('#stopOverlayOk').addEventListener('click', dismissStopOverlay);
+    speakStop();
+    stopSpeakCount = 1;
+    clearInterval(stopSpeakTimer);
+    stopSpeakTimer = setInterval(function () {
+      if (!stopOverlay || stopSpeakCount >= 3) { clearInterval(stopSpeakTimer); stopSpeakTimer = null; return; }
+      stopSpeakCount++;
+      speakStop();
+    }, 12000);
+  }
+  function dismissStopOverlay() {
+    if (stopOverlay && stopOverlay.parentNode) stopOverlay.remove();
+    stopOverlay = null;
+    document.body.classList.remove('timer-ringing');
+    clearInterval(stopSpeakTimer); stopSpeakTimer = null;
+    try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+    UI.toast('잘했어요! 화면을 꺼 주세요 👍', { emoji: '👏', kind: 'good' });
+  }
+  function fireStopTimer() {
+    stopTimer = null;
+    writeStopTimer(null);
+    stopLabel();
+    showStopOverlay();
+  }
+  function tickStopTimer() {
+    if (!stopTimer) return;
+    if (stopRemainMs() <= 0) fireStopTimer();
+    else stopLabel();
+  }
+  function initStopTimer() {
+    var btn = document.getElementById('stopTimerBtn');
+    if (btn) btn.addEventListener('click', stopTimerModal);
+    var saved = readStopTimer();
+    if (saved) {
+      var late = Date.now() - saved.endsAt;
+      if (late > 10 * 60000) writeStopTimer(null);   // 한참 지난 타이머는 조용히 지움
+      else stopTimer = saved;
+    }
+    stopLabel();
+    setInterval(tickStopTimer, 1000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) tickStopTimer(); });
+    if (stopTimer && stopRemainMs() <= 0) fireStopTimer();
+  }
+
   function startClock() {
     function tick() {
       var now = new Date();
@@ -199,7 +365,9 @@
 
   function setMode(mode) {
     if (mode === 'parent') {
-      askActor();
+      /* 아이 모드 → 부모님 모드: 매번 새로 나오는 곱셈 문제를 맞혀야 열립니다 */
+      if (S.mode === 'parent') { askActor(); return; }
+      askQuiz(function () { askActor(); }, '부모님 모드로 들어가려면<br>정답을 맞혀 주세요.');
       return;
     }
     S.mode = 'child';
@@ -212,7 +380,7 @@
   function askActor() {
     UI.modal({
       title: '누구세요?',
-      bodyHTML: '<p class="modal-text">부모님 모드로 바꾸면 루틴 완료 확인, 칭찬, 저금통, 일정·식판·성장 기록을 관리할 수 있어요.</p>' +
+      bodyHTML: '<p class="modal-text">부모님 모드로 바꾸면 루틴 완료 확인, 칭찬, 일정·식판·성장 기록을 관리할 수 있어요.</p>' +
         '<div class="pick-child" style="margin-top:14px">' +
         D.parents.map(function (p) {
           return '<button type="button" data-actor="' + p.id + '"><span class="avatar sm ' + p.color + '">' + p.emoji + '</span>' + esc(p.name) + '</button>';
@@ -238,7 +406,7 @@
   function showIntro() {
     UI.modal({
       title: '🏡 우리집 다모아',
-      bodyHTML: '<p class="modal-text">루틴 체크, 칭찬과 돼지저금통, 가족 일정, 우체통, 식판·약·성장 기록을 한 곳에 모았어요.<br>누구로 시작할까요?</p>' +
+      bodyHTML: '<p class="modal-text">루틴 체크, 칭찬하기, 가족 일정, 우체통, 식판·약·성장 기록을 한 곳에 모았어요.<br>누구로 시작할까요?</p>' +
         '<div class="pick-child" style="margin-top:14px;flex-wrap:wrap">' +
         D.parents.map(function (p) {
           return '<button type="button" data-start="' + p.id + '"><span class="avatar sm ' + p.color + '">' + p.emoji + '</span>' + esc(p.name) + '</button>';
@@ -283,8 +451,14 @@
     main.classList.add('view-enter');
     $$('.tab').forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-view') === view); });
     updateChrome();
+    scrollChatToEnd();
     if (opts.keepScroll) window.scrollTo(0, y);
     else if (opts.scrollTop) window.scrollTo(0, 0);
+  }
+
+  /* 가족방 대화는 항상 맨 아래(최근 말풍선)가 보이게 */
+  function scrollChatToEnd() {
+    $$('.chat-thread').forEach(function (el) { el.scrollTop = el.scrollHeight; });
   }
 
   function updateChrome() {
@@ -299,6 +473,74 @@
   }
 
   /* ================= 홈 ================= */
+  function growthLatest(childId) {
+    var recs = (S.growth[childId] || []).slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    return recs.length ? recs[recs.length - 1] : null;
+  }
+  function bodySummary(childId) {
+    var g = growthLatest(childId);
+    if (!g) return '';
+    var bits = [];
+    if (g.height) bits.push(Number(g.height) + 'cm');
+    if (g.weight) bits.push(Number(g.weight) + 'kg');
+    return bits.join(' · ');
+  }
+  function newestMessage() {
+    var list = S.messages.slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+    return list[0] || null;
+  }
+  function messagePreview(m) {
+    if (!m) return '';
+    var text = String(m.text || '').trim();
+    if (text) return text;
+    var words = (m.pictos || []).map(function (id) {
+      var p = D.pictograms.filter(function (x) { return x.id === id; })[0];
+      return p ? p.label : '';
+    }).filter(Boolean);
+    return words.length ? words.join(' ') : '그림 편지';
+  }
+  function mailTileSub() {
+    var m = newestMessage();
+    if (!m) return '아직 편지가 없어요';
+    var from = childById(m.fromId);
+    var pv = messagePreview(m);
+    return from.name + ' · ' + (pv.length > 14 ? pv.slice(0, 14) + '…' : pv);
+  }
+  function medNamesSub() {
+    if (!S.meds.length) return '등록된 약이 없어요';
+    var names = [];
+    S.meds.forEach(function (m) {
+      var n = m.memberName || '가족';
+      if (names.indexOf(n) < 0) names.push(n);
+    });
+    var left = medPending();
+    return names.slice(0, 3).join(' · ') + (left ? ' · ' + left + '개 남음' : ' · 다 챙겼어요');
+  }
+  function miniCalendarHTML() {
+    var now = new Date();
+    var year = now.getFullYear(), month = now.getMonth();
+    var first = new Date(year, month, 1);
+    var start = new Date(year, month, 1 - first.getDay());
+    var dow = ['일', '월', '화', '수', '목', '금', '토'].map(function (w, i) {
+      return '<div class="mini-dow' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '') + '">' + w + '</div>';
+    }).join('');
+    var cells = '';
+    for (var i = 0; i < 42; i++) {
+      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      var key = UI.dateKey(d);
+      if (i >= 35 && d.getMonth() !== month) continue;   // 마지막 주가 다음 달뿐이면 줄이기
+      var evs = eventsOn(key);
+      var cls = 'mini-day';
+      if (d.getMonth() !== month) cls += ' outside';
+      if (key === todayKey()) cls += ' today';
+      if (evs.length) cls += ' has-ev';
+      cells += '<button type="button" class="' + cls + '" data-act="mini-day" data-date="' + key + '" aria-label="' + UI.shortDateKo(key) + (evs.length ? ' 일정 ' + evs.length + '개' : '') + '">' +
+        '<span>' + d.getDate() + '</span>' + (evs.length ? '<i class="mini-dot ' + memberColor(evs[0].member) + '"></i>' : '') +
+        '</button>';
+    }
+    return '<div class="mini-cal">' + dow + cells + '</div>';
+  }
+
   function renderHome() {
     var today = todayKey();
     var hour = new Date().getHours();
@@ -311,14 +553,19 @@
       doneTotal += st.done; allTotal += st.total;
     });
 
+    var upcoming = upcomingEvents(4, 60);
+    var left = allTotal - doneTotal;
+    var bodyOf = bodySummary(routineChild);
     var tiles = [
-      { act: 'goto', view: 'routine', cls: 't-sun', ico: '✅', title: '오늘 할 일', sub: (allTotal - doneTotal) + '개 남았어요', badge: allTotal - doneTotal > 0 ? (allTotal - doneTotal) : '' },
-      { act: 'goto', view: 'mailbox', cls: 't-rose', ico: '📮', title: '가족 우체통', sub: unreadTotal() > 0 ? '새 편지 ' + unreadTotal() + '통' : '새 편지가 없어요', badge: unreadTotal() || '' },
-      { act: 'goto', view: 'health', cls: 't-mint', ico: '🍱', title: '오늘의 식판', sub: mealsTodayCount() + '/' + D.children.length + '명 기록' },
-      { act: 'goto', view: 'health', cls: 't-lav', ico: '💊', title: '오늘의 약', sub: S.meds.length ? (medPending() ? medPending() + '개 남았어요' : '모두 챙겼어요') : '등록된 약이 없어요' }
+      { view: 'routine', cls: 't-sun', ico: '✅', title: '할 일', sub: left > 0 ? left + '개 남았어요' : '오늘 다 했어요!', badge: left > 0 ? left : '' },
+      { view: 'mailbox', cls: 't-rose', ico: '📮', title: '우체통', sub: unreadTotal() > 0 ? '새 메시지 ' + unreadTotal() + '통 · ' + mailTileSub() : mailTileSub(), badge: unreadTotal() || '' },
+      { view: 'health', cls: 't-mint', ico: '🍱', title: '골고루 먹자', sub: mealsTodayCount() + '/' + D.children.length + '명 기록' },
+      { view: 'health', cls: 't-lav', ico: '📏', title: '이만큼 자랐어요', sub: bodyOf ? childById(routineChild).name + ' ' + bodyOf : '키·몸무게 기록 없음' },
+      { view: 'health', cls: 't-sky', ico: '💊', title: '약 먹고 있는 사람', sub: medNamesSub() }
     ];
 
-    var upcoming = upcomingEvents(3, 60);
+    var now = new Date();
+    var monthLabel = now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월';
 
     return '' +
       '<div class="home-hero">' +
@@ -326,19 +573,20 @@
           '<p class="hi">' + UI.dateKo(today) + '</p>' +
           '<h2>' + esc(who) + ', ' + greet + ' 💛</h2>' +
           '<div class="today-line">' +
-            '<span class="badge mint">오늘 루틴 ' + doneTotal + '/' + allTotal + '</span>' +
+            '<span class="badge mint">오늘 할 일 ' + doneTotal + '/' + allTotal + '</span>' +
             '<span class="badge sun">다가오는 일정 ' + upcomingEvents(99, 60).length + '개</span>' +
             (unreadTotal() ? '<span class="badge rose">새 편지 ' + unreadTotal() + '통</span>' : '') +
           '</div>' +
         '</div>' +
-        '<div class="home-children">' + D.children.map(kidCardHTML).join('') + '</div>' +
+        '<div class="home-kids">' +
+          '<div class="home-children">' + D.children.map(kidCardHTML).join('') + '</div>' +
+          '<p class="home-hint">아이 카드를 누르면 그 아이의 할 일로 가요 (민국 ↔ 이준)</p>' +
+        '</div>' +
       '</div>' +
-
-      noticeCardHTML() +
 
       '<div class="quick-grid" style="margin-bottom:12px">' +
         tiles.map(function (t) {
-          return '<button type="button" class="quick-tile ' + t.cls + '" data-act="' + t.act + '" data-view="' + t.view + '">' +
+          return '<button type="button" class="quick-tile ' + t.cls + '" data-act="goto" data-view="' + t.view + '">' +
             (t.badge ? '<span class="q-badge">' + t.badge + '</span>' : '') +
             '<span class="q-ico">' + t.ico + '</span>' +
             '<strong>' + esc(t.title) + '</strong>' +
@@ -347,16 +595,16 @@
         }).join('') +
       '</div>' +
 
-      '<div class="two-col">' +
-        '<div class="card soft-sun">' +
-          cardHead('📅', '다가오는 일정', '우리 가족', '<button type="button" class="link-btn" data-act="goto" data-view="calendar">달력 보기</button>') +
-          (upcoming.length ? '<div class="ev-list">' + upcoming.map(function (e) { return evItemHTML(e, true); }).join('') + '</div>'
+      '<div class="home-bottom">' +
+        '<div class="card soft-sun home-cal-card">' +
+          cardHead('📅', '이번 달', monthLabel, '<button type="button" class="link-btn" data-act="goto" data-view="calendar">달력 보기</button>') +
+          miniCalendarHTML() +
+          '<p class="mini-sub">⏳ 다가오는 일정</p>' +
+          (upcoming.length
+            ? '<div class="ev-list">' + upcoming.map(function (e) { return evItemHTML(e, true); }).join('') + '</div>'
             : '<div class="empty"><span class="big">🗓️</span>아직 등록된 일정이 없어요.<br>부모님 모드에서 일정을 추가해 보세요.</div>') +
         '</div>' +
-        '<div class="card">' +
-          cardHead('⭐', '최근 기록', '칭찬과 저금통', '<button type="button" class="link-btn" data-act="goto" data-view="praise">전체 보기</button>') +
-          recentLogsHTML(5) +
-        '</div>' +
+        noticeCardHTML() +
       '</div>';
   }
 
@@ -481,19 +729,22 @@
     var today = todayKey();
     var st = routineStats(c.id, today);
     var pct = st.total ? Math.round(st.done / st.total * 100) : 0;
-    return '<div class="kid-card ' + c.color + '">' +
+    var isActive = c.id === routineChild;
+    var body = bodySummary(c.id);
+    return '<button type="button" class="kid-card ' + c.color + (isActive ? ' is-active' : '') + '" data-act="pick-kid" data-id="' + c.id + '" aria-pressed="' + (isActive ? 'true' : 'false') + '">' +
       '<div class="avatar ' + c.color + '">' + c.emoji + '</div>' +
       '<div class="kid-main">' +
         '<div class="kid-name"><strong>' + esc(c.name) + '</strong><span>' + esc(c.tag) + '</span></div>' +
         '<div class="kid-stats">' +
-          '<span class="stat-pill">⭐ <b>' + (S.stars[c.id] || 0) + '</b></span>' +
-          '<span class="stat-pill">🏅 <b>' + (S.praiseCount[c.id] || 0) + '</b></span>' +
-          '<span class="stat-pill">🐷 <b>' + UI.won(S.money[c.id] || 0) + '</b></span>' +
+          '<span class="stat-pill sun">⭐ <b>' + (S.stars[c.id] || 0) + '</b></span>' +
+          '<span class="stat-pill rose">🏅 <b>' + (S.praiseCount[c.id] || 0) + '</b></span>' +
         '</div>' +
+        '<div class="kid-body" title="키 · 몸무게"><span class="kb-ico">📏</span>' +
+          (body ? esc(body) : '<span class="kb-none">키·몸무게 기록 없음</span>') + '</div>' +
         '<div class="progress ' + (c.color === 'coral' ? 'coral' : '') + '"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="progress-label"><span>오늘 루틴 ' + st.done + '/' + st.total + '</span><span>' + pct + '%</span></div>' +
+        '<div class="progress-label"><span>오늘 할 일 ' + st.done + '/' + st.total + '</span><span>' + pct + '%</span></div>' +
       '</div>' +
-    '</div>';
+    '</button>';
   }
 
   function evItemHTML(e, compact) {
@@ -514,39 +765,24 @@
   }
 
   function recentLogsHTML(limit) {
-    var list = [];
-    S.praiseLog.forEach(function (l) {
-      list.push({ ts: l.ts, html: logItemHTML({
+    var list = S.praiseLog.slice().sort(function (a, b) { return b.ts - a.ts; });
+    if (!list.length) {
+      return '<div class="empty"><span class="big">🌱</span>아직 칭찬 기록이 없어요.<br>칭찬을 하면 여기에 차곡차곡 쌓여요.</div>';
+    }
+    return '<div class="log-list">' + list.slice(0, limit).map(function (l) {
+      return logItemHTML({
         emoji: l.emoji || '⭐',
         main: '<b>' + esc(childById(l.childId).name) + '</b> 칭찬 · ' + esc(l.item || ''),
         by: l.by ? ' · ' + esc(l.by) : '',
         ts: l.ts
-      }) });
-    });
-    S.moneyLog.forEach(function (l) {
-      list.push({ ts: l.ts, html: logItemHTML({
-        emoji: '🐷',
-        main: '<b>' + esc(childById(l.childId).name) + '</b> ' + esc(l.note || '저금통'),
-        delta: l.delta,
-        ts: l.ts
-      }) });
-    });
-    list.sort(function (a, b) { return b.ts - a.ts; });
-    if (!list.length) {
-      return '<div class="empty"><span class="big">🌱</span>아직 기록이 없어요.<br>칭찬을 하면 여기에 차곡차곡 쌓여요.</div>';
-    }
-    return '<div class="log-list">' + list.slice(0, limit).map(function (x) { return x.html; }).join('') + '</div>';
+      });
+    }).join('') + '</div>';
   }
 
   function logItemHTML(o) {
-    var deltaHtml = '';
-    if (typeof o.delta === 'number') {
-      deltaHtml = '<span class="l-delta ' + (o.delta > 0 ? 'plus' : 'minus') + '">' + (o.delta > 0 ? '+' : '−') + Math.abs(o.delta).toLocaleString('ko-KR') + '원</span>';
-    }
     return '<div class="log-item">' +
       '<span>' + (o.emoji || '•') + '</span>' +
       '<div class="l-main">' + o.main + (o.by || '') + '</div>' +
-      deltaHtml +
       '<span class="l-time">' + UI.ago(o.ts) + '</span>' +
     '</div>';
   }
@@ -554,54 +790,70 @@
   /* ================= 루틴 ================= */
   function renderRoutine() {
     var today = todayKey();
-    var c = childById(routineChild);
-    var items = routineItems(c.id);
-    var st = routineStats(c.id, today);
-    var pct = st.total ? Math.round(st.done / st.total * 100) : 0;
-
-    function group(title, emoji, list, slot) {
-      return '<div class="routine-group">' +
-        '<h3><span>' + emoji + '</span>' + esc(title) + ' <span class="badge mint" style="margin-left:4px">' +
-          list.filter(function (i) { return isDone(i.id, today); }).length + '/' + list.length + '</span></h3>' +
-        '<div class="routine-list">' + list.map(function (i) {
-          var done = isDone(i.id, today);
-          var ts = done ? S.routine[today][i.id] : null;
-          return '<div class="routine-item' + (done ? ' done' : '') + '">' +
-            '<div class="r-emoji">' + i.emoji + '</div>' +
-            '<div class="r-label">' + esc(i.label) +
-              (done ? '<div class="r-time">' + UI.timeKo(ts) + ' 완료</div>' : '') + '</div>' +
-            (done
-              ? '<button type="button" class="routine-check" aria-label="완료함">✓</button>' +
-                (S.mode === 'parent' ? '<button type="button" class="icon-btn" data-act="routine-undo" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="되돌리기">↩</button>' : '')
-              : '<button type="button" class="btn btn-soft btn-sm" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '">다 했어요!</button>') +
-          '</div>';
-        }).join('') + '</div>' +
-      '</div>';
-    }
-
+    var slots = [{ key: 'all', label: '전체' }, { key: 'morning', label: '🌅 아침' }, { key: 'evening', label: '🌙 저녁' }];
     return '<div class="card soft-mint routine-card">' +
         '<div class="routine-head">' +
-          D.children.map(function (k) {
-            return '<button type="button" class="chip ' + k.color + (k.id === c.id ? ' active' : '') + '" data-act="pick-routine-child" data-id="' + k.id + '">' +
-              k.emoji + ' ' + esc(k.name) + '</button>';
-          }).join('') +
+          '<strong style="font-size:15px">✅ 오늘 할 일</strong>' +
+          '<div class="growth-toggle">' + slots.map(function (s) {
+            return '<button type="button" class="chip' + (routineSlot === s.key ? ' active' : '') + '" data-act="pick-routine-slot" data-slot="' + s.key + '">' + s.label + '</button>';
+          }).join('') + '</div>' +
           '<span style="flex:1"></span>' +
-          '<span class="badge mint">오늘 ' + st.done + '/' + st.total + ' · ' + pct + '%</span>' +
+          D.children.map(function (k) {
+            var st = routineStats(k.id, today);
+            return '<span class="badge ' + (k.color === 'coral' ? 'rose' : 'mint') + '">' + k.emoji + ' ' + esc(k.name) + ' ' + st.done + '/' + st.total + '</span>';
+          }).join('') +
         '</div>' +
-        '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
-        '<p class="help" style="margin-top:8px">‘다 했어요!’를 누르면 부모님 확인 문제가 나와요. 답을 맞혀야 완료돼요.</p>' +
+        '<p class="help" style="margin-top:8px">두 아이를 한 화면에서 바로 체크해요. ‘다 했어요!’를 누르면 바로 완료되고 별 ⭐ 1개가 쌓여요.</p>' +
       '</div>' +
-
-      '<div class="two-col">' +
-        '<div class="card">' + cardHead('🌅', '아침 루틴', esc(c.name) + '의 아침') + group('아침', '🌅', items.morning, 'morning') + '</div>' +
-        '<div class="card">' + cardHead('🌙', '저녁 루틴', esc(c.name) + '의 저녁') + group('저녁', '🌙', items.evening, 'evening') + '</div>' +
-      '</div>' +
-
+      '<div class="duo-grid">' + D.children.map(routineKidCardHTML).join('') + '</div>' +
       '<div class="lock-note">🔒 완료한 일은 부모님 모드에서 되돌릴 수 있어요. 완료할 때마다 별 ⭐ 1개가 쌓여요.</div>';
   }
 
-  /* 부모 확인 곱셈 문제 */
-  function askQuiz(onPass, itemLabel) {
+  function routineGroupHTML(c, title, emoji, list) {
+    if (!list.length) return '';
+    var today = todayKey();
+    return '<div class="routine-group">' +
+      '<h3><span>' + emoji + '</span>' + esc(title) + ' <span class="badge mint" style="margin-left:4px">' +
+        list.filter(function (i) { return isDone(i.id, today); }).length + '/' + list.length + '</span></h3>' +
+      '<div class="routine-list">' + list.map(function (i) {
+        var done = isDone(i.id, today);
+        var ts = done ? S.routine[today][i.id] : null;
+        return '<div class="routine-item' + (done ? ' done' : '') + '">' +
+          '<div class="r-emoji">' + i.emoji + '</div>' +
+          '<div class="r-label">' + esc(i.label) +
+            (done ? '<div class="r-time">' + UI.timeKo(ts) + ' 완료</div>' : '') + '</div>' +
+          (done
+            ? '<button type="button" class="routine-check" aria-label="완료함">✓</button>' +
+              (S.mode === 'parent' ? '<button type="button" class="icon-btn" data-act="routine-undo" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="되돌리기">↩</button>' : '')
+            : '<button type="button" class="btn btn-soft btn-sm" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '">다 했어요!</button>') +
+        '</div>';
+      }).join('') + '</div>' +
+    '</div>';
+  }
+
+  function routineKidCardHTML(c) {
+    var today = todayKey();
+    var items = routineItems(c.id);
+    var st = routineStats(c.id, today);
+    var pct = st.total ? Math.round(st.done / st.total * 100) : 0;
+    var body = '';
+    if (routineSlot === 'all' || routineSlot === 'morning') body += routineGroupHTML(c, '아침', '🌅', items.morning);
+    if (routineSlot === 'all' || routineSlot === 'evening') body += routineGroupHTML(c, '저녁', '🌙', items.evening);
+    return '<div class="card routine-kid ' + c.color + '">' +
+      '<div class="rk-head">' +
+        '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span>' +
+        '<strong>' + esc(c.name) + '</strong>' +
+        '<span class="badge sun">⭐ ' + (S.stars[c.id] || 0) + '</span>' +
+        '<span class="rk-spacer"></span>' +
+        '<span class="badge mint">' + st.done + '/' + st.total + ' · ' + pct + '%</span>' +
+      '</div>' +
+      '<div class="progress" style="margin-top:8px"><i style="width:' + pct + '%"></i></div>' +
+      body +
+    '</div>';
+  }
+
+  /* 부모님 확인 곱셈 문제 (매번 새 문제) — 아이 모드 → 부모님 모드 전환에만 씁니다 */
+  function askQuiz(onPass, subHTML) {
     var a = 0, b = 0, product = 0;
 
     function makeQuestion() {
@@ -620,7 +872,7 @@
     var m = UI.modal({
       title: '부모님 확인 문제',
       bodyHTML: '<div class="quiz-box" id="quizBox">' +
-          '<p class="quiz-sub">' + esc(itemLabel || '') + ' 완료!<br>부모님이 답을 확인해 주세요.</p>' +
+          '<p class="quiz-sub">' + (subHTML || '부모님 확인이 필요해요.') + '</p>' +
           '<div class="quiz-q" id="quizQ"></div>' +
           '<input class="quiz-input" id="quizInput" type="text" inputmode="numeric" autocomplete="off" aria-label="정답">' +
           '<p class="quiz-wrong" id="quizWrong"></p>' +
@@ -720,41 +972,31 @@
     }
   }
 
-  /* ================= 칭찬 · 저금통 ================= */
+  /* ================= 칭찬 ================= */
   function renderPraise() {
-    var c = childById(praiseChild);
-    return '<div class="praise-grid">' +
-      '<div class="card soft-rose">' +
-        cardHead('🏅', '칭찬하기', '칭찬하면 별 ⭐ 1개') +
-        '<div class="pick-child">' + D.children.map(function (k) {
-          return '<button type="button" class="' + (k.id === c.id ? 'active ' + (k.color === 'coral' ? 'coral' : '') : '') + '" data-act="pick-praise-child" data-id="' + k.id + '">' +
-            '<span class="avatar sm ' + k.color + '">' + k.emoji + '</span>' + esc(k.name) +
-            ' <span class="badge sun">⭐ ' + (S.stars[k.id] || 0) + '</span></button>';
-        }).join('') + '</div>' +
-        '<div class="praise-items">' + D.praiseItems.map(function (p) {
-          return '<button type="button" class="praise-item" data-act="praise" data-child="' + c.id + '" data-item="' + p.id + '">' +
-            '<span>' + p.emoji + '</span>' + esc(p.label) + '</button>';
-        }).join('') + '</div>' +
-        (S.mode === 'parent' ? '' : '<div class="lock-note">🔒 칭찬은 부모님 모드에서 할 수 있어요.</div>') +
-      '</div>' +
+    var total = 0;
+    D.children.forEach(function (k) { total += (S.praiseCount[k.id] || 0); });
+    return '<div class="duo-grid">' + D.children.map(praiseKidCardHTML).join('') + '</div>' +
+      (S.mode === 'parent' ? '' : '<div class="lock-note">🔒 칭찬은 부모님 모드에서 할 수 있어요.</div>') +
+      '<div class="card" style="margin-top:12px">' +
+        cardHead('🧾', '최근 칭찬 기록', total ? '지금까지 ' + total + '번 칭찬했어요' : '칭찬한 만큼 차곡차곡') +
+        recentLogsHTML(20) +
+      '</div>';
+  }
 
-      '<div class="card piggy-card">' +
-        cardHead('🐷', '돼지저금통', '칭찬받은 만큼 차곡차곡') +
-        D.children.map(function (k) {
-          return '<div class="piggy-row">' +
-            '<div class="piggy-who"><span class="avatar sm ' + k.color + '">' + k.emoji + '</span>' + esc(k.name) +
-              '<span class="badge mint">⭐ ' + (S.stars[k.id] || 0) + '</span></div>' +
-            '<div class="piggy-amount">🐷 ' + UI.won(S.money[k.id] || 0) + '</div>' +
-            '<div class="piggy-actions">' +
-              '<button type="button" class="btn btn-primary" data-act="money" data-child="' + k.id + '" data-key="plus100">+100원</button>' +
-              '<button type="button" class="btn btn-sun" data-act="money" data-child="' + k.id + '" data-key="plus500">+500원</button>' +
-              '<button type="button" class="btn btn-ghost" data-act="money" data-child="' + k.id + '" data-key="minus100">-100원</button>' +
-              '<button type="button" class="btn btn-soft" data-act="money" data-child="' + k.id + '" data-key="cash">현금 줬어요</button>' +
-            '</div>' +
-          '</div>';
-        }).join('') +
-        '<div style="margin-top:10px">' + cardHead('🧾', '최근 기록', '칭찬 · 저금통') + recentLogsHTML(12) + '</div>' +
+  function praiseKidCardHTML(c) {
+    return '<div class="card praise-kid ' + c.color + '">' +
+      '<div class="rk-head">' +
+        '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span>' +
+        '<strong>' + esc(c.name) + '</strong>' +
+        '<span class="badge sun">⭐ ' + (S.stars[c.id] || 0) + '</span>' +
+        '<span class="rk-spacer"></span>' +
+        '<span class="badge rose">🏅 ' + (S.praiseCount[c.id] || 0) + '</span>' +
       '</div>' +
+      '<div class="praise-items" style="margin-top:10px">' + D.praiseItems.map(function (p) {
+        return '<button type="button" class="praise-item" data-act="praise" data-child="' + c.id + '" data-item="' + p.id + '">' +
+          '<span>' + p.emoji + '</span>' + esc(p.label) + '</button>';
+      }).join('') + '</div>' +
     '</div>';
   }
 
@@ -771,40 +1013,6 @@
     render({ keepScroll: true });
     UI.confetti(14);
     UI.toast(childById(childId).name + '이를 칭찬했어요! 별 ⭐ 1개', { emoji: item.emoji, kind: 'good' });
-  }
-
-  function moneyAction(childId, key) {
-    if (!needParent('저금통은 부모님 모드에서 관리할 수 있어요')) return;
-    var c = childById(childId);
-    var cur = S.money[childId] || 0;
-
-    if (key === 'cash') {
-      if (cur <= 0) { UI.toast('줄 현금이 없어요', { emoji: '🐷' }); return; }
-      UI.confirm('현금으로 줬나요?', c.name + '의 저금통 ' + UI.won(cur) + '을 현금으로 드리고 저금통을 0원으로 비울까요?',
-        '현금 줬어요', 'sun').then(function (ok) {
-        if (!ok) return;
-        S.money[childId] = 0;
-        S.moneyLog.unshift({ id: UI.uid('money'), childId: childId, delta: -cur, note: '현금으로 줬어요', ts: Date.now() });
-        save();
-        render({ keepScroll: true });
-        UI.toast(c.name + '에게 ' + UI.won(cur) + '을 현금으로 줬어요', { emoji: '💵', kind: 'good' });
-      });
-      return;
-    }
-
-    var delta = key === 'plus100' ? 100 : key === 'plus500' ? 500 : key === 'minus100' ? -100 : 0;
-    if (!delta) return;
-    if (delta < 0 && cur <= 0) { UI.toast('저금통이 비어 있어요', { emoji: '🐷' }); return; }
-    var next = Math.max(0, cur + delta);
-    var realDelta = next - cur;
-    S.money[childId] = next;
-    S.moneyLog.unshift({
-      id: UI.uid('money'), childId: childId, delta: realDelta,
-      note: realDelta > 0 ? '저금통에 넣었어요' : '저금통에서 뺐어요', ts: Date.now()
-    });
-    save();
-    render({ keepScroll: true });
-    UI.toast(c.name + ' 돼지저금통 ' + (realDelta > 0 ? '+' : '−') + Math.abs(realDelta) + '원', { emoji: '🐷', kind: 'good' });
   }
 
   /* ================= 일정 ================= */
@@ -935,13 +1143,11 @@
 
   /* ================= 우체통 ================= */
   function renderMailbox() {
-    var rec = D.mailRecipients.filter(function (r) { return r.id === mailTab; })[0] || D.mailRecipients[0];
-    var letters = S.messages.filter(function (m) { return m.toId === rec.id; })
-      .sort(function (a, b) { return b.ts - a.ts; });
-
     /* 보이는 편지는 읽음 처리 (배지 계산에만 사용) */
     var changed = false;
-    letters.forEach(function (m) { if (!m.read) { m.read = true; changed = true; } });
+    D.mailRecipients.forEach(function (r) {
+      S.messages.forEach(function (m) { if (m.toId === r.id && !m.read) { m.read = true; changed = true; } });
+    });
     if (changed) save();
 
     var hourAgo = Date.now() - 3600 * 1000;
@@ -963,6 +1169,10 @@
           return '<button type="button" class="picto" data-act="pick-picto" data-id="' + p.id + '">' +
             '<span class="emoji">' + p.emoji + '</span>' + esc(p.label) + '</button>';
         }).join('') + '</div>' +
+        '<button type="button" class="mic-btn" id="mailMic" data-act="mail-mic" aria-pressed="false">' +
+          '<span class="mic-ico" aria-hidden="true">🎤</span>' +
+          '<span class="mic-text"><b>눌러서 말하기</b><small id="mailMicHint">버튼을 누르고 말해요. 다시 누르면 끝나요.</small></span>' +
+        '</button>' +
         '<div class="field" style="margin-top:10px"><input class="input" id="mailText" maxlength="40" placeholder="짧은 말도 함께 보낼 수 있어요 (선택)"></div>' +
         '<div class="mail-compose-foot">' +
           '<span class="counter" id="mailCounter">' + sentLastHour + '/3통 보냈어요</span>' +
@@ -970,64 +1180,153 @@
         '</div>' +
       '</div>' +
 
-      '<div class="card">' +
-        cardHead('📮', '받은 편지함', '부모님·조부모님이 답장해요') +
-        '<div class="mail-tabs">' + D.mailRecipients.map(function (r) {
-          var n = unreadFor(r.id);
-          return '<button type="button" class="mail-tab' + (r.id === mailTab ? ' active' : '') + '" data-act="pick-mail-tab" data-id="' + r.id + '">' +
-            r.emoji + ' ' + esc(r.name) + (n ? ' <span class="badge rose">' + n + '</span>' : '') + '</button>';
-        }).join('') + '</div>' +
-        (letters.length ? letters.map(letterHTML).join('')
-          : '<div class="empty"><span class="big">📭</span>' + esc(rec.name) + '에게 온 편지가 아직 없어요.<br>아이와 함께 그림 편지를 보내 보세요.</div>') +
+      '<div class="card mail-room">' +
+        cardHead('📮', '가족방 편지', '아이 편지와 엄마·아빠 답장이 시간순으로 쌓여요') +
+        '<div class="chat-room">' +
+          D.mailRecipients.map(mailThreadHTML).join('') +
+        '</div>' +
+        chatReplyBarHTML() +
       '</div>' +
     '</div>';
   }
 
-  function letterHTML(m) {
-    var from = childById(m.fromId);
-    var fresh = (Date.now() - m.ts) < 24 * 3600 * 1000;
-    var pictos = (m.pictos || []).map(function (id) {
+  function pictoChatChips(m) {
+    return (m.pictos || []).map(function (id) {
       var p = D.pictograms.filter(function (x) { return x.id === id; })[0];
-      return p ? '<span class="letter-picto"><span class="emoji">' + p.emoji + '</span>' + esc(p.label) + '</span>' : '';
+      return p ? '<span class="chat-picto"><span class="emoji">' + p.emoji + '</span>' + esc(p.label) + '</span>' : '';
     }).join('');
-    var replies = (m.replies || []).map(function (r) {
-      return '<div class="log-item" style="margin-top:6px">' +
-        '<span>' + (r.emoji || '💬') + '</span>' +
-        '<div class="l-main"><b>' + esc(r.by) + '</b> ' + esc(r.text) + '</div>' +
-        '<span class="l-time">' + UI.ago(r.ts) + '</span></div>';
-    }).join('');
+  }
 
-    return '<div class="letter' + (fresh && !m.read ? ' unread' : '') + '">' +
-      '<div class="letter-head">' +
-        '<span class="avatar sm ' + from.color + '">' + from.emoji + '</span>' +
-        '<span class="who">' + esc(from.name) + '</span>' +
-        '<span class="to">→ ' + esc(m.toName) + '</span>' +
-        '<span class="when">' + UI.ago(m.ts) + '</span>' +
+  /* 아이가 보낸 그림 편지 (왼쪽 말풍선) */
+  function letterBubbleHTML(m) {
+    var from = childById(m.fromId);
+    var pictos = pictoChatChips(m);
+    return '<div class="chat-row them">' +
+      '<span class="chat-ava ' + from.color + '">' + from.emoji + '</span>' +
+      '<div class="chat-col">' +
+        '<div class="chat-meta"><b>' + esc(from.name) + '</b><span>→ ' + esc(m.toName) + '</span><span class="chat-time">' + UI.ago(m.ts) + '</span></div>' +
+        '<div class="chat-bubble them">' +
+          (pictos ? '<div class="chat-pictos">' + pictos + '</div>' : '') +
+          (m.text ? '<div class="chat-text">' + esc(m.text) + '</div>' : '') +
+          '<button type="button" class="chat-speak" data-act="read-letter" data-id="' + m.id + '" aria-label="소리 내어 읽어주기" title="읽어주기">🔊</button>' +
+        '</div>' +
       '</div>' +
-      '<div class="letter-pictos">' + pictos + '</div>' +
-      (m.text ? '<div class="letter-text">' + esc(m.text) + '</div>' : '') +
-      '<div class="letter-actions">' +
-        '<button type="button" class="btn btn-soft btn-sm" data-act="read-letter" data-id="' + m.id + '">🔊 읽어주기</button>' +
-        (S.mode === 'parent'
-          ? '<button type="button" class="btn btn-primary btn-sm" data-act="reply-open" data-id="' + m.id + '">답장하기</button>'
-          : '<span class="badge lav">🔒 답장은 부모님 모드</span>') +
-      '</div>' +
-      (replies ? '<div class="reply-box">' + replies + '</div>' : '') +
-      (window.__replyOpen === m.id ? replyBoxHTML(m) : '') +
     '</div>';
   }
 
-  function replyBoxHTML(m) {
-    return '<div class="reply-box" id="replyBox">' +
-      '<div class="chip-row" style="margin-bottom:8px">' + D.quickReplies.map(function (q) {
-        return '<button type="button" class="chip" data-act="quick-reply" data-id="' + m.id + '" data-text="' + esc(q.label) + '" data-emoji="' + esc(q.emoji) + '">' +
+  /* 부모님 답장 (오른쪽 말풍선) */
+  function replyBubbleHTML(r) {
+    return '<div class="chat-row me">' +
+      '<div class="chat-col right">' +
+        '<div class="chat-meta right"><span class="chat-time">' + UI.ago(r.ts) + '</span><b>' + esc(r.by) + '</b></div>' +
+        '<div class="chat-bubble me">' + (r.emoji && r.emoji !== '💬' ? r.emoji + ' ' : '') + esc(r.text) + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /* 받는 사람 한 명과 주고받은 편지를 시간순 대화로 */
+  function mailThreadHTML(r) {
+    var letters = S.messages.filter(function (m) { return m.toId === r.id; });
+    var items = [];
+    letters.forEach(function (m) {
+      items.push({ ts: m.ts, html: letterBubbleHTML(m) });
+      (m.replies || []).forEach(function (rep) { items.push({ ts: rep.ts, html: replyBubbleHTML(rep) }); });
+    });
+    items.sort(function (a, b) { return a.ts - b.ts; });
+    return '<div class="chat-group ' + (r.id === 'mom' ? 'mom' : 'dad') + '">' +
+      '<div class="inbox-head ' + (r.id === 'mom' ? 'mom' : 'dad') + '">' +
+        '<span class="inbox-emoji">' + r.emoji + '</span>' +
+        '<strong>' + esc(r.name) + '에게 온 편지</strong>' +
+        '<span class="badge rose">' + letters.length + '통</span>' +
+      '</div>' +
+      (items.length
+        ? '<div class="chat-thread">' + items.map(function (i) { return i.html; }).join('') + '</div>'
+        : '<div class="empty inbox-empty"><span class="big">📭</span>' + esc(r.name) + '에게 온 편지가 아직 없어요.</div>') +
+    '</div>';
+  }
+
+  /* 가족방처럼 고정된 답장창 (가장 최근 편지에 답장) */
+  function chatReplyBarHTML() {
+    var all = S.messages.slice().sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+    var target = all[0] || null;
+    if (!target) {
+      return '<div class="chat-replybar"><p class="help">아이가 그림 편지를 보내면 여기서 바로 답장할 수 있어요.</p></div>';
+    }
+    if (S.mode !== 'parent') {
+      return '<div class="chat-replybar"><p class="help">🔒 답장은 부모님 모드에서 보낼 수 있어요.</p></div>';
+    }
+    var from = childById(target.fromId);
+    return '<div class="chat-replybar">' +
+      '<div class="crb-to">' + from.emoji + ' <b>' + esc(from.name) + '</b>의 마지막 편지에 답장해요 · <span>→ ' + esc(target.toName) + '</span></div>' +
+      '<div class="chip-row crb-quick">' + D.quickReplies.map(function (q) {
+        return '<button type="button" class="chip" data-act="quick-reply" data-id="' + target.id + '" data-text="' + esc(q.label) + '" data-emoji="' + esc(q.emoji) + '">' +
           q.emoji + ' ' + esc(q.label) + '</button>';
       }).join('') + '</div>' +
-      '<div style="display:flex;gap:6px">' +
-        '<input class="input" id="replyInput" maxlength="60" placeholder="짧은 답장을 적어 주세요">' +
-        '<button type="button" class="btn btn-primary btn-sm" data-act="send-reply" data-id="' + m.id + '">보내기</button>' +
+      '<div class="crb-input">' +
+        '<input class="input" id="replyInput" maxlength="60" placeholder="답장을 적어 주세요">' +
+        '<button type="button" class="btn btn-primary" data-act="send-reply" data-id="' + target.id + '">보내기</button>' +
       '</div>' +
     '</div>';
+  }
+
+  /* 🎤 말해서 쓰기 (Web Speech API, 한국어) */
+  var micRec = null;
+  var micOn = false;
+  function mailMicToggle() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var btn = document.getElementById('mailMic');
+    var hint = document.getElementById('mailMicHint');
+    if (!SR) {
+      UI.toast('이 브라우저는 말해서 쓰기를 지원하지 않아요. 글자로 적어 주세요', { emoji: '🎤', kind: 'warn', duration: 3400 });
+      return;
+    }
+    if (micOn && micRec) { try { micRec.stop(); } catch (e) {} return; }
+    var input = document.getElementById('mailText');
+    var base = input ? (input.value || '') : '';
+    try {
+      micRec = new SR();
+    } catch (e) {
+      UI.toast('마이크를 쓸 수 없어요. 글자로 적어 주세요', { emoji: '🎤', kind: 'warn' });
+      return;
+    }
+    micRec.lang = 'ko-KR';
+    micRec.interimResults = true;
+    micRec.continuous = false;
+    micRec.maxAlternatives = 1;
+
+    micRec.onstart = function () {
+      micOn = true;
+      if (btn) { btn.classList.add('on'); btn.setAttribute('aria-pressed', 'true'); }
+      if (hint) hint.textContent = '듣고 있어요… 말해 주세요. (다시 누르면 끝)';
+    };
+    micRec.onresult = function (ev) {
+      var said = '';
+      for (var i = ev.resultIndex; i < ev.results.length; i++) said += ev.results[i][0].transcript;
+      said = said.trim();
+      if (!input || !said) return;
+      input.value = ((base ? base + ' ' : '') + said).slice(0, 40);
+    };
+    micRec.onerror = function (ev) {
+      var code = ev && ev.error;
+      if (code === 'not-allowed' || code === 'service-not-allowed') {
+        UI.toast('마이크 사용을 하락해 주세요 (브라우저 설정)', { emoji: '🎤', kind: 'warn', duration: 3400 });
+      } else if (code === 'no-speech') {
+        UI.toast('말이 잘 안 들렸어요. 다시 해 볼까요?', { emoji: '🎤', kind: 'warn' });
+      } else if (code !== 'aborted') {
+        UI.toast('말해서 쓰기가 안 됐어요. 글자로 적어 주세요', { emoji: '🎤', kind: 'warn' });
+      }
+    };
+    micRec.onend = function () {
+      micOn = false;
+      if (btn) { btn.classList.remove('on'); btn.setAttribute('aria-pressed', 'false'); }
+      if (hint) hint.textContent = '버튼을 누르고 말해요. 다시 누르면 끝나요.';
+    };
+    try {
+      micRec.start();
+      UI.toast('듣고 있어요 🎤 또박또박 말해 주세요', { emoji: '🎤', duration: 2000 });
+    } catch (e) {
+      UI.toast('말해서 쓰기를 시작하지 못했어요', { emoji: '🎤', kind: 'warn' });
+    }
   }
 
   function sendLetter() {
@@ -1054,18 +1353,9 @@
     });
     window.__pictos = [];
     save();
-    mailTab = rec.id;
     render({ keepScroll: true });
     UI.confetti(18);
     UI.toast(rec.name + '에게 편지를 보냈어요', { emoji: '💌', kind: 'good' });
-  }
-
-  function openReply(id) {
-    if (!needParent('답장은 부모님 모드에서 보낼 수 있어요')) return;
-    window.__replyOpen = window.__replyOpen === id ? null : id;
-    render({ keepScroll: true });
-    var inp = document.getElementById('replyInput');
-    if (inp) inp.focus();
   }
 
   function sendReply(id, text, emoji) {
@@ -1078,7 +1368,6 @@
     if (!t) { UI.toast('답장 내용을 적어 주세요', { kind: 'warn' }); return; }
     m.replies = m.replies || [];
     m.replies.push({ id: UI.uid('reply'), by: S.actor || '부모님', text: t, emoji: emoji || '💬', ts: Date.now() });
-    window.__replyOpen = null;
     save();
     render({ keepScroll: true });
     UI.toast('답장을 보냈어요', { emoji: '💬', kind: 'good' });
@@ -1099,21 +1388,21 @@
   /* ================= 식판 · 약 · 성장 ================= */
   function renderHealth() {
     var today = todayKey();
-    var c = childById(mealChild);
+    var c = childById(growthChild);
     var stats = mealStats(14);
 
     return '<div class="card soft-sun" style="margin-bottom:12px">' +
         '<div class="routine-head">' +
-          '<strong style="font-size:15px">🍱 오늘의 식판</strong>' +
-          D.children.map(function (k) {
-            return '<button type="button" class="chip ' + k.color + (k.id === c.id ? ' active' : '') + '" data-act="pick-meal-child" data-id="' + k.id + '">' +
-              k.emoji + ' ' + esc(k.name) + '</button>';
-          }).join('') +
+          '<strong style="font-size:15px">🍱 오늘의 식판 메뉴</strong>' +
           '<span style="flex:1"></span>' +
           '<span class="badge ' + (S.mode === 'parent' ? 'mint' : 'lav') + '">' + (S.mode === 'parent' ? '부모님이 기록해요' : '🔒 부모님 모드에서 기록') + '</span>' +
         '</div>' +
-        trayHTML(c, today) +
-        mealSummaryHTML(c, today) +
+        '<p class="help" style="margin:6px 0 8px">메뉴는 두 아이가 같아요. 그릇을 눌러 오늘 음식을 골라 주세요.</p>' +
+        trayMenuHTML(today) +
+      '</div>' +
+
+      '<div class="duo-grid" style="margin-bottom:12px">' +
+        D.children.map(function (k) { return kidMealHTML(k, today); }).join('') +
       '</div>' +
 
       '<div class="two-col" style="margin-bottom:12px">' +
@@ -1168,42 +1457,48 @@
       '</div>';
   }
 
-  function trayHTML(c, date) {
-    return '<div class="tray">' + D.traySlots.map(function (slot, idx) {
-      var st = slotOf(c.id, date, slot.key);
+  /* 오늘의 식판 메뉴 (두 아이 공통) */
+  function trayMenuHTML(date) {
+    var first = D.children[0].id;
+    return '<div class="tray">' + D.traySlots.map(function (slot) {
+      var st = slotOf(first, date, slot.key);
       var food = st.dishId ? foodById(st.dishId) : null;
       var area = { rice: 'rice', soup: 'soup', side1: 's1', side2: 's2', side3: 's3' }[slot.key] || 's1';
-      var cls = 'tray-slot ' + area;
-      return '<div class="' + cls + '">' +
+      return '<div class="tray-slot ' + area + '">' +
         '<span class="slot-label">' + esc(slot.label) + '</span>' +
-        '<button type="button" class="dish-btn" data-act="pick-dish" data-child="' + c.id + '" data-slot="' + slot.key + '">' +
+        '<button type="button" class="dish-btn" data-act="pick-dish" data-slot="' + slot.key + '">' +
           '<span class="dish">' + (food ? food.emoji : '➕') + '</span>' +
           '<span class="dish-name' + (food ? '' : ' none') + '">' + (food ? esc(food.name) : '음식 고르기') + '</span>' +
         '</button>' +
-        '<div class="level-row">' + D.mealLevels.map(function (lv) {
-          var active = food && st.level === lv.key;
-          return '<button type="button" class="level-pill' + (active ? ' active' : '') + '" data-act="set-level" data-child="' + c.id + '" data-slot="' + slot.key + '" data-level="' + lv.key + '">' + esc(lv.label) + '</button>';
-        }).join('') + '</div>' +
       '</div>';
     }).join('') + '</div>';
   }
 
-  function mealSummaryHTML(c, date) {
+  /* 아이 한 명의 먹은 정도 (두 아이 나란히) */
+  function kidMealHTML(c, date) {
     var m = mealOf(c.id, date);
     var picked = (m.slots || []).filter(function (s) { return s.dishId; });
-    if (!picked.length) {
-      return '<div class="empty" style="margin-top:10px"><span class="big">🍽️</span>아직 오늘 식판을 기록하지 않았어요.' +
-        (S.mode === 'parent' ? '<br>그릇을 눌러 음식을 골라 주세요.' : '') + '</div>';
-    }
-    var counts = {};
-    D.mealLevels.forEach(function (l) { counts[l.key] = 0; });
-    picked.forEach(function (s) { counts[s.level] = (counts[s.level] || 0) + 1; });
-    return '<div class="meal-summary">' +
-      '<span class="badge mint">먹은 음식 ' + picked.length + '가지</span>' +
-      D.mealLevels.map(function (l) {
-        return '<span class="badge ' + (l.key === 'all' ? 'mint' : l.key === 'half' ? 'sun' : l.key === 'taste' ? 'rose' : '') + '">' +
-          esc(l.label) + ' ' + counts[l.key] + '</span>';
-      }).join('') +
+    var rows = D.traySlots.map(function (slot) {
+      var st = slotOf(c.id, date, slot.key);
+      var food = st.dishId ? foodById(st.dishId) : null;
+      if (!food) return '';
+      return '<div class="mk-row' + (st.level && st.level !== 'none' ? ' eaten' : '') + '">' +
+        '<div class="mk-dish"><span>' + food.emoji + '</span>' + esc(food.name) + '</div>' +
+        '<div class="level-row">' + D.mealLevels.map(function (lv) {
+          var active = st.level === lv.key;
+          return '<button type="button" class="level-pill' + (active ? ' active' : '') + '" data-act="set-level" data-child="' + c.id + '" data-slot="' + slot.key + '" data-level="' + lv.key + '">' + esc(lv.label) + '</button>';
+        }).join('') + '</div>' +
+      '</div>';
+    }).filter(Boolean);
+
+    return '<div class="card meal-kid ' + c.color + '">' +
+      '<div class="rk-head">' +
+        '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span>' +
+        '<strong>' + esc(c.name) + '</strong>' +
+        '<span class="rk-spacer"></span>' +
+        '<span class="badge mint">먹은 음식 ' + picked.length + '가지</span>' +
+      '</div>' +
+      (rows.length ? rows.join('') : '<div class="empty" style="margin-top:8px"><span class="big">🍽️</span>위에서 오늘 식판 메뉴를 골라 주세요.</div>') +
     '</div>';
   }
 
@@ -1240,14 +1535,16 @@
     return out;
   }
 
-  function pickDishModal(childId, slotKey) {
+  /* 오늘의 식판 메뉴는 두 아이 공통이라 한 번에 같이 넣습니다 */
+  function pickDishModal(slotKey) {
     if (!needParent('식판은 부모님 모드에서 기록할 수 있어요')) return;
     var slot = D.traySlots.filter(function (s) { return s.key === slotKey; })[0];
     var traySlot = slot ? slot.label : '음식';
     UI.modal({
       title: traySlot + ' 고르기',
       size: 'wide',
-      bodyHTML: '<div class="picto-grid" style="grid-template-columns:repeat(3,1fr)">' +
+      bodyHTML: '<p class="help">고른 음식은 민국·이준 식판에 같이 들어가요.</p>' +
+        '<div class="picto-grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px">' +
         D.foods.map(function (f) {
           return '<button type="button" class="picto" data-food="' + f.id + '">' +
             '<span class="emoji">' + f.emoji + '</span>' + esc(f.name) + '</button>';
@@ -1263,16 +1560,18 @@
           if (!fb && !clear) return;
           var date = todayKey();
           S.meals[date] = S.meals[date] || {};
-          S.meals[date][childId] = S.meals[date][childId] || { slots: [] };
-          var slots = S.meals[date][childId].slots;
-          var cur = slots.filter(function (s) { return s.key === slotKey; })[0];
-          if (!cur) { cur = { key: slotKey, dishId: null, level: 'half' }; slots.push(cur); }
-          if (clear) {
-            cur.dishId = null; cur.level = 'none';
-          } else {
-            cur.dishId = fb.getAttribute('data-food');
-            if (cur.level === 'none') cur.level = 'half';
-          }
+          D.children.forEach(function (c) {
+            S.meals[date][c.id] = S.meals[date][c.id] || { slots: [] };
+            var slots = S.meals[date][c.id].slots;
+            var cur = slots.filter(function (s) { return s.key === slotKey; })[0];
+            if (!cur) { cur = { key: slotKey, dishId: null, level: 'half' }; slots.push(cur); }
+            if (clear) {
+              cur.dishId = null; cur.level = 'none';
+            } else {
+              cur.dishId = fb.getAttribute('data-food');
+              if (cur.level === 'none') cur.level = 'half';
+            }
+          });
           save();
           close();
           render({ keepScroll: true });
@@ -1517,7 +1816,7 @@
 
       '<div class="card span-2">' +
         cardHead('🏡', '우리집 다모아', '가족 대시보드 v2') +
-        '<p class="help">아이 루틴 · 칭찬과 돼지저금통 · 가족 일정 · 우체통 · 식판/약/성장 기록을 한 곳에 모은 웹앱이에요.<br>' +
+        '<p class="help">아이 루틴 · 칭찬하기 · 가족 일정 · 우체통 · 식판/약/성장 기록을 한 곳에 모은 웹앱이에요.<br>' +
         '모드: ' + (S.mode === 'parent' ? '🔒 부모님 모드(' + esc(S.actor || '부모님') + ')' : '🧒 아이 모드') + ' · 연결: ' + (isFb ? '가족 클라우드' : '이 기기') + '</p>' +
         '<p class="help" style="margin-top:8px">앱 주소: ' + esc(location.origin + location.pathname) + '</p>' +
       '</div>' +
@@ -1666,30 +1965,35 @@
     switch (act) {
       case 'goto': setView(el.getAttribute('data-view')); break;
 
-      case 'pick-routine-child': routineChild = el.getAttribute('data-id'); render({ keepScroll: true }); break;
-      case 'pick-praise-child': praiseChild = el.getAttribute('data-id'); render({ keepScroll: true }); break;
-      case 'pick-meal-child': mealChild = el.getAttribute('data-id'); render({ keepScroll: true }); break;
-      case 'pick-growth-child': growthChild = el.getAttribute('data-id'); render({ keepScroll: true }); break;
-      case 'pick-mail-sender': mailSender = el.getAttribute('data-id'); render({ keepScroll: true }); break;
-      case 'pick-mail-recipient': mailRecipient = el.getAttribute('data-id'); render({ keepScroll: true }); break;
-      case 'pick-mail-tab':
-        mailTab = el.getAttribute('data-id');
-        S.messages.forEach(function (m) { if (m.toId === mailTab) m.read = true; });
-        save();
-        render({ keepScroll: true });
+      case 'pick-kid': {
+        var kid = childById(el.getAttribute('data-id'));
+        selectChild(kid.id);
+        setView('routine');
+        UI.toast(kid.name + '의 할 일을 볼게요', { emoji: kid.emoji, kind: 'good', duration: 1600 });
         break;
+      }
+
+      case 'mini-day': {
+        var mk = el.getAttribute('data-date');
+        calSelected = mk;
+        calCursor = UI.parseKey(mk);
+        setView('calendar');
+        break;
+      }
+
+      case 'pick-routine-slot': routineSlot = el.getAttribute('data-slot'); render({ keepScroll: true }); break;
+      case 'pick-growth-child': selectChild(el.getAttribute('data-id')); render({ keepScroll: true }); break;
+      case 'mail-mic': mailMicToggle(); break;
+      case 'pick-mail-sender': selectChild(el.getAttribute('data-id')); render({ keepScroll: true }); break;
+      case 'pick-mail-recipient': mailRecipient = el.getAttribute('data-id'); render({ keepScroll: true }); break;
 
       case 'routine-check': {
-        var childId = el.getAttribute('data-child');
-        var itemId = el.getAttribute('data-item');
-        var label = el.parentElement.querySelector('.r-label').childNodes[0].textContent;
-        askQuiz(function () { completeRoutine(childId, itemId); }, label);
+        completeRoutine(el.getAttribute('data-child'), el.getAttribute('data-item'));
         break;
       }
       case 'routine-undo': undoRoutine(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
 
       case 'praise': addPraise(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
-      case 'money': moneyAction(el.getAttribute('data-child'), el.getAttribute('data-key')); break;
 
       case 'cal-prev': calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1); render({ keepScroll: true }); break;
       case 'cal-next': calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 1); render({ keepScroll: true }); break;
@@ -1714,11 +2018,10 @@
       }
       case 'send-mail': sendLetter(); break;
       case 'read-letter': readLetter(el.getAttribute('data-id')); break;
-      case 'reply-open': openReply(el.getAttribute('data-id')); break;
       case 'quick-reply': sendReply(el.getAttribute('data-id'), el.getAttribute('data-text'), el.getAttribute('data-emoji')); break;
       case 'send-reply': sendReply(el.getAttribute('data-id')); break;
 
-      case 'pick-dish': pickDishModal(el.getAttribute('data-child'), el.getAttribute('data-slot')); break;
+      case 'pick-dish': pickDishModal(el.getAttribute('data-slot')); break;
       case 'set-level': setMealLevel(el.getAttribute('data-child'), el.getAttribute('data-slot'), el.getAttribute('data-level')); break;
 
       case 'med-check': {
@@ -1929,10 +2232,17 @@
     if (err) { setSyncBanner(err); return; }
     if (!state) return;
     var keep = S ? { mode: S.mode, actor: S.actor } : null;
+    var prevNewest = S ? newestMessage() : null;
     S = normalize(state);
     if (keep) { S.mode = keep.mode; S.actor = keep.actor; }
     render({ keepScroll: true });
-    UI.toast('다른 기기에서 가족 데이터가 업데이트됐어요', { emoji: '🔄', duration: 2200 });
+    var nowNewest = newestMessage();
+    if (nowNewest && (!prevNewest || nowNewest.id !== prevNewest.id || (nowNewest.replies || []).length !== (prevNewest.replies || []).length)) {
+      var who = childById(nowNewest.fromId);
+      UI.toast('새 메시지 도착 · ' + who.name + ' ' + messagePreview(nowNewest), { emoji: '💌', kind: 'good', duration: 4200 });
+    } else {
+      UI.toast('다른 기기에서 가족 데이터가 업데이트됐어요', { emoji: '🔄', duration: 2200 });
+    }
   }
 
   /* 잠금을 풀었거나 열쇠가 있는 기기에서 대시보드를 엽니다 */
@@ -2022,6 +2332,7 @@
   async function init() {
     bindChrome();
     startClock();
+    initStopTimer();
     if (Storage.hasGate()) await startApp();
     else showGate();
   }
