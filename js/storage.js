@@ -30,6 +30,7 @@ window.Storage = (function () {
   var SALT = 'urijip-damoa-family-v1';   // 해시에 섞어 문서 ID 추측을 더 어렵게
   var MIN_CODE_LEN = 4;
   var HASH_LEN = 24;                     // 24 hex = 96bit
+  var CONNECT_TIMEOUT_MS = 12000;        // 첫 읽기가 이보다 늦으면 이 기기 저장으로 먼저 연다
 
   var mode = 'local';        // 'local' | 'firebase'
   var config = null;         // 실제 사용 중인 Firebase 설정
@@ -109,6 +110,24 @@ window.Storage = (function () {
   }
 
   /* ---------------- Firebase ---------------- */
+  function withTimeout(promise, ms, label) {
+    return new Promise(function (resolve, reject) {
+      var done = false;
+      var t = setTimeout(function () {
+        if (done) return;
+        done = true;
+        var e = new Error(label || '시간 초과');
+        e.__timeout = true;
+        reject(e);
+      }, ms);
+      promise.then(function (v) {
+        if (done) return; done = true; clearTimeout(t); resolve(v);
+      }, function (e) {
+        if (done) return; done = true; clearTimeout(t); reject(e);
+      });
+    });
+  }
+
   async function connect(connConfig, familyId, opts) {
     opts = opts || {};
     var version = '10.12.2';
@@ -121,11 +140,25 @@ window.Storage = (function () {
       try { await appMod.deleteApp(app); } catch (e) {}
       app = appMod.initializeApp(connConfig);
     }
-    var nextDb = fs.getFirestore(app);
+    /* 일부 공유기·회사망·프록시는 실시간 채널(WebChannel)을 막습니다.
+       long polling으로 열어 두면 그런 망에서도 동기화가 됩니다. */
+    var nextDb;
+    try {
+      nextDb = fs.initializeFirestore(app, { experimentalForceLongPolling: true });
+    } catch (e) {
+      nextDb = fs.getFirestore(app);
+    }
     var nextRef = fs.doc(nextDb, COLLECTION, familyId);
 
-    /* 여기서 문서를 실제로 읽어 봅니다 → 권한/DB 없음 오류를 이때 잡습니다 */
-    var snap = await fs.getDoc(nextRef);
+    /* 여기서 문서를 실제로 읽어 봅니다 → 권한/DB 없음 오류를 이때 잡습니다.
+       응답이 너무 늦으면 기다리지 않고 이 기기 저장으로 먼저 열어 줍니다. */
+    var snap;
+    try {
+      snap = await withTimeout(fs.getDoc(nextRef), CONNECT_TIMEOUT_MS);
+    } catch (e) {
+      if (e && e.__timeout) throw new Error('서버 응답이 너무 늦어요. 잠시 뒤 다시 연결해 주세요');
+      throw e;
+    }
     var remoteDoc = snap.exists() ? snap.data() : null;
     var remoteState = (remoteDoc && remoteDoc.state) ? remoteDoc.state : null;
 
