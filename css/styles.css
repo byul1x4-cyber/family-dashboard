@@ -1009,8 +1009,8 @@ details.more[open] > summary::before { content: '－ '; }
   .brand-text h1 { font-size: 24px; }
   .mode-switch { width: auto; }
   .mode-btn { flex: none; padding: 9px 16px; font-size: 13px; }
-  .tabs { top: 86px; gap: 8px; }
-  .tab { padding: 10px 16px; font-size: 14px; }
+  .tabs { top: 86px; gap: 8px; flex-wrap: wrap; overflow-x: visible; }
+  .tab { padding: 10px 16px; font-size: 14px; flex: 0 0 auto; }
   .two-col { grid-template-columns: 1.15fr .85fr; align-items: start; }
   .praise-grid { grid-template-columns: 1.05fr .95fr; align-items: start; }
   .mail-layout { grid-template-columns: .95fr 1.05fr; align-items: start; }
@@ -1026,7 +1026,7 @@ details.more[open] > summary::before { content: '－ '; }
   .home-children { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .card { padding: 18px; }
   .cal-day { min-height: 46px; font-size: 13px; }
-  .tabs { top: 90px; }
+  .tabs { top: 90px; flex-wrap: nowrap; overflow-x: auto; }
 }
 
 @media (max-width: 380px) {
