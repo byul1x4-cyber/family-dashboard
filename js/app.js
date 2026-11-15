@@ -2014,8 +2014,6 @@
     });
     if (changed) save();
 
-    var hourAgo = Date.now() - 3600 * 1000;
-    var sentLastHour = S.messages.filter(function (m) { return m.fromId === mailSender && m.ts > hourAgo; }).length;
     var events = mailEvents();
     var shown = events.filter(function (ev) {
       return mailFilter === 'all' ? true : (ev.letter && ev.letter.fromId === mailFilter);
@@ -2038,7 +2036,7 @@
           return '<button type="button" class="mail-recipient' + (r.id === mailRecipient ? ' active' : '') + '" data-act="pick-mail-recipient" data-id="' + r.id + '">' +
             '<span class="emoji">' + r.emoji + '</span>' + esc(r.name) + '</button>';
         }).join('') + '</div>' +
-        '<p class="help" style="margin:12px 0 8px">그림은 2개까지, 한 시간에 3통까지 보낼 수 있어요.</p>' +
+        '<p class="help" style="margin:12px 0 8px">그림을 몇 개든 골라 마음껏 보내요.</p>' +
         '<div class="picto-grid">' + D.pictograms.map(function (p) {
           return '<button type="button" class="picto" data-act="pick-picto" data-id="' + p.id + '">' +
             '<span class="emoji">' + p.emoji + '</span>' + esc(p.label) + '</button>';
@@ -2049,8 +2047,8 @@
         '</button>' +
         '<div class="field" style="margin-top:10px"><input class="input" id="mailText" maxlength="40" placeholder="짧은 말도 함께 보낼 수 있어요 (선택)"></div>' +
         '<div class="mail-compose-foot">' +
-          '<span class="counter" id="mailCounter">' + sentLastHour + '/3통 보냈어요</span>' +
-          '<button type="button" class="btn btn-rose" data-act="send-mail"' + (sentLastHour >= 3 ? ' disabled' : '') + '>편지 보내기 💌</button>' +
+          '<span class="counter" id="mailCounter">' + (window.__pictos || []).length + '개 골랐어요</span>' +
+          '<button type="button" class="btn btn-rose" data-act="send-mail">편지 보내기 💌</button>' +
         '</div>' +
       '</div>' +
 
@@ -2231,17 +2229,11 @@
   }
 
   function sendLetter() {
-    var hourAgo = Date.now() - 3600 * 1000;
-    var sent = S.messages.filter(function (m) { return m.fromId === mailSender && m.ts > hourAgo; }).length;
-    if (sent >= 3) {
-      UI.toast('한 시간에 3통까지 보낼 수 있어요', { emoji: '⏳', kind: 'warn' });
-      return;
-    }
     if (!window.__pictos || !window.__pictos.length) {
       var txt0 = (document.getElementById('mailText') || {}).value || '';
       if (!txt0.trim()) { UI.toast('그림을 하나 골라 주세요', { emoji: '🖼️', kind: 'warn' }); return; }
     }
-    var pictos = (window.__pictos || []).slice(0, 2);
+    var pictos = (window.__pictos || []).slice();
     var text = ((document.getElementById('mailText') || {}).value || '').trim();
     var rec = D.mailRecipients.filter(function (r) { return r.id === mailRecipient; })[0];
     var sender = childById(mailSender);
@@ -2928,13 +2920,10 @@
         window.__pictos = window.__pictos || [];
         var i = window.__pictos.indexOf(pid);
         if (i >= 0) window.__pictos.splice(i, 1);
-        else {
-          if (window.__pictos.length >= 2) { UI.toast('그림은 2개까지 고를 수 있어요', { emoji: '🖼️', kind: 'warn' }); return; }
-          window.__pictos.push(pid);
-        }
+        else window.__pictos.push(pid);
         el.classList.toggle('active');
         var cnt = document.getElementById('mailCounter');
-        if (cnt) cnt.textContent = (window.__pictos.length) + '개 골랐어요 · 2개까지';
+        if (cnt) cnt.textContent = (window.__pictos.length) + '개 골랐어요';
         break;
       }
       case 'send-mail': sendLetter(); break;
