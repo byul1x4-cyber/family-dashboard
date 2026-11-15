@@ -1649,6 +1649,11 @@
       S = normalize(state);
       render({ keepScroll: true });
     });
+    /* ?view=health 처럼 탭으로 바로 열기 */
+    try {
+      var wanted = new URLSearchParams(location.search).get('view');
+      if (wanted && VIEWS[wanted]) view = wanted;
+    } catch (e) {}
     render();
     if (!S.introSeen) showIntro();
     save();
