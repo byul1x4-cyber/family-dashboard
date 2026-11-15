@@ -64,6 +64,9 @@ window.Storage = {
     document.head.insertAdjacentHTML('beforeend', d.head.innerHTML);
     document.getElementById('boot').remove();
     document.body.insertAdjacentHTML('beforeend', d.body.innerHTML);
+    if (location.search.indexOf('ring=1') >= 0) {
+      try { localStorage.setItem('family-dashboard-stop-timer', JSON.stringify({ endsAt: Date.now() + 2500 })); } catch (e) {}
+    }
     try {
       await load('js/data.js'); await load('js/ui.js'); await load('js/app.js');
       var wanted = new URLSearchParams(location.search).get('view');

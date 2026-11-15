@@ -1269,6 +1269,7 @@ details.more[open] > summary::before { content: '－ '; }
   .tabs { top: 86px; gap: 8px; flex-wrap: wrap; overflow-x: visible; }
   .tab { padding: 9px 13px; font-size: 13px; flex: 0 0 auto; }
   .two-col { grid-template-columns: 1.15fr .85fr; align-items: start; }
+  .duo-grid { grid-template-columns: 1fr 1fr; align-items: start; }
   .praise-grid { grid-template-columns: 1.05fr .95fr; align-items: start; }
   .mail-layout { grid-template-columns: .95fr 1.05fr; align-items: start; }
   .picto { font-size: 11px; letter-spacing: -.2px; }
