@@ -27,7 +27,7 @@ window.Storage = (function () {
       actor: params.mode === 'parent' ? '엄마' : null,
       routine: (function () {
         var r = {}; r[t] = {};
-        ['mg-m-wake', 'mg-m-brush', 'mg-m-break', 'ij-m-wake', 'ij-m-brush'].forEach(function (id, i) { r[t][id] = Date.now() - (6 - i) * 600000; });
+        ['mg-m-wake', 'mg-m-brush', 'mg-m-wash', 'ij-m-wake', 'ij-m-brush', 'ij-m-wash', 'mg-e-bag', 'ij-e-toys'].forEach(function (id, i) { r[t][id] = Date.now() - (6 - i) * 600000; });
         return r;
       })(),
       celebrated: {}, stars: { minguk: 12, ijun: 7 }, praiseCount: { minguk: 4, ijun: 2 },

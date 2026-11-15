@@ -32,11 +32,10 @@ window.APP_DATA = {
         { id: 'mg-m-bag',    label: '가방 챙기기',     emoji: '🎒' }
       ],
       evening: [
-        { id: 'mg-e-home',   label: '숙제하기',        emoji: '📚' },
-        { id: 'mg-e-tkd',    label: '태권도',          emoji: '🥋' },
-        { id: 'mg-e-swim',   label: '수영',            emoji: '🏊' },
-        { id: 'mg-e-chess',  label: '체스',            emoji: '♟️' },
-        { id: 'mg-e-hockey', label: '하키',            emoji: '🏒' },
+        { id: 'mg-e-home',   label: '숙제하기',        emoji: '✏️' },
+        { id: 'mg-e-bag',    label: '가방 정리하기',    emoji: '🎒' },
+        { id: 'mg-e-toys',   label: '장난감 정리하기',  emoji: '🧸' },
+        { id: 'mg-e-books',  label: '책 정리하기',      emoji: '📚' },
         { id: 'mg-e-brush',  label: '양치하기',        emoji: '🪥' },
         { id: 'mg-e-book',   label: '책 읽기',         emoji: '📖' },
         { id: 'mg-e-sleep',  label: '9시 전에 자기',   emoji: '🌙' }
@@ -46,13 +45,15 @@ window.APP_DATA = {
       morning: [
         { id: 'ij-m-wake',   label: '혼자 일어나기',   emoji: '⏰' },
         { id: 'ij-m-brush',  label: '양치하기',        emoji: '🪥' },
+        { id: 'ij-m-wash',   label: '세수하기',        emoji: '🧼' },
         { id: 'ij-m-break',  label: '아침 먹기',       emoji: '🍳' },
         { id: 'ij-m-bag',    label: '유치원 가방 챙기기', emoji: '🎒' }
       ],
       evening: [
-        { id: 'ij-e-toys',   label: '장난감 정리',     emoji: '🧸' },
+        { id: 'ij-e-bag',    label: '가방 정리하기',    emoji: '🎒' },
+        { id: 'ij-e-toys',   label: '장난감 정리하기',  emoji: '🧸' },
+        { id: 'ij-e-books',  label: '책 정리하기',      emoji: '📚' },
         { id: 'ij-e-brush',  label: '양치하기',        emoji: '🪥' },
-        { id: 'ij-e-water',  label: '물 마시기',       emoji: '💧' },
         { id: 'ij-e-book',   label: '책 읽기',         emoji: '📖' },
         { id: 'ij-e-sleep',  label: '9시 전에 자기',   emoji: '🌙' }
       ]

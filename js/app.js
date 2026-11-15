@@ -1359,6 +1359,13 @@
     '</div>';
   }
 
+  /* 예전에 저장된 칭찬 기록도 아이에 맞는 문구로 보여 줍니다 (이준은 형) */
+  function praiseLogLabel(l) {
+    var text = String((l && l.item) || '');
+    if (l && l.childId === 'ijun') text = text.replace(/동생/g, '형');
+    return text;
+  }
+
   function recentLogsHTML(limit) {
     var list = S.praiseLog.slice().sort(function (a, b) { return b.ts - a.ts; });
     if (!list.length) {
@@ -1367,7 +1374,7 @@
     return '<div class="log-list">' + list.slice(0, limit).map(function (l) {
       return logItemHTML({
         emoji: l.emoji || '⭐',
-        main: '<b>' + esc(childById(l.childId).name) + '</b> 칭찬 · ' + esc(l.item || ''),
+        main: '<b>' + esc(childById(l.childId).name) + '</b> 칭찬 · ' + esc(praiseLogLabel(l)),
         by: l.by ? ' · ' + esc(l.by) : '',
         ts: l.ts
       });
