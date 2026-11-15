@@ -2,7 +2,7 @@
 <html lang="ko">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>미리보기 · 우리집 다모아</title>
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=9">
 </head>
 <body>
 <p id="boot" style="font:14px/1.6 sans-serif;padding:20px;color:#8a7a66">불러오는 중…</p>
@@ -60,7 +60,7 @@ window.Storage = {
   (async function () {
     var html = await (await fetch('index.html')).text();
     var d = new DOMParser().parseFromString(html, 'text/html');
-    d.head.querySelectorAll('script').forEach(function (s) { s.remove(); });
+    d.head.querySelectorAll('script, link[rel="stylesheet"]').forEach(function (n) { n.remove(); });
     document.head.insertAdjacentHTML('beforeend', d.head.innerHTML);
     document.getElementById('boot').remove();
     document.body.insertAdjacentHTML('beforeend', d.body.innerHTML);
