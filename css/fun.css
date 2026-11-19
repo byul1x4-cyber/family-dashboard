@@ -1683,3 +1683,13 @@
   .tv-actions { margin-top: 6px; }
   .tv-minis { margin-top: 6px; }
 }
+
+/* 폰: 그림은 조금 줄이고 버튼 네 개까지 한 화면에 */
+@media (max-width: 619px) {
+  .tv-h1t small { display: none; }
+  .tv-stage { min-height: 134px; }
+  .tv-mon img { width: 112px; height: 112px; }
+  .tv-floor { width: 110px; height: 11px; margin-top: -7px; }
+  .tbar-track { height: 14px; }
+  .tbar-runner img { width: 26px; height: 26px; }
+}
