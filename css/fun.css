@@ -3164,3 +3164,9 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   body.on-home .hero > .hero-clock { grid-area: clock; grid-column: clock; margin: 0; min-width: 0; }
   body.on-home .hero > .wx-head { grid-area: wx; grid-column: wx; width: auto; margin: 0; }
 }
+
+/* ---- 폰에서는 헤더 날씨를 숨기고(본문 띠 사용) 정리·그만 버튼만 ---- */
+@media (max-width: 999px) {
+  body.on-home .wx-head { display: none !important; }
+  body.on-home .tabrow .clock.mini { display: inline-flex; }
+}
