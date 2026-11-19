@@ -1952,3 +1952,13 @@
   .hm-cal .day-ev { padding: 4px 6px; margin-bottom: 3px; }
   .hm-cal .day-go { padding: 4px; }
 }
+
+/* 폰: 오늘·내일 목록을 미니 달력보다 위에 (중요한 것이 먼저 보이게) */
+@media (max-width: 719px) {
+  .hm-cal .day-cols { grid-template-columns: 1fr; }
+  .hm-cal .day-list { order: 1; }
+  .hm-cal .day-cal { order: 2; }
+  .hm-cal .mini-cal { margin-bottom: 0; gap: 2px; }
+  .hm-cal .mini-day { min-height: 27px; font-size: 11.5px; border-radius: 8px; }
+  .hm-cal .mini-dow { font-size: 10px; padding: 1px 0 3px; }
+}
