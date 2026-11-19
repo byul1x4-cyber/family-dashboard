@@ -1693,3 +1693,11 @@
   .tbar-track { height: 14px; }
   .tbar-runner img { width: 26px; height: 26px; }
 }
+
+/* 폰: 헤더 간격을 줄여 브랜드·바로가기·시계가 확실히 한 줄에 */
+@media (max-width: 719px) {
+  .topbar { gap: 6px; padding: 8px 10px; }
+  .qb-btn { padding: 6px 8px; gap: 3px; }
+  .brand { gap: 7px; }
+  .clock::before { content: none; }
+}
