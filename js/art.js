@@ -366,8 +366,9 @@ window.Art = (function () {
         '<ellipse cx="62" cy="142" rx="24" ry="5" fill="#000" opacity=".06"/>' +
         '<g transform="translate(62,142)">' + schBoy(c, { arms: 'one-up' }) + '</g>' +
         /* 칫솔 (들어 올린 손) */
-        '<g transform="rotate(-32 28 46)"><rect x="25.6" y="32" width="5" height="22" rx="2.5" fill="#9FD8F5"/>' +
-          '<rect x="24.4" y="24" width="8.4" height="9.5" rx="3.2" fill="#fff"/></g>' +
+        '<g transform="rotate(-32 28 46)"><rect x="26" y="34" width="4.4" height="20" rx="2.2" fill="#9FD8F5"/>' +
+          '<rect x="24.6" y="26" width="7" height="8" rx="2.6" fill="#fff"/>' +
+          '<g stroke="#CFE6F5" stroke-width="1.1" stroke-linecap="round"><path d="M26 27v-2M28 27v-2M30 27v-2"/></g></g>' +
         '<rect x="96" y="96" width="96" height="18" rx="9" fill="#F7F2E6"/>' +
         '<ellipse cx="146" cy="98" rx="31" ry="11" fill="#CFE9F7" stroke="#fff" stroke-width="3"/>' +
         '<path d="M146 74v-10a8 8 0 0 1 16 0" stroke="#B9CBD8" stroke-width="5" fill="none" stroke-linecap="round" transform="translate(-16 0)"/>' +
@@ -387,9 +388,10 @@ window.Art = (function () {
         '<g transform="translate(74,142)">' + schBoy(c, { arms: 'up' }) + '</g>' +
         /* 머리 위로 뒤집어쓰는 옷 */
         '<g transform="translate(74,142)">' +
-          '<path d="M-30 -104h60l-3 16a9 9 0 0 1-9 8h-36a9 9 0 0 1-9-8z" fill="' + c.shirt2 + '" stroke="#fff" stroke-width="2.4"/>' +
-          '<path d="M-30 -104l-12 8 6 10 8-6zM30 -104l12 8-6 10-8-6z" fill="' + c.shirt2 + '" stroke="#fff" stroke-width="2.4"/>' +
-          '<path d="M-22 -104c4-6 14-8 22-8s18 2 22 8" fill="none" stroke="#fff" stroke-width="2.4"/>' +
+          '<path d="M-32 -130h64l-3.2 15a9 9 0 0 1-9 8h-39.6a9 9 0 0 1-9-8z" fill="' + c.shirt2 + '" stroke="#fff" stroke-width="2.6"/>' +
+          '<path d="M-32 -130l-13 9 6.5 10 8.5-6zM32 -130l13 9-6.5 10-8.5-6z" fill="' + c.shirt2 + '" stroke="#fff" stroke-width="2.6"/>' +
+          '<path d="M-24 -130c4-7 15-9 24-9s20 2 24 9" fill="none" stroke="#fff" stroke-width="2.6"/>' +
+          '<path d="M-10 -116c6 3 14 3 20 0" stroke="#fff" stroke-width="2.2" fill="none" opacity=".9"/>' +
         '</g>' +
         '<g transform="translate(24,120)"><rect x="0" y="8" width="34" height="9" rx="4.5" fill="#C9B7E8"/>' +
           '<rect x="4" y="0" width="26" height="9" rx="4.5" fill="#FFD98A"/></g>' +
