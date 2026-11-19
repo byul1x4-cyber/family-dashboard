@@ -727,6 +727,11 @@
 }
 
 /* 도감 — 반짝이는 홀로그램 카드 */
+.pk-pick { margin-bottom: 12px; }
+.pk-pick .chip small { font-size: 10px; font-weight: 800; opacity: .9; }
+/* 알·키우기 카드 → 그 아이 도감 순서로 한 줄에 쌓기 (패드·데스크톱에서도 나란히 두지 않음) */
+.pk-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
+.pk-stack > .pk-dex { margin-top: 0; }
 .pk-dex { margin-top: 12px; }
 .pk-dex-grid {
   display: grid;
