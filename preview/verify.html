@@ -5665,6 +5665,13 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   .tabrow .qb-btn, .tabrow .stop-timer { display: none !important; }
 }
 
+/* 폰: 큰 시계만 숨기고 [정리/그만] 줄은 보이게 (히어로 시계 칸 안에 버튼이 있음) */
+@media (max-width: 999px) {
+  body.on-home .hero-clock { display: flex !important; width: 100%; margin: 0; gap: 0; }
+  body.on-home .hero-clock .clock.big { display: none !important; }
+  body.on-home .hero-quick { display: flex !important; flex: 1 1 auto; width: 100%; }
+}
+
 </style>
 </head>
 <body>
