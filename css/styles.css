@@ -1148,6 +1148,22 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 .log-item .l-main b { font-weight: 800; }
 .log-item .l-time { font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
 
+/* 칭찬 취소 — 부모님 모드의 최근 칭찬 기록에만 붙는 작은 버튼 */
+.log-cancel {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1.5px solid #F0DCC6;
+  background: #fff;
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  transition: background .15s, color .15s, border-color .15s, transform .12s;
+}
+.log-cancel:hover { background: #FFEDE8; border-color: #FFD8CE; color: #C4533C; }
+.log-cancel:active { transform: scale(.96); }
+
 /* =========================================================
    우리 가족 일정
    ========================================================= */

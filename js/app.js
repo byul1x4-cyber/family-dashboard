@@ -1205,6 +1205,8 @@
     }
     S.mode = 'child';
     S.actor = null;
+    /* 설정은 부모님 모드 전용이라, 설정 화면에 있었다면 홈으로 돌아갑니다 */
+    if (view === 'settings') view = 'home';
     save();
     render({ keepScroll: true });
     UI.toast('아이 모드로 바꿨어요', { emoji: '🧒' });
@@ -1271,6 +1273,7 @@
 
   /* ---------------- 화면 전환 ---------------- */
   function setView(name) {
+    if (name === 'settings' && S.mode !== 'parent') name = 'home';   /* ⚙️ 설정 탭은 부모님 모드에서만 */
     view = name;
     render({ scrollTop: true });
     /* 우체통은 손글씨 종이·최근 편지 카드가 그려진 뒤 높이가 변해서, 한 번 더 맨 위로 맞춥니다 */
@@ -1333,6 +1336,9 @@
     if (sub) sub.textContent = S.mode === 'parent' ? ((S.actor || '부모님') + ' 모드 · 관리 중') : '아이 모드 · 오늘도 다 같이!';
     var mailTabBtn = document.querySelector('.tab[data-view="mailbox"]');
     if (mailTabBtn) mailTabBtn.classList.toggle('has-dot', unreadTotal() > 0);
+    /* ⚙️ 설정 탭은 부모님 모드에서만 보입니다 (아이 모드에서는 숨김) */
+    var setTabBtn = document.querySelector('.tab[data-view="settings"]');
+    if (setTabBtn) setTabBtn.style.display = S.mode === 'parent' ? '' : 'none';
     var bb = document.getElementById('bannerBtn');
     if (bb) bb.hidden = S.mode !== 'parent';
   }
@@ -1983,7 +1989,12 @@
         emoji: l.emoji || '⭐',
         main: '<b>' + esc(childById(l.childId).name) + '</b> 칭찬 · ' + esc(praiseLogLabel(l)),
         by: l.by ? ' · ' + esc(l.by) : '',
-        ts: l.ts
+        ts: l.ts,
+        /* 칭찬 취소는 부모님 모드에서만 보여요 (아이 모드에는 없음) */
+        trail: S.mode === 'parent'
+          ? '<button type="button" class="log-cancel" data-act="cancel-praise" data-id="' + esc(l.id) + '" aria-label="' +
+            esc(childById(l.childId).name) + ' 칭찬 취소">취소</button>'
+          : ''
       });
     }).join('') + '</div>';
   }
@@ -1993,6 +2004,7 @@
       '<span>' + (o.emoji || '•') + '</span>' +
       '<div class="l-main">' + o.main + (o.by || '') + '</div>' +
       '<span class="l-time">' + UI.ago(o.ts) + '</span>' +
+      (o.trail || '') +
     '</div>';
   }
 
@@ -2341,6 +2353,38 @@
     render({ keepScroll: true });
     UI.confetti(14);
     UI.toast(childById(childId).name + '이를 칭찬했어요! 별 ⭐ 1개', { emoji: item.emoji, kind: 'good' });
+  }
+
+  /* 칭찬 취소 — 잘못 누른 칭찬을 되돌립니다.
+     기록·칭찬 수를 되돌리고, 그때 준 별 1개도 함께 뺍니다.
+     보유 별이 0개면 spendStars 가 포켓몬에게 먹인 별에서 이어서 빼요. */
+  function cancelPraise(logId) {
+    if (!needParent('칭찬 취소는 부모님 모드에서 할 수 있어요')) return;
+    var idx = -1, i;
+    for (i = 0; i < S.praiseLog.length; i++) {
+      if (S.praiseLog[i] && S.praiseLog[i].id === logId) { idx = i; break; }
+    }
+    if (idx < 0) {
+      UI.toast('이미 지운 칭찬이에요', { emoji: '🧾', duration: 1800 });
+      render({ keepScroll: true });
+      return;
+    }
+    var log = S.praiseLog[idx];
+    var childId = log.childId;
+    var kid = childById(childId);
+    var name = kid ? kid.name : '아이';
+    S.praiseLog.splice(idx, 1);
+    S.praiseCount[childId] = Math.max(0, (S.praiseCount[childId] || 0) - 1);
+    var r = spendStars(childId, 1);   /* 보유 별 1개 → 모자라면 포켓몬 먹인 별에서 */
+    save();
+    render({ keepScroll: true });
+    if (r.pokemon > 0) {
+      UI.toast(name + ' 칭찬을 취소했어요 · 보유 별이 없어 포켓몬에게 먹인 별에서 ' + r.pokemon + '개 뺐어요',
+        { emoji: '⚡', kind: 'warn', duration: 3600 });
+    } else {
+      UI.toast(name + ' 칭찬을 취소했어요 · 별 1개도 함께 뺐어요',
+        { emoji: '↩️', kind: 'warn', duration: 2600 });
+    }
   }
 
   /* ================= 일정 ================= */
@@ -3535,11 +3579,11 @@
 
       '<div class="card">' +
         cardHead('🎛️', '새 기능 관리', '등교 시작 · 정리시간 · 포켓몬') +
-        '<p class="help">등교 시각과 등교 준비 항목, 정리시간 버튼·보상·노래, 포켓몬 레벨업 별을 여기서 바로 고쳐요.<br>' +
+        '<p class="help">등교 시각과 등교 준비 항목, 정리시간 버튼·노래, 포켓몬 레벨업 별을 여기서 바로 고쳐요.<br>' +
         '저장하면 <b>아이 태블릿에도 새로고침 없이</b> 바로 보여요.</p>' +
         '<div class="admin-grid">' +
           '<button type="button" class="admin-btn" data-act="school-settings"><span>🌅</span><b>등교 시작 설정</b><small>' + esc(S.schoolTime) + ' · 준비 ' + schoolItems(D.children[0].id).length + '개</small></button>' +
-          '<button type="button" class="admin-btn" data-act="tidy-settings"><span>🧹</span><b>정리시간 설정</b><small>' + ((S.tidyCfg && S.tidyCfg.mins) || [5, 10, 15]).join('·') + '분 · 별 ' + tidyReward(true) + '개</small></button>' +
+          '<button type="button" class="admin-btn" data-act="tidy-settings"><span>🧹</span><b>정리시간 설정</b><small>' + ((S.tidyCfg && S.tidyCfg.mins) || [5, 10, 15]).join('·') + '분 · 보상 없이 축하만</small></button>' +
           '<button type="button" class="admin-btn" data-act="pk-settings"><span>⚡</span><b>포켓몬 관리</b><small>별 ' + pkPerLevel() + '개 = 진화 1단계</small></button>' +
           '<button type="button" class="admin-btn" data-act="edit-routines"><span>✅</span><b>아침·저녁 할 일</b><small>할 일 탭에서 바로 고치기</small></button>' +
         '</div>' +
@@ -3930,15 +3974,11 @@
      · 5·10·15분 버튼 → 바로 집중 타이머 화면.
      · 남은 시간 막대가 줄어들고, 신나는 동요 멜로디를 Web Audio로 직접 연주합니다
        (외부 음원 링크를 쓰지 않아 끊기지 않아요. 음소거·일시정지 토글 있음).
-     · '정리 끝!'을 누르면 별 보상(시간 안에 끝내면 별 3개, 시간이 지나면 별 1개).
+     · '정리 끝!'을 누르면 축하(반짝이·소리·토스트)만 하고, 별은 주지 않습니다
+       (정리시간은 보상 없이 스스로 하는 습관으로 둔다고 해서요).
      ========================================================= */
   var tidy = null;
   var tidyInt = null;
-
-  function tidyReward(inTime) {
-    var c = (S && S.tidyCfg) || {};
-    return clampNum(inTime ? c.reward : c.rewardLate, 0, 20, inTime ? 3 : 1);
-  }
 
   var TM = { ctx: null, master: null, timer: null, playing: false, muted: false, paused: false };
   var TM_BEAT = 0.34;
@@ -4052,7 +4092,6 @@
     var chips = D.children.map(function (c) {
       return '<button type="button" class="chip ' + c.color + (who === c.id ? ' active' : '') + '" data-td="who" data-id="' + c.id + '">' + c.emoji + ' ' + esc(c.name) + '</button>';
     }).join('') + '<button type="button" class="chip' + (who === 'family' ? ' active' : '') + '" data-td="who" data-id="family">👪 가족 모두</button>';
-    var reward = tidy.endsAt - Date.now() > 0 ? tidyReward(true) : tidyReward(false);
     return '<div class="td-panel" role="dialog" aria-modal="true" aria-label="정리시간">' +
       '<div class="td-head">' +
         '<span class="td-ico" aria-hidden="true">🧹</span>' +
@@ -4066,7 +4105,7 @@
       '<div class="td-actions">' +
         '<button type="button" class="td-mini" data-td="music" aria-label="음악 켜기/끄기">' + (TM.muted ? '🔇' : '🔊') + '</button>' +
         '<button type="button" class="td-mini" data-td="pause" aria-label="음악 멈춤">' + (TM.paused ? '▶️' : '⏸️') + '</button>' +
-        '<button type="button" class="btn btn-primary td-finish" data-td="finish">정리 끝! 🎉 <span id="tdReward">별 ' + reward + '개</span></button>' +
+        '<button type="button" class="btn btn-primary td-finish" data-td="finish">정리 끝! 🎉</button>' +
       '</div>' +
     '</div>';
   }
@@ -4078,7 +4117,6 @@
     var big = el.querySelector('#tdBig');
     var bar = el.querySelector('#tdBar');
     var note = el.querySelector('#tdNote');
-    var rew = el.querySelector('#tdReward');
     var total = tidy.minutes * 60000;
     var pct = Math.max(0, Math.min(100, (left / total) * 100));
     if (big) big.textContent = clockText(left);
@@ -4091,7 +4129,6 @@
         ? '🎵 노래가 나와요! 신나게 정리해요'
         : '⏰ 시간이 다 됐어요! 정리를 마무리하고 [정리 끝!]을 눌러요';
     }
-    if (rew) rew.textContent = '별 ' + (left > 0 ? tidyReward(true) : tidyReward(false)) + '개';
   }
   function startTidy(minutes, childId) {
     minutes = Number(minutes) || 10;
@@ -4131,24 +4168,16 @@
   function finishTidy() {
     if (!tidy) return;
     var left = tidy.endsAt - Date.now();
-    var totalMs = tidy.minutes * 60000;
-    var elapsed = totalMs - Math.max(0, left);
     var inTime = left > 0;
-    var per = tidyReward(inTime);
-    /* 너무 빨리(전체 시간의 1/3도 안 되게) 끝내면 한 번만 막고, 별을 적게 줘서
-       시작→끝 버튼만 누르는 식으로 별을 모으지 못하게 합니다 */
-    var quick = elapsed < totalMs * 0.33;
-    if (quick) per = Math.min(per, 1);
-    var ids = tidy.childId === 'family' ? D.children.map(function (c) { return c.id; }) : [tidy.childId];
-    ids.forEach(function (id) { S.stars[id] = (S.stars[id] || 0) + per; });
     var who = tidy.childId === 'family' ? '가족 모두' : childById(tidy.childId).name;
     save();
     closeTidyMode();
     render({ keepScroll: true });
     UI.confetti(inTime ? 52 : 24);
     chime();
-    UI.toast((quick ? '정말 빨랐어요! ' : inTime ? '시간 안에 정리 끝! ' : '정리 끝! ') + who + ' 별 ' + per + '개 ⭐', { emoji: inTime ? '🎉' : '👏', kind: 'good', duration: 3600 });
-    pushToPhones('🧹 정리 끝!', who + (inTime ? '가 시간 안에 정리를 마쳤어요! 별 ' : ' 정리를 마무리했어요! 별 ') + per + '개 ⭐');
+    UI.toast('정리 끝! ' + who + (inTime ? '가 시간 안에 아주 깔끔하게 정리했어요 ✨' : ' 정리를 마무리했어요 ✨'),
+      { emoji: inTime ? '🎉' : '👏', kind: 'good', duration: 3400 });
+    pushToPhones('🧹 정리 끝!', who + (inTime ? '가 시간 안에 정리를 마쳤어요 ✨' : ' 정리를 마무리했어요 ✨'));
   }
 
   /* =========================================================
@@ -4975,7 +5004,7 @@
     return '<div class="card soft-sun pk-rules">' +
         '<div class="pk-rules-head"><b>⭐ 별 ' + pkPerLevel() + '개 모으면 진화!</b>' +
           '<span>' + D.children.map(function (k) { return k.emoji + ' ' + esc(k.name) + ' ⭐' + (S.stars[k.id] || 0); }).join(' · ') + '</span></div>' +
-        '<p>할 일 체크 · 등교 준비 · 정리하기로 <b>내 별(⭐)</b>을 모아서 포켓몬에게 먹여요.<br>' +
+        '<p>할 일 체크 · 등교 준비로 <b>내 별(⭐)</b>을 모아서 포켓몬에게 먹여요.<br>' +
         '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 단계마다 먹인 별 ' + pkPerLevel() + '개를 모아야 진화해요.<br>' +
         '먹인 별은 포켓몬 안에서만 쌓여요(내 별과는 따로 보여요). 알 속 포켓몬은 <b>부화하는 순간까지 비밀</b>!</p>' +
         (S.mode === 'parent'
@@ -5181,11 +5210,8 @@
           return '<div class="field"><label>' + (i + 1) + '번째 버튼 (분)</label>' +
             '<input class="input ed-min" data-i="' + i + '" type="number" min="1" max="60" value="' + (mins[i] || [5, 10, 15][i]) + '"></div>';
         }).join('') + '</div>' +
-        '<div class="field-row">' +
-          '<div class="field"><label>시간 안에 끝냈을 때 별</label><input class="input" id="edTidyReward" type="number" min="0" max="20" value="' + S.tidyCfg.reward + '"></div>' +
-          '<div class="field"><label>시간이 지나서 끝냈을 때 별</label><input class="input" id="edTidyLate" type="number" min="0" max="20" value="' + S.tidyCfg.rewardLate + '"></div>' +
-        '</div>' +
-        '<label class="sw-row"><input type="checkbox" id="edTidyMusic"' + (S.tidyCfg.music !== false ? ' checked' : '') + '>' +
+        '<p class="help" style="margin:6px 0 10px">정리를 끝내면 반짝이·소리·응원 메시지만 보여 주고, 별은 주지 않아요.</p>' +
+        '<label class="sw-row"><input type="checkbox" id="edTidyMusic"' + (S.tidyCfg.music !== false ? ' checked' : '') + '>' + +
           '<span class="sw-box" aria-hidden="true"></span><span class="sw-txt">정리 노래를 기본으로 틀기</span></label>',
       actions: [
         { label: '저장', kind: 'primary', onClick: function () {
@@ -5196,8 +5222,9 @@
             vals.forEach(function (v) { if (uniq.indexOf(v) < 0) uniq.push(v); });
             S.tidyCfg = {
               mins: uniq.length ? uniq : [5, 10, 15],
-              reward: clampNum((document.getElementById('edTidyReward') || {}).value, 0, 20, 3),
-              rewardLate: clampNum((document.getElementById('edTidyLate') || {}).value, 0, 20, 1),
+              /* 보상 별은 더 이상 쓰지 않지만, 예전 값은 그대로 두고 저장합니다 */
+              reward: clampNum((S.tidyCfg || {}).reward, 0, 20, 3),
+              rewardLate: clampNum((S.tidyCfg || {}).rewardLate, 0, 20, 1),
               music: !!(document.getElementById('edTidyMusic') || {}).checked
             };
             saveNow();
@@ -5346,6 +5373,7 @@
       case 'routine-del': removeRoutineItem(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
 
       case 'praise': addPraise(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
+      case 'cancel-praise': cancelPraise(el.getAttribute('data-id')); break;
 
       case 'cal-prev': calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1); render({ keepScroll: true }); break;
       case 'cal-next': calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 1); render({ keepScroll: true }); break;
@@ -5730,7 +5758,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 51;             /* index.html 의 ?v=51 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 52;             /* index.html 의 ?v=52 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
