@@ -1676,3 +1676,10 @@
   .clock::before { font-size: 14px; }
   .clock-time { font-size: 16px; }
 }
+
+/* 폰: 안내 한 줄은 접어 버튼까지 한 화면에 */
+@media (max-width: 619px) {
+  .tv-note { display: none; }
+  .tv-actions { margin-top: 6px; }
+  .tv-minis { margin-top: 6px; }
+}
