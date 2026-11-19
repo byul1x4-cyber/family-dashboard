@@ -2918,7 +2918,7 @@
         '<div class="admin-grid">' +
           '<button type="button" class="admin-btn" data-act="school-settings"><span>🌅</span><b>등교 시작 설정</b><small>' + esc(S.schoolTime) + ' · 준비 ' + schoolItems(D.children[0].id).length + '개</small></button>' +
           '<button type="button" class="admin-btn" data-act="tidy-settings"><span>🧹</span><b>정리시간 설정</b><small>' + ((S.tidyCfg && S.tidyCfg.mins) || [5, 10, 15]).join('·') + '분 · 별 ' + tidyReward(true) + '개</small></button>' +
-          '<button type="button" class="admin-btn" data-act="pk-settings"><span>⚡</span><b>포켓몬 관리</b><small>별 ' + pkPerLevel() + '개 = Lv.1업</small></button>' +
+          '<button type="button" class="admin-btn" data-act="pk-settings"><span>⚡</span><b>포켓몬 관리</b><small>별 ' + pkPerLevel() + '개 = 진화 1단계</small></button>' +
           '<button type="button" class="admin-btn" data-act="edit-routines"><span>✅</span><b>아침·저녁 할 일</b><small>할 일 탭에서 바로 고치기</small></button>' +
         '</div>' +
       '</div>' +
