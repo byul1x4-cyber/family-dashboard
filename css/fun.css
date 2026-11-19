@@ -894,46 +894,50 @@
   .pk-rules-btns { margin-top: 7px; }
 
   /* 키우기 카드 — 위아래를 줄여 두 장이 한 화면에 들어오게 */
-  .pk-duo .pk-card { padding: 11px 12px; border-radius: 24px; }
-  .pk-duo .rk-head { gap: 7px; }
-  .pk-duo .rk-head strong { font-size: 17px; }
-  .pk-duo .rk-head .avatar { width: 33px; height: 33px; font-size: 18px; }
-  .pk-duo .pk-hero { gap: 8px; margin-top: 5px; padding: 6px 9px; border-radius: 18px; }
-  .pk-duo .pk-art { width: 86px; height: 86px; }
-  .pk-duo .pk-mon { width: 82px; height: 82px; }
-  .pk-duo .pk-egg-emoji { font-size: 54px; }
-  .pk-duo .pk-name { font-size: 18px; gap: 6px; }
-  .pk-duo .pk-lv { font-size: 10.5px; padding: 2px 7px; }
-  .pk-duo .pk-sub { font-size: 10.5px; margin-top: 1px; }
-  .pk-duo .pk-bar { height: 11px; margin-top: 6px; }
-  .pk-duo .pk-progtxt { font-size: 10.5px; margin-top: 4px; }
-  .pk-duo .pk-track { margin-top: 8px; padding: 5px 4px; border-radius: 14px; }
-  .pk-duo .pk-tr img { width: 30px; height: 30px; }
-  .pk-duo .pk-tr i { font-size: 19px; }
-  .pk-duo .pk-tr em { font-size: 9px; }
-  .pk-duo .pk-next { margin-top: 7px; padding: 5px 8px; gap: 6px; }
-  .pk-duo .pk-next-img { width: 26px; height: 26px; }
-  .pk-duo .pk-next-mystery { width: 25px; height: 25px; font-size: 13px; }
-  .pk-duo .pk-next b { font-size: 12px; }
-  .pk-duo .pk-next small { font-size: 10px; }
-  .pk-duo .pk-feed { margin-top: 8px; gap: 6px; flex-wrap: nowrap; }
-  .pk-duo .pk-feed .btn { min-width: 0; padding: 6px 3px; font-size: 11.5px; }
-  .pk-duo .pk-help { margin-top: 6px; font-size: 10.5px; line-height: 1.4; }
-  .pk-duo .pk-new { margin-top: 8px; }
-  .pk-duo .pk-choose-help { margin: 4px 0 8px; font-size: 11.5px; }
+  .pk-duo .pk-card { padding: 10px 11px; border-radius: 22px; }
+  .pk-duo .rk-head { gap: 6px; }
+  .pk-duo .rk-head strong { font-size: 16px; }
+  .pk-duo .rk-head .avatar { width: 30px; height: 30px; font-size: 16px; }
+  .pk-duo .pk-hero { gap: 7px; margin-top: 4px; padding: 5px 8px; border-radius: 16px; }
+  .pk-duo .pk-art { width: 76px; height: 76px; }
+  .pk-duo .pk-mon { width: 72px; height: 72px; }
+  .pk-duo .pk-egg-emoji { font-size: 48px; }
+  .pk-duo .pk-name { font-size: 17px; gap: 6px; }
+  .pk-duo .pk-lv { font-size: 10px; padding: 2px 6px; }
+  .pk-duo .pk-sub { font-size: 10px; margin-top: 1px; }
+  .pk-duo .pk-bar { height: 10px; margin-top: 5px; }
+  .pk-duo .pk-progtxt { font-size: 10px; margin-top: 3px; }
+  .pk-duo .pk-track { margin-top: 7px; padding: 4px 3px; border-radius: 13px; }
+  .pk-duo .pk-tr img { width: 28px; height: 28px; }
+  .pk-duo .pk-tr i { font-size: 17px; }
+  .pk-duo .pk-tr em { font-size: 8.5px; }
+  .pk-duo .pk-next { margin-top: 6px; padding: 4px 7px; gap: 5px; }
+  .pk-duo .pk-next-img { width: 24px; height: 24px; }
+  .pk-duo .pk-next-mystery { width: 22px; height: 22px; font-size: 12px; }
+  .pk-duo .pk-next b { font-size: 11.5px; }
+  .pk-duo .pk-next small { font-size: 9.5px; }
+  .pk-duo .pk-feed { margin-top: 7px; gap: 5px; flex-wrap: nowrap; }
+  .pk-duo .pk-feed .btn { min-width: 0; padding: 5px 3px; font-size: 11px; }
+  .pk-duo .pk-help { margin-top: 5px; font-size: 10px; line-height: 1.35; }
+  .pk-duo .pk-new { margin-top: 7px; }
+  .pk-duo .pk-choose-help { margin: 4px 0 6px; font-size: 11px; }
   .pk-duo .pk-mystery { padding: 0; }
-  .pk-duo .pk-mystery-egg { padding: 10px; }
-  .pk-duo .pk-mystery-emoji { font-size: 50px; }
-  .pk-duo .pk-mystery-egg b { font-size: 16px; }
+  .pk-duo .pk-mystery-egg { padding: 8px; }
+  .pk-duo .pk-mystery-emoji { font-size: 44px; }
+  .pk-duo .pk-mystery-egg b { font-size: 15px; }
 
   /* 아래 도감 — 컴팩트한 간격으로 시원하게 */
-  .pk-dex { margin-top: 10px; padding: 11px 14px 12px; border-radius: 24px; }
-  .pk-dex-head { margin-bottom: 8px; }
-  .pk-dex-grid { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
-  .pk-dex-cell { padding: 6px 2px 4px; border-radius: 13px; gap: 0; }
-  .pk-dex-cell img { width: 38px; height: 38px; }
-  .pk-dex-cell span { font-size: 9.5px; }
-  .pk-dex-help { margin-top: 7px; font-size: 10.5px; }
+  .pk-dex { margin-top: 8px; padding: 10px 12px; border-radius: 22px; }
+  .pk-dex-head { margin-bottom: 7px; gap: 8px; }
+  .pk-dex-ico { width: 30px; height: 30px; font-size: 15px; border-radius: 10px; }
+  .pk-dex-title b { font-size: 16px; }
+  .pk-dex-title small { font-size: 11px; }
+  .pk-dex-tabs .chip { padding: 5px 10px; font-size: 12px; }
+  .pk-dex-grid { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 5px; }
+  .pk-dex-cell { padding: 4px 2px 3px; border-radius: 11px; gap: 0; }
+  .pk-dex-cell img { width: 30px; height: 30px; }
+  .pk-dex-cell span { font-size: 9px; }
+  .pk-dex-help { margin-top: 5px; font-size: 10px; }
 }
 
 /* ---------------- 좁은 화면 ---------------- */
