@@ -8,6 +8,10 @@
 </style></head>
 <body>
   <div><div class="cap">390×844 (아이폰 폭)</div>
-    <div class="wrap"><iframe id="a" src="preview-pokemon.html?view=pokemon"></iframe></div>
+    <div class="wrap"><iframe id="a" src="about:blank"></iframe></div>
   </div>
+<script>
+  var q = location.search.replace(/^\?/, '');
+  document.getElementById('a').src = 'preview-pokemon.html?view=pokemon' + (q ? '&' + q : '');
+</script>
 </body></html>
