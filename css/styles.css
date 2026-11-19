@@ -344,6 +344,26 @@ img { max-width: 100%; }
 .badge.sun { background: var(--sun-soft); color: #8A6414; }
 .badge.rose { background: var(--rose-soft); color: var(--rose-deep); }
 
+/* ⏰ 아침 체크 마감(아이 모드 · 등교 시각 이후) */
+.badge.lock { background: #F1EEE9; color: #7E7469; }
+.routine-item.locked {
+  background: #FAF7F2;
+  border-color: #E7E0D6;
+  border-style: dashed;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.routine-item.locked .r-label { color: #9A9086; }
+.routine-item.locked .r-emoji { opacity: .55; background: #F3EEE6; }
+.routine-item.locked .routine-check.lock {
+  border-style: dashed;
+  border-color: #DED6CA;
+  background: #F7F3EC;
+  color: #8C8378;
+  font-size: 15px;
+}
+.rg-locked .rg-head { opacity: .92; }
+
 .chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
 .chip {
   display: inline-flex; align-items: center; gap: 4px;

@@ -183,6 +183,16 @@
 }
 .sc-step.done .sc-label { color: #2C8563; text-decoration: line-through; text-decoration-thickness: 2px; }
 .sc-step.done .sc-emoji { filter: saturate(.5); opacity: .8; }
+/* 🔒 아이 모드 · 등교 시각이 지난 뒤에는 체크할 수 없어요 */
+.sc-step.locked {
+  background: #FAF7F2;
+  border-color: #E5DED4;
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.sc-step.locked .sc-label { color: #9A9086; }
+.sc-step.locked .sc-emoji { opacity: .5; }
+.sc-step.locked .sc-tick { color: #8C8378; }
 .sc-kid-done {
   margin-top: 9px;
   padding: 8px 10px;

@@ -25,6 +25,7 @@ window.APP_DATA = {
   routines: {
     minguk: {
       morning: [
+        { id: 'mg-m-wake',   label: '스스로 일어나기',  emoji: '⏰' },
         { id: 'mg-m-wash',   label: '세수·양치하기',    emoji: '🧼' },
         { id: 'mg-m-dress',  label: '옷 갈아입기',      emoji: '👕' },
         { id: 'mg-m-break',  label: '아침밥 먹기',      emoji: '🍚' },
@@ -42,6 +43,7 @@ window.APP_DATA = {
     },
     ijun: {
       morning: [
+        { id: 'ij-m-wake',   label: '스스로 일어나기',  emoji: '⏰' },
         { id: 'ij-m-wash',   label: '세수·양치하기',    emoji: '🧼' },
         { id: 'ij-m-dress',  label: '옷 갈아입기',      emoji: '👕' },
         { id: 'ij-m-break',  label: '아침밥 먹기',      emoji: '🍚' },

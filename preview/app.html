@@ -7,15 +7,15 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#FFF7EC">
-<title>다모아 미리보기(임시) · 식판 퀵메뉴</title>
+<title>다모아 미리보기(임시)</title>
 <meta name="description" content="아이 루틴 체크, 칭찬하기, 가족 일정, 우체통, 식판·약·성장 기록을 한 곳에 모은 우리집 가족 대시보드.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%A1%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/styles.css?v=46">
-<link rel="stylesheet" href="../css/fun.css?v=46">
+<link rel="stylesheet" href="../css/styles.css?v=47">
+<link rel="stylesheet" href="../css/fun.css?v=47">
 </head>
 <body>
 
@@ -107,13 +107,17 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="../js/data.js?v=46"></script>
-<script src="../js/storage.js?v=46"></script>
+<script src="../js/data.js?v=47"></script>
+<script src="../js/storage.js?v=47"></script>
 
 <script>
 /* 미리보기 전용 스텁 — 실제 가족 Firestore 문서(fam_e4f076...)는 읽지도 쓰지도 않습니다.
-   이 기기(localStorage)에만 임시 상태를 만들어 화면·동작을 확인합니다. */
+   이 기기(localStorage)에만 임시 상태를 만들어 화면·동작을 확인합니다.
+   ?legacy=1 로 열면 '예전 기본 4개' 아침 목록이 저장된 가족 문서를 흉내 냅니다. */
 (function () {
+  var qs = new URLSearchParams(location.search);
+  var legacy = qs.get('legacy') === '1';
+  var mode = qs.get('mode') === 'child' ? 'child' : 'parent';
   var d = new Date();
   var pad = function (n) { return (n < 10 ? '0' : '') + n; };
   var today = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
@@ -130,13 +134,38 @@
   };
   var seed = {
     introSeen: true,
-    mode: 'parent',
-    actor: '엄마',
+    mode: mode,
+    actor: mode === 'parent' ? '엄마' : null,
     meals: meals,
     growth: { minguk: [{ date: '2026-11-15', height: 128, weight: 27 }], ijun: [] },
     meds: [{ id: 'med-pv', name: '유산균', memberId: 'minguk', memberName: '민국', time: 'morning' }],
+    mealQuick: [
+      { id: 'qm-pv1', name: '어묵볶음', emoji: '🍥', slot: 'side2', ingredients: ['어묵', '양파'] }
+    ],
     ntfyPush: false
   };
+  if (legacy) {
+    seed.customRoutines = {
+      minguk: {
+        morning: [
+          { id: 'mg-m-wash', label: '세수·양치하기', emoji: '🧼' },
+          { id: 'mg-m-dress', label: '옷 갈아입기', emoji: '👕' },
+          { id: 'mg-m-break', label: '아침밥 먹기', emoji: '🍚' },
+          { id: 'mg-m-bag', label: '가방·물통 챙기기', emoji: '🎒' }
+        ],
+        evening: []
+      },
+      ijun: {
+        morning: [
+          { id: 'ij-m-wash', label: '세수·양치하기', emoji: '🧼' },
+          { id: 'ij-m-dress', label: '옷 갈아입기', emoji: '👕' },
+          { id: 'ij-m-break', label: '아침밥 먹기', emoji: '🍚' },
+          { id: 'ij-m-bag', label: '가방·물통 챙기기', emoji: '🎒' }
+        ],
+        evening: []
+      }
+    };
+  }
   try {
     localStorage.setItem('family-dashboard-v1', JSON.stringify(seed));
     localStorage.setItem('family-dashboard-gate', JSON.stringify({ id: 'fam_preview_only', at: Date.now(), v: 1 }));
@@ -149,10 +178,10 @@
   }
 })();
 </script>
-<script src="../js/ui.js?v=46"></script>
-<script src="../js/art.js?v=46"></script>
-<script src="../js/weather.js?v=46"></script>
-<script src="../js/ntfy.js?v=46"></script>
+<script src="../js/ui.js?v=47"></script>
+<script src="../js/art.js?v=47"></script>
+<script src="../js/weather.js?v=47"></script>
+<script src="../js/ntfy.js?v=47"></script>
 
 <script>
 /* 미리보기에서는 잠금화면 알림(ntfy)을 보내지 않습니다 */
@@ -160,6 +189,6 @@
   if (window.Ntfy) window.Ntfy.notify = function () { return Promise.resolve({ ok: false, skipped: 'preview' }); };
 })();
 </script>
-<script src="../js/app.js?v=46"></script>
+<script src="../js/app.js?v=47"></script>
 </body>
 </html>

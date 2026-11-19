@@ -252,6 +252,25 @@
       s.customRoutines[c.id] = { morning: norm(cur.morning), evening: norm(cur.evening) };
     });
 
+    /* ⏰ 2026-11-19: 아침 할 일 맨 앞에 '스스로 일어나기'가 새로 들어갔어요.
+       가족 문서에 예전 기본 4개가 그대로 저장돼 있으면 새 기본값(5개)으로 바꿔 줍니다.
+       부모님이 직접 고친 목록은 건드리지 않아요. */
+    var legacyMorning = {
+      minguk: ['mg-m-wash', 'mg-m-dress', 'mg-m-break', 'mg-m-bag'],
+      ijun: ['ij-m-wash', 'ij-m-dress', 'ij-m-break', 'ij-m-bag']
+    };
+    D.children.forEach(function (c) {
+      var cur = s.customRoutines[c.id];
+      if (!cur || !Array.isArray(cur.morning)) return;
+      var ids = cur.morning.map(function (i) { return i.id; });
+      var leg = legacyMorning[c.id] || [];
+      if (!leg.length || ids.length !== leg.length) return;
+      if (!leg.every(function (id, i) { return ids[i] === id; })) return;
+      cur.morning = ((D.routines[c.id] || {}).morning || []).map(function (i) {
+        return { id: i.id, label: i.label, emoji: i.emoji };
+      });
+    });
+
     /* ⭐ 식판 퀵메뉴 (부모님이 등록한 자주 먹는 메뉴)
        예전 가족 문서에는 없는 값이라 없으면 비어 있어요. 기본 음식(foods)과
        id 가 겹치면 기본 음식이 우선이 되니 새 id 로 바꿔 둡니다. */
@@ -762,6 +781,25 @@
     return { morning: (r.morning || []).slice(), evening: (r.evening || []).slice() };
   }
 
+  /* ⏰ 아침 별 체크 마감 — 등교 시작 시각(기본 08:30)이 지났는지 */
+  function schoolDeadlinePassed() {
+    var now = new Date();
+    var mins = now.getHours() * 60 + now.getMinutes();
+    return mins >= schoolTargetMin();
+  }
+  /* 아이 모드에서만 아침 체크를 막습니다 (부모님 모드는 언제든 체크·해제) */
+  function morningLocked() {
+    return S.mode !== 'parent' && schoolDeadlinePassed();
+  }
+  function deadlineText() { return (S && S.schoolTime) || '08:30'; }
+  function morningLockToast() {
+    UI.toast(deadlineText() + '이 지나서 아이 모드에선 체크할 수 없어요. 부모님께 부탁해 보세요!',
+      { emoji: '🔒', kind: 'warn', duration: 3800 });
+  }
+  function morningItemIds(childId) {
+    return routineItems(childId).morning.map(function (i) { return i.id; });
+  }
+
   /* 부모님이 할 일을 고치면 그 아이 목록을 이 가족 문서에 저장합니다 */
   function ensureRoutineCustom(childId) {
     S.customRoutines = S.customRoutines || {};
@@ -1138,8 +1176,19 @@
         window.__lastDay = todayKey();
         render({ keepScroll: true });
       }
+      /* ⏰ 아침 체크 마감 시각을 넘기면 잠금 표시가 바로 보이게 */
+      if (S) {
+        var lm = morningLocked();
+        if (window.__lastMorningLock !== lm) {
+          window.__lastMorningLock = lm;
+          if (view === 'routine' || view === 'home') render({ keepScroll: true });
+          var scEl = document.getElementById('schoolLayer');
+          if (scEl && !scEl.hidden) paintSchool(true);
+        }
+      }
     }, 60000);
     window.__lastDay = todayKey();
+    window.__lastMorningLock = S ? morningLocked() : false;
   }
 
   function setMode(mode) {
@@ -1991,12 +2040,15 @@
           '<span class="badge sun">오늘 ' + doneTotal + '/' + allTotal + '</span>' +
         '</div>' +
         '<p class="help">두 아이를 한 화면에서 바로 체크해요. 오른쪽 동그라미를 누르면 바로 완료되고 별 ⭐ 1개가 쌓여요.</p>' +
+        (S.mode !== 'parent' && schoolDeadlinePassed()
+          ? '<p class="help" style="margin-top:6px;color:#8C8378">🔒 ' + esc(deadlineText()) + '이 지나서 아침 체크는 잠겼어요. 부모님 모드에서는 언제든 체크할 수 있어요.</p>'
+          : '') +
       '</div>' +
       '<div class="duo-grid">' + D.children.map(routineKidCardHTML).join('') + '</div>' +
       '<div class="lock-note">🔒 완료한 일은 부모님 모드에서 되돌릴 수 있어요. 완료할 때마다 별 ⭐ 1개가 쌓여요.</div>';
   }
 
-  function routineGroupHTML(c, title, emoji, list) {
+  function routineGroupHTML(c, title, emoji, list, slotKey) {
     if (!list.length) {
       return S.mode === 'parent'
         ? '<div class="routine-group"><div class="rg-head"><span class="ico">' + emoji + '</span>' + esc(title) + '</div>' +
@@ -2005,10 +2057,14 @@
     }
     var today = todayKey();
     var parent = S.mode === 'parent';
+    /* 아이 모드에서 마감 시각이 지나면 아침 체크는 잠금 (부모님 모드는 그대로) */
+    var locked = slotKey === 'morning' && morningLocked();
     var doneCnt = list.filter(function (i) { return isDone(i.id, today); }).length;
-    return '<div class="routine-group">' +
+    return '<div class="routine-group' + (locked ? ' rg-locked' : '') + '">' +
       '<div class="rg-head"><span class="ico">' + emoji + '</span>' + esc(title) +
-        ' <span class="badge mint" style="margin-left:4px">' + doneCnt + '/' + list.length + '</span></div>' +
+        ' <span class="badge mint" style="margin-left:4px">' + doneCnt + '/' + list.length + '</span>' +
+        (locked ? '<span class="badge lock" style="margin-left:4px">🔒 ' + esc(deadlineText()) + ' 마감</span>' : '') +
+      '</div>' +
       '<div class="routine-list">' + list.map(function (i) {
         var done = isDone(i.id, today);
         var ts = done ? S.routine[today][i.id] : null;
@@ -2025,6 +2081,13 @@
               '<span class="routine-check on" aria-label="완료함">✓</span>' +
               del +
             '</div>';
+        }
+        if (locked) {
+          return '<button type="button" class="routine-item locked" data-act="morning-locked" data-child="' + c.id + '" data-item="' + i.id + '">' +
+              '<span class="r-emoji">' + i.emoji + '</span>' +
+              '<span class="r-label">' + esc(i.label) + '</span>' +
+              '<span class="routine-check lock" aria-hidden="true">🔒</span>' +
+            '</button>';
         }
         if (parent) {
           return '<div class="routine-item">' +
@@ -2051,8 +2114,8 @@
     var st = routineStats(c.id, today);
     var pct = st.total ? Math.round(st.done / st.total * 100) : 0;
     var body = '';
-    if (routineSlot === 'all' || routineSlot === 'morning') body += routineGroupHTML(c, '아침', '🌅', items.morning);
-    if (routineSlot === 'all' || routineSlot === 'evening') body += routineGroupHTML(c, '저녁', '🌙', items.evening);
+    if (routineSlot === 'all' || routineSlot === 'morning') body += routineGroupHTML(c, '아침', '🌅', items.morning, 'morning');
+    if (routineSlot === 'all' || routineSlot === 'evening') body += routineGroupHTML(c, '저녁', '🌙', items.evening, 'evening');
     return '<div class="card routine-kid ' + c.color + '">' +
       '<div class="rk-head">' +
         kidAvaHTML(c) +
@@ -2156,6 +2219,11 @@
 
   function completeRoutine(childId, itemId) {
     var today = todayKey();
+    /* 아이 모드에서 마감 시각이 지난 뒤에는 아침 별을 주지 않습니다 */
+    if (morningLocked() && morningItemIds(childId).indexOf(itemId) >= 0) {
+      morningLockToast();
+      return;
+    }
     S.routine[today] = S.routine[today] || {};
     if (S.routine[today][itemId]) return;
     S.routine[today][itemId] = Date.now();
@@ -3655,12 +3723,14 @@
     var morning = schoolItems(c.id);
     var done = morning.filter(function (i) { return isDone(i.id, today); }).length;
     var all = morning.length > 0 && done >= morning.length;
+    var locked = morningLocked();
     var steps = morning.map(function (i) {
       var d = isDone(i.id, today);
-      return '<button type="button" class="sc-step' + (d ? ' done' : '') + '" data-sch="step" data-child="' + c.id + '" data-item="' + esc(i.id) + '" aria-pressed="' + (d ? 'true' : 'false') + '">' +
+      var lockThis = locked && !d;
+      return '<button type="button" class="sc-step' + (d ? ' done' : '') + (lockThis ? ' locked' : '') + '" data-sch="step" data-child="' + c.id + '" data-item="' + esc(i.id) + '" aria-pressed="' + (d ? 'true' : 'false') + '">' +
           '<span class="sc-emoji" aria-hidden="true">' + esc(i.emoji || '⭐') + '</span>' +
           '<span class="sc-label">' + esc(i.label) + '</span>' +
-          '<span class="sc-tick" aria-hidden="true">' + (d ? '✓' : '') + '</span>' +
+          '<span class="sc-tick" aria-hidden="true">' + (d ? '✓' : (lockThis ? '🔒' : '')) + '</span>' +
         '</button>';
     }).join('');
     return '<div class="sc-kid ' + c.color + (all ? ' all' : '') + '">' +
@@ -3680,7 +3750,8 @@
     return '<div class="sc-panel" role="dialog" aria-modal="true" aria-label="등교 시작 모드">' +
       '<div class="sc-head">' +
         '<span class="sc-head-ico" aria-hidden="true">🌅</span>' +
-        '<div class="sc-head-txt"><b>등교 시작</b><small>' + esc(S.schoolTime) + '까지 준비해요</small></div>' +
+        '<div class="sc-head-txt"><b>등교 시작</b><small>' + esc(deadlineText()) + '까지 준비해요' +
+          (morningLocked() ? ' · 🔒 마감' : '') + '</small></div>' +
         '<button type="button" class="sc-x" data-sch="close" aria-label="닫기">✕</button>' +
       '</div>' +
       '<div class="sc-clock">' +
@@ -3728,7 +3799,9 @@
     }
     if (note) {
       if (ms <= 0) {
-        note.textContent = S.schoolTime + '이 지났어요! 그래도 준비는 할 수 있어요. 하나씩 차근차근 😊';
+        note.textContent = S.mode === 'parent'
+          ? deadlineText() + '이 지났어요! 부모님 모드에선 언제든 체크할 수 있어요 😊'
+          : deadlineText() + '이 지나서 아이 모드에선 체크할 수 없어요. 부모님께 부탁해 보세요!';
       } else if (pct < 20) {
         note.textContent = '거의 다 왔어요! 얼른 챙기고 나가요 🏃';
       } else {
@@ -3761,6 +3834,10 @@
   }
   function schoolStep(childId, itemId) {
     var today = todayKey();
+    if (!isDone(itemId, today) && morningLocked() && morningItemIds(childId).indexOf(itemId) >= 0) {
+      morningLockToast();
+      return;
+    }
     if (isDone(itemId, today)) {
       if (S.mode === 'parent') { undoRoutine(childId, itemId); paintSchool(true); }
       else UI.toast('이미 끝냈어요! ✓', { emoji: '✅', duration: 1300 });
@@ -5182,6 +5259,7 @@
         completeRoutine(el.getAttribute('data-child'), el.getAttribute('data-item'));
         break;
       }
+      case 'morning-locked': morningLockToast(); break;
       case 'routine-undo': undoRoutine(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
       case 'add-routine': addRoutineModal(el.getAttribute('data-child')); break;
       case 'routine-del': removeRoutineItem(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
@@ -5570,7 +5648,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 46;             /* index.html 의 ?v=46 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 47;             /* index.html 의 ?v=47 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
