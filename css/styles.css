@@ -1263,16 +1263,26 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 .mail-recipients.compact .mail-recipient .emoji { font-size: 15px; }
 .mail-compose-grid { display: grid; gap: 9px; align-items: start; }
 .mail-compose-left { display: grid; gap: 7px; min-width: 0; }
-.mail-compose-left .mail-text { min-height: 50px; padding: 8px 10px; font-size: 13px; line-height: 1.5; resize: none; }
+/* ✍️ 글 칸 + 🎤 한 묶음 — 입력칸 바로 밑에 붙어 '말하면 이 칸에 적힌다'가 한눈에 보입니다 */
+.mail-say {
+  display: grid;
+  border-radius: 16px;
+  background: #FFFDF8;
+  border: 2px solid #F1E2CB;
+  overflow: hidden;
+  transition: border-color .16s, box-shadow .16s;
+}
+.mail-say:focus-within { border-color: var(--mint); box-shadow: 0 0 0 4px rgba(92, 199, 156, .15); }
+.mail-say .mail-text {
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  min-height: 48px; padding: 9px 11px 7px; font-size: 13px; line-height: 1.5; resize: none;
+}
+.mail-say .mail-text:focus { border: 0; box-shadow: none; }
 .mail-ornament { display: flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 800; color: var(--ink-soft); }
 .mail-ornament small { font-size: 10.5px; font-weight: 700; color: var(--ink-faint); }
 .mail-compose-left .picto-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
 .mail-compose-left .picto { padding: 6px 2px; border-radius: 12px; font-size: 10px; gap: 2px; }
 .mail-compose-left .picto .emoji { font-size: 19px; }
-.mail-compose-left .mic-btn { margin-top: 0; padding: 8px 11px; gap: 9px; border-width: 2px; border-radius: 16px; box-shadow: 0 5px 12px rgba(255, 130, 175, .22); }
-.mail-compose-left .mic-btn .mic-ico { width: 34px; height: 34px; font-size: 17px; }
-.mail-compose-left .mic-btn .mic-text b { font-size: 14px; }
-.mail-compose-left .mic-btn .mic-text small { font-size: 10px; }
 .mail-compose-right .hw-block { margin-top: 0; padding: 9px; border-radius: 18px; }
 .mail-compose-right .hw-head { margin-bottom: 5px; }
 .mail-compose-right .hw-head b { font-size: 15px; }
@@ -1302,33 +1312,41 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 .picto.active { border-color: var(--sun); background: #FFF7E2; color: #8A6414; box-shadow: 0 8px 18px rgba(248, 188, 69, .24); transform: translateY(-2px); }
 .picto:active { transform: scale(.97); }
 
-/* 🎤 눌러서 말하기 — 큼직한 핑크 버튼 */
+/* 🎤 눌러서 말하기 — 글 칸 밑에 딱 붙은 컴포넌트 바 (말한 내용이 위 칸에 적힘) */
 .mic-btn {
   width: 100%;
-  display: flex; align-items: center; gap: 14px;
-  margin-top: 14px;
-  padding: 16px 18px;
-  border-radius: 26px;
-  border: 3px solid #FFC6DB;
-  background: linear-gradient(155deg, #FFD3E4, #FFB4CF 60%, #FF9EC3);
+  display: flex; align-items: center; gap: 8px;
+  margin: 0;
+  padding: 7px 11px 8px;
+  border: 0;
+  border-top: 1.5px dashed #F8CFDF;
+  border-radius: 0;
+  background: linear-gradient(180deg, #FFF4F9, #FFE2EF);
   text-align: left;
-  box-shadow: 0 10px 22px rgba(255, 130, 175, .32);
-  transition: transform .12s, box-shadow .18s, filter .2s;
+  box-shadow: none;
+  transition: background .2s, filter .2s;
 }
-.mic-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(255, 130, 175, .38); }
-.mic-btn:active { transform: scale(.99); }
+.mic-btn:hover { filter: brightness(1.02); }
+.mic-btn:active .mic-ico { transform: scale(.94); }
 .mic-btn .mic-ico {
-  width: 54px; height: 54px; flex: none;
+  width: 30px; height: 30px; flex: none;
   display: grid; place-items: center;
   border-radius: 50%;
-  font-size: 26px;
+  font-size: 15px;
   background: #fff;
-  box-shadow: 0 4px 10px rgba(180, 70, 120, .22);
+  box-shadow: 0 2px 6px rgba(180, 70, 120, .2);
+  transition: transform .12s;
 }
-.mic-btn .mic-text { display: grid; gap: 1px; text-align: left; }
-.mic-btn .mic-text b { font-family: var(--font-round); font-weight: 400; font-size: 20px; letter-spacing: 0; color: #7A2E4C; }
-.mic-btn .mic-text small { font-size: 11.5px; color: #A2557A; font-weight: 700; }
-.mic-btn.on { animation: micPulse 1.2s infinite; }
+.mic-btn .mic-text { display: flex; align-items: baseline; gap: 7px; min-width: 0; flex: 1; }
+.mic-btn .mic-text b { flex: none; font-family: var(--font-round); font-weight: 400; font-size: 14.5px; letter-spacing: 0; color: #7A2E4C; }
+.mic-btn .mic-text small { font-size: 10.5px; color: #A2557A; font-weight: 700; min-width: 0; }
+.mic-btn.on { background: linear-gradient(180deg, #FFE7F2, #FFC9DE); }
+.mic-btn.on .mic-text b { color: #B4245F; }
+.mic-btn.on .mic-ico { animation: micIco 1s infinite; background: #FFF0F6; }
+@keyframes micIco {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 150, .5); }
+  50% { box-shadow: 0 0 0 7px rgba(255, 90, 150, 0); }
+}
 @keyframes micPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 130, 175, .5); }
   50% { box-shadow: 0 0 0 12px rgba(255, 130, 175, 0); }
@@ -2013,9 +2031,10 @@ body.timer-ringing { overflow: hidden; }
   .picto-grid { grid-template-columns: repeat(3, 1fr); }
   .picto { padding: 10px 4px; }
   .picto .emoji { font-size: 22px; }
-  .mic-btn { padding: 13px; gap: 11px; }
-  .mic-btn .mic-ico { width: 46px; height: 46px; font-size: 22px; }
-  .mic-btn .mic-text b { font-size: 17px; }
+  .mic-btn { padding: 7px 10px 8px; }
+  .mic-btn .mic-ico { width: 28px; height: 28px; font-size: 14px; }
+  .mic-btn .mic-text b { font-size: 14px; }
+  .mic-btn .mic-text small { font-size: 10px; }
   .kc-ava { width: 72px; height: 72px; }
   .kc-star { font-size: 24px; }
   .time-banner { padding: 13px 14px; gap: 10px; }
