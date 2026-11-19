@@ -3042,3 +3042,9 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   body.on-home .hero-clock { grid-area: left; margin-left: auto; display: flex; align-items: center; gap: 8px; }
   body.on-home .wx-head { grid-area: wx; }
 }
+
+/* ---- 브랜드는 자연 폭으로 (시계와 겹치지 않게) ---- */
+@media (min-width: 1000px) {
+  body.on-home .hero-brand { justify-self: start; width: auto; max-width: 46%; }
+  body.on-home .hero-clock { margin-left: auto; }
+}
