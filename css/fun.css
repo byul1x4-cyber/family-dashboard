@@ -2572,3 +2572,8 @@
   .parent-sq { padding: 7px 7px 6px; }
   .km-ava { width: 48px; height: 48px; }
 }
+
+/* ---- 화면 맨 아래 여유 4~6px (태블릿 브라우저 하단 바에 카드가 붙지 않게) ---- */
+@media (min-width: 1000px) {
+  body.on-home .home-main2 { height: calc(100vh - var(--sticky-top, 130px) - 38px); }
+}
