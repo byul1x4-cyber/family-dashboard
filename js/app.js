@@ -1374,9 +1374,8 @@
     var quick = document.querySelector('.hero-quick');
     var bar = document.querySelector('.tabrow .mode-bar');
     if (!btn || !quick || !bar) return;
-    var wide = false;
-    try { wide = window.matchMedia('(min-width: 1000px)').matches; } catch (e) {}
-    var host = (view === 'home' && wide) ? quick : bar;
+    /* 홈에서만 큰 시계 줄(휴대폰은 컴팩트 줄)에 두고, 다른 탭에서는 탭 줄로 돌려 놓습니다 */
+    var host = (view === 'home') ? quick : bar;
     if (btn.parentNode !== host) host.appendChild(btn);
   }
 

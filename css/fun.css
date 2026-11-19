@@ -2935,3 +2935,33 @@ body.on-home .wx-head { flex: 0 0 auto; margin-left: auto; display: block; }
   .routine-item .r-emoji { font-size: 22px; }
   .routine-item .r-label { font-size: 13.5px; }
 }
+
+/* ---- 11차: 포켓볼 아이콘 · 탭 줄에서 그만! 알림 제거(홈 시계 줄에만) ---- */
+.pb-ico { width: 28px; height: 28px; flex: none; display: block; filter: drop-shadow(0 2px 3px rgba(200, 120, 110, .25)); }
+
+/* 탭 줄에서는 그만! 알림을 보이지 않게 (JS가 홈 줄로 옮깁니다) */
+@media (min-width: 1000px) {
+  .tabrow .stop-timer { display: none !important; }
+}
+
+/* 휴대폰·작은 태블릿: 홈에서는 시계 대신 [🧹 정리][⏰ 그만! 알림] 작은 줄만 */
+@media (max-width: 999px) {
+  body.on-home .hero {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1.5px dashed #FBE8C8;
+  }
+  body.on-home .hero-brand, body.on-home .hero-clock { display: none; }
+  body.on-home .hero-quick { flex-direction: row; gap: 6px; width: auto; flex: 1; }
+  body.on-home .hero-quick .qb-btn,
+  body.on-home .hero-quick .stop-timer {
+    flex: 1 1 auto;
+    border-radius: 12px;
+    padding: 7px 10px;
+    font-size: 12.5px;
+    justify-content: center;
+  }
+}
