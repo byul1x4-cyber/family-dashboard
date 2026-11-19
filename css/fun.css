@@ -3823,3 +3823,62 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
 
 /* ---- v75 보정 8: 폰에서 엄마·아빠 카드 큰 그림이 카드 밖으로 3px 새던 것 ---- */
 .parent-sq { overflow: hidden; }
+
+/* =========================================================
+   v76 (2026-11-20) — 홈 상단 미세 조정
+     ① 날씨 카드: 시간별 4칸을 카드 오른쪽 끝에 밀착 (패드·데스크톱)
+     ② 🔴⚪ 민국·이준이네 왼쪽 여백 확대
+     ③ 민국·이준이네 ↔ 시계 사이를 넓게
+     ④ 폰: 헤더 좌우 여백 · 날씨 시간별 오른쪽 밀착 · 미세먼지 칸 꽉 채우기
+   ========================================================= */
+
+/* ---- ① 날씨 카드 본문이 카드 폭을 꽉 채우고, 시간별 4칸은 오른쪽 끝으로 ---- */
+@media (min-width: 780px) {
+  .wx-hero-main { flex: 1 1 auto; min-width: 0; }
+  .wx-hero-row { width: 100%; }
+  .wx-h-hours { margin-left: auto; }
+  /* 옷차림 줄은 카드 폭에 맞춰 가지런히 (오른쪽 끝을 시간별 칸과 맞춤) */
+  body.on-home .wx-hero-tip { align-self: stretch; max-width: none; }
+}
+@media (min-width: 1000px) {
+  body.on-home .wx-h-hours { gap: 10px; }
+  body.on-home .wx-h-hr { min-width: 0; flex: 0 0 auto; }
+}
+/* 아주 좁은 패드(1000~1060)에서는 시간별 칸 사이만 살짝 좁혀 카드 밖으로 넘치지 않게 */
+@media (min-width: 1000px) and (max-width: 1060px) {
+  body.on-home .wx-h-hours { gap: 5px; }
+}
+
+/* ---- ②③ 브랜드 왼쪽 여백 · 이름과 시계 사이 넓히기 (패드·데스크톱) ---- */
+@media (min-width: 1000px) {
+  body.on-home .hero-brand { padding-left: 22px; padding-right: 6px; }
+  /* hero-clock 은 margin:0 규칙이 더 세므로 padding 으로 띄웁니다 */
+  body.on-home .hero > .hero-clock { padding-left: 20px; }
+}
+
+/* ---- ④ 폰(≤779px): 헤더 좌우 여백 · 날씨 오른쪽 밀착 · 미세먼지 칸 꽉 채우기 ---- */
+@media (max-width: 779px) {
+  /* 시계·모드 버튼 줄을 화면 가장자리에서 조금 띄움 (좌우 대칭) */
+  .topstack { padding-left: 10px; padding-right: 10px; }
+
+  /* 날씨 카드 본문이 카드 폭만큼 늘어나고 시간별 4칸은 오른쪽 끝 */
+  .wx-slot .wx-hero-main { flex: 1 1 auto; min-width: 0; }
+  .wx-slot .wx-hero-row { width: 100%; }
+  .wx-slot .wx-h-hours { margin-left: auto; gap: 4px; }
+  .wx-slot .wx-hero-tip { align-self: stretch; }
+  body.on-home .wx-slot .wx-hero-tip { max-width: none; }
+
+  /* 미세먼지 배지: 카드 왼쪽 세로 칸 전체 높이에 꽉 차게 */
+  .wx-slot .wx-dust-col {
+    align-self: stretch;
+    align-content: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 9px;
+    min-width: 56px;
+    border-radius: 0;
+    border-right: 1.5px solid rgba(255, 255, 255, .75);
+  }
+  .wx-slot .wx-dust-col i { font-size: 16px; }
+  .wx-slot .wx-dust-col em { font-size: 12.5px; }
+}
