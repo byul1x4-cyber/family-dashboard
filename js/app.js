@@ -944,7 +944,12 @@
     var f = foodById(st.dishId);
     if (f) return f;
     if (st.dishName) {
-      return { id: st.dishId, name: String(st.dishName), emoji: String(st.dishEmoji || '🍽️'), ingredients: [] };
+      return {
+        id: st.dishId,
+        name: String(st.dishName),
+        emoji: String(st.dishEmoji || '🍽️'),
+        ingredients: Array.isArray(st.dishIngs) ? st.dishIngs : []
+      };
     }
     return null;
   }
@@ -2962,7 +2967,7 @@
     var parent = S.mode === 'parent';
     var head = '<div class="qm-head">' +
         '<strong>⭐ 퀵메뉴</strong>' +
-        '<span class="qm-hint">' + (list.length ? '한 번 누르면 오늘 식판에 들어가요' : '자주 먹는 반찬·메뉴를 등록해 두세요') + '</span>' +
+        '<span class="qm-hint">' + (list.length ? '한 번 누르면 오늘 식판에 들어가요' : '자주 먹는 반찬·메뉴는 퀵메뉴로 저장해 두세요') + '</span>' +
       '</div>';
     var chips = list.map(function (q) {
       return '<span class="qm-item">' +
@@ -2976,10 +2981,14 @@
     if (!list.length && !parent) {
       body = '<p class="help qm-empty">🔒 부모님 모드에서 자주 먹는 메뉴를 등록할 수 있어요.</p>';
     } else {
-      body = '<div class="qm-row">' + chips +
-        (parent ? '<button type="button" class="qm-add-chip" data-act="quick-add">＋ 퀵메뉴 등록</button>' : '') +
-        '</div>' +
-        (!list.length ? '<p class="help qm-empty">계란말이·김·어묵볶음처럼 자주 내는 메뉴를 등록해 두면 그릇에 바로 넣을 수 있어요.</p>' : '');
+      var addBtns = parent
+        ? '<button type="button" class="qm-add-chip once" data-act="dish-once">＋ 오늘만 넣기</button>' +
+          '<button type="button" class="qm-add-chip quick" data-act="quick-add">＋ 퀵메뉴 등록</button>'
+        : '';
+      body = '<div class="qm-row">' + chips + addBtns + '</div>' +
+        (parent
+          ? '<p class="help qm-empty">🍽️ <b>오늘만 넣기</b>는 저장 없이 오늘 식판에만 · ⭐ <b>퀵메뉴 등록</b>은 저장해서 다음에도 한 번에</p>'
+          : '');
     }
     return '<div class="qm-wrap">' + head + body + '</div>';
   }
@@ -3063,7 +3072,10 @@
             return '<button type="button" class="qm-chip" data-quick="' + esc(q.id) + '">' +
               '<span class="qm-emoji">' + esc(q.emoji) + '</span>' + esc(q.name) + '</button>';
           }).join('') + '</div>' : '') +
-          '<button type="button" class="btn btn-soft btn-sm qm-add-inline" data-add-quick="1">＋ 새 메뉴 등록</button>' +
+          '<div class="qm-pick-actions">' +
+            '<button type="button" class="btn btn-soft btn-sm" data-add-once="1">＋ 오늘만 넣기</button>' +
+            '<button type="button" class="btn btn-soft btn-sm" data-add-quick="1">⭐ 퀵메뉴 등록</button>' +
+          '</div>' +
         '</div>' +
         '<p class="help" style="margin-top:14px">기본 음식에서도 골라요</p>' +
         '<div class="picto-grid" style="grid-template-columns:repeat(3,1fr);margin-top:6px">' +
@@ -3084,6 +3096,13 @@
             setTimeout(function () { addQuickMenuModal(slotKey); }, 230);
             return;
           }
+          var addOnce = e.target.closest('[data-add-once]');
+          if (addOnce) {
+            e.preventDefault();
+            close();
+            setTimeout(function () { addOneOffDishModal(slotKey); }, 230);
+            return;
+          }
           var qb = e.target.closest('[data-quick]');
           var fb = e.target.closest('[data-food]');
           var clear = e.target.closest('[data-clear]');
@@ -3098,11 +3117,12 @@
   }
 
   /* 고른 음식을 오늘 두 아이 식판 한 그릇에 넣습니다 (dishId 가 없으면 비우기)
-     담을 때 이름·이모지를 같이 적어 두어, 나중에 퀵메뉴를 지워도 지난 기록이
-     빈 그릇으로 보이지 않습니다. */
-  function assignDish(slotKey, dishId) {
+     담을 때 이름·이모지(·재료)를 같이 적어 두어, 나중에 퀵메뉴를 지우거나
+     오늘만 넣은 메뉴여도 지난 기록이 빈 그릇으로 보이지 않습니다. */
+  function assignDish(slotKey, dishId, snap) {
     var date = todayKey();
-    var food = dishId ? foodById(dishId) : null;
+    var food = dishId ? (foodById(dishId) || snap || null) : null;
+    var knownFood = dishId ? !!foodById(dishId) : false;
     S.meals[date] = S.meals[date] || {};
     D.children.forEach(function (c) {
       S.meals[date][c.id] = S.meals[date][c.id] || { slots: [] };
@@ -3112,11 +3132,16 @@
       if (!cur) { cur = { key: slotKey, dishId: null, level: 'half' }; slots.push(cur); }
       if (!dishId) {
         cur.dishId = null; cur.level = 'none';
-        delete cur.dishName; delete cur.dishEmoji;
+        delete cur.dishName; delete cur.dishEmoji; delete cur.dishIngs;
       } else {
         cur.dishId = dishId;
         cur.dishName = food ? food.name : '';
         cur.dishEmoji = food ? food.emoji : '🍽️';
+        if (!knownFood && food && Array.isArray(food.ingredients) && food.ingredients.length) {
+          cur.dishIngs = food.ingredients.slice(0, 6);
+        } else {
+          delete cur.dishIngs;
+        }
         if (cur.level === 'none') cur.level = 'half';
       }
     });
@@ -3170,17 +3195,22 @@
 
   var QUICK_EMOJIS = ['🍳', '🍚', '🍲', '🥘', '🍗', '🥩', '🐟', '🍥', '🥦', '🥕', '🥬', '🍙', '🌿', '🥔', '🍅', '🍎', '🍌', '🥛', '🧀', '🍮', '🥣', '🌱', '🐠', '🍜', '🥗', '🍽️'];
 
-  /* ⭐ 부모님이 자주 먹는 메뉴를 퀵메뉴로 등록 */
-  function addQuickMenuModal(slotKey) {
-    if (!needParent('식판 퀵메뉴는 부모님 모드에서 등록할 수 있어요')) return;
+  /* ⭐ 자주 먹는 메뉴를 퀵메뉴로 등록 (저장해서 다음에도 씁니다) */
+  function addQuickMenuModal(slotKey) { dishEntryModal(slotKey, 'quick'); }
+  /* 🍽️ 오늘 한 번만 식판에 올리기 (퀵메뉴에는 저장하지 않습니다) */
+  function addOneOffDishModal(slotKey) { dishEntryModal(slotKey, 'once'); }
+
+  function dishEntryModal(slotKey, mode) {
+    var once = mode === 'once';
+    if (!needParent(once ? '식판은 부모님 모드에서 기록할 수 있어요' : '식판 퀵메뉴는 부모님 모드에서 등록할 수 있어요')) return;
     var defSlot = D.traySlots.some(function (s) { return s.key === slotKey; })
       ? slotKey : ((D.traySlots[2] || D.traySlots[0] || {}).key || 'side1');
     UI.modal({
-      title: '⭐ 식판 퀵메뉴 등록',
+      title: once ? '🍽️ 오늘 식판에만 넣기' : '⭐ 퀵메뉴 등록',
       bodyHTML:
         '<div class="field"><label>메뉴 이름</label><input class="input" id="qmName" maxlength="16" placeholder="예: 어묵볶음, 계란말이"></div>' +
         '<div class="field-row">' +
-          '<div class="field"><label>보통 어느 그릇에</label><select class="select" id="qmSlot">' +
+          '<div class="field"><label>' + (once ? '어느 그릇에' : '보통 어느 그릇에') + '</label><select class="select" id="qmSlot">' +
             D.traySlots.map(function (s) {
               return '<option value="' + s.key + '"' + (s.key === defSlot ? ' selected' : '') + '>' + s.emoji + ' ' + esc(s.label) + '</option>';
             }).join('') +
@@ -3191,10 +3221,12 @@
           return '<button type="button" class="rt-emoji" data-qm-emoji="' + em + '">' + em + '</button>';
         }).join('') + '</div></div>' +
         '<div class="field"><label>재료 (선택)</label><input class="input" id="qmIng" maxlength="80" placeholder="예: 어묵, 양파 — 쉼표로 나눠 적어요"></div>' +
-        '<p class="help">등록하면 식판 위 ⭐ 퀵메뉴에 남고, 오늘 식판에도 바로 넣어 둘게요. 재료를 적으면 재료 통계에도 쌓여요.</p>',
+        (once
+          ? '<p class="help">오늘 식판에만 들어가요. ⭐ 퀵메뉴 목록에는 <b>저장되지 않아요</b>.<br>자주 먹는 메뉴라면 <b>＋ 퀵메뉴 등록</b>으로 넣어 두면 다음에 한 번에 쓸 수 있어요.</p>'
+          : '<p class="help">⭐ 퀵메뉴에 <b>저장</b>되고 오늘 식판에도 바로 들어가요. 다음부터는 퀵메뉴 칩을 한 번만 누르면 돼요.<br>오늘만 먹는 메뉴는 <b>＋ 오늘만 넣기</b>를 써 주세요.</p>'),
       actions: [
         {
-          label: '등록하고 식판에 넣기', kind: 'primary', onClick: function (close) {
+          label: once ? '오늘 식판에 넣기' : '퀵메뉴 등록하고 식판에 넣기', kind: 'primary', onClick: function (close) {
             var nameEl = document.getElementById('qmName');
             var name = ((nameEl || {}).value || '').replace(/\s+/g, ' ').trim();
             if (!name) {
@@ -3208,6 +3240,14 @@
             var ing = (((document.getElementById('qmIng') || {}).value || '') + '')
               .split(',').map(function (x) { return x.replace(/\s+/g, ' ').trim().slice(0, 10); })
               .filter(Boolean).slice(0, 6);
+            if (once) {
+              /* 퀵메뉴에 저장하지 않고 오늘 식판에만 — 이름·아이콘·재료를 그릇에 함께 적어 둡니다 */
+              assignDish(slot, UI.uid('once'), { name: name.slice(0, 16), emoji: emoji, ingredients: ing });
+              render({ keepScroll: true });
+              UI.toast('오늘 ' + slotLabel(slot) + '에 넣었어요 · 퀵메뉴엔 저장 안 했어요',
+                { emoji: '🍽️', kind: 'good', duration: 3400 });
+              return;
+            }
             S.mealQuick = (S.mealQuick || []).concat([{
               id: UI.uid('qm'), name: name.slice(0, 16), emoji: emoji, slot: slot, ingredients: ing
             }]).slice(-40);
@@ -5348,6 +5388,7 @@
 
       case 'pick-dish': pickDishModal(el.getAttribute('data-slot')); break;
       case 'quick-add': addQuickMenuModal(el.getAttribute('data-slot')); break;
+      case 'dish-once': addOneOffDishModal(el.getAttribute('data-slot')); break;
       case 'quick-use': useQuickMenu(el.getAttribute('data-id')); break;
       case 'quick-del': deleteQuickMenu(el.getAttribute('data-id')); break;
       case 'set-level': setMealLevel(el.getAttribute('data-child'), el.getAttribute('data-slot'), el.getAttribute('data-level')); break;
@@ -5684,7 +5725,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 49;             /* index.html 의 ?v=49 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 50;             /* index.html 의 ?v=50 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 

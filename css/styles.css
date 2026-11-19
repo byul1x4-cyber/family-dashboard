@@ -1592,7 +1592,10 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
   background: #FFFDF8;
   font-family: inherit;
 }
+.qm-add-chip.once { color: #857C72; border-color: #E2DBD1; background: #FCFAF7; }
+.qm-add-chip.quick { color: #8A6414; border-color: #F2D9A4; background: #FFF9EA; }
 .qm-add-chip:active { background: #FFF4DC; }
+.qm-pick-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
 .qm-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
 .qm-item {
   display: inline-flex;
