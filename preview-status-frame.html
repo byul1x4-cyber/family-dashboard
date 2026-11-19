@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><title>미리보기 · 390px</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { margin: 0; background: #2a2a2a; display: flex; gap: 16px; padding: 12px; font-family: sans-serif; }
+  .wrap { background: #000; border-radius: 22px; padding: 6px; }
+  iframe { display: block; width: 390px; border: 0; border-radius: 18px; background: #fff; }
+  .cap { color: #ddd; font-size: 12px; margin-bottom: 4px; }
+</style></head>
+<body>
+  <div><div class="cap" id="cap">390px</div>
+    <div class="wrap"><iframe id="a" src="about:blank" style="height:844px"></iframe></div>
+  </div>
+<script>
+  var p = new URLSearchParams(location.search);
+  var h = Number(p.get('h')) || 844;
+  var f = document.getElementById('a');
+  f.style.height = h + 'px';
+  document.getElementById('cap').textContent = '390 × ' + h;
+  f.src = 'preview-status.html' + (p.toString() ? '?' + p.toString() : '');
+</script>
+</body></html>

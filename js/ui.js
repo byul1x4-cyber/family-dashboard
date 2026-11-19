@@ -116,7 +116,7 @@ window.UI = (function () {
       }
     });
     if (opts.onOpen) opts.onOpen(wrap, close);
-    var focusEl = wrap.querySelector('input, textarea, button.btn');
+    var focusEl = opts.focus === false ? null : wrap.querySelector('input, textarea, button.btn');
     if (focusEl && window.innerWidth > 640) setTimeout(function () { focusEl.focus(); }, 60);
     return { el: wrap, close: close };
   }

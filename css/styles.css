@@ -537,6 +537,21 @@ img { max-width: 100%; }
 .sc-txt small { font-size: 12px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-time { margin-left: auto; font-size: 10px; color: var(--ink-faint); white-space: nowrap; }
 
+/* 상태 직접 적기 (모달) */
+.status-write {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #FFF9F0;
+  border: 2px dashed #F2E2CB;
+}
+.status-write-label { display: block; font-size: 12px; font-weight: 800; color: var(--ink-soft); margin-bottom: 7px; }
+.status-write.on { border-style: solid; border-color: var(--mint); background: #F5FBF8; }
+.status-write-row { display: flex; gap: 8px; align-items: stretch; }
+.status-write-row .input { flex: 1; min-width: 0; padding: 9px 12px; font-size: 13px; }
+.status-write-row .btn { flex: none; white-space: nowrap; }
+.status-write-help { margin: 8px 0 0; font-size: 11px; color: var(--ink-faint); line-height: 1.45; }
+
 /* =========================================================
    홈 — 아이 카드 (큼직)
    ========================================================= */

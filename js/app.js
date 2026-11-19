@@ -22,6 +22,8 @@
   var mailSender = D.children[0].id;
   var mailRecipient = D.mailRecipients[0].id;
   var mailFilter = 'all';   // 우체통: 'all'(전체 가족방) | 아이 id
+  var STATUS_CUSTOM_KEY = 'custom';   // 엄마·아빠 상태: 프리셋 대신 직접 적은 문구
+  var STATUS_TEXT_MAX = 24;           // 직접 적는 상태 문구 최대 글자 수
 
   /* 이 기기 이름 · 알림 설정 · 날씨 · 팝업 상태 */
   var DEV_KEY = 'family-dashboard-device';
@@ -150,12 +152,21 @@
       s.bannerPopup = null;
     }
 
-    /* 엄마·아빠 상태 */
+    /* 엄마·아빠 상태 — 프리셋(key) 또는 직접 적은 문구(key:'custom' + text) */
     s.parentStatus = {};
     D.parents.forEach(function (p) {
       var cur = (raw.parentStatus && raw.parentStatus[p.id]) || null;
-      var ok = cur && cur.key && D.statusOptions.some(function (o) { return o.key === cur.key; });
-      if (ok) s.parentStatus[p.id] = { key: cur.key, at: cur.at || Date.now(), by: String(cur.by || '') };
+      if (!cur) return;
+      var key = String(cur.key || '');
+      var at = cur.at || Date.now(), by = String(cur.by || '');
+      if (key === STATUS_CUSTOM_KEY) {
+        var text = statusTextClean(cur.text);
+        if (text) s.parentStatus[p.id] = { key: key, text: text, at: at, by: by };
+        return;
+      }
+      if (D.statusOptions.some(function (o) { return o.key === key; })) {
+        s.parentStatus[p.id] = { key: key, at: at, by: by };
+      }
     });
 
     /* 🛒 장보기 */
@@ -385,41 +396,93 @@
   }
 
   /* ================= 엄마·아빠 지금 상태 ================= */
+  function statusTextClean(v) {
+    return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, STATUS_TEXT_MAX);
+  }
   function statusOf(id) { return (S.parentStatus && S.parentStatus[id]) || null; }
   function statusOption(key) {
     return D.statusOptions.filter(function (o) { return o.key === key; })[0] || null;
   }
-  function setStatus(id, key) {
+  /* 화면에 보여 줄 한 줄 — 프리셋이면 '🏠 집에 있어요', 직접 적었으면 적은 그대로 */
+  function statusLabel(st) {
+    if (!st) return '';
+    if (st.key === STATUS_CUSTOM_KEY) return statusTextClean(st.text);
+    var o = statusOption(st.key);
+    return o ? (o.emoji + ' ' + o.label) : '';
+  }
+  function setStatus(id, key, text) {
     S.parentStatus = S.parentStatus || {};
-    if (!key) delete S.parentStatus[id];
-    else S.parentStatus[id] = { key: key, at: Date.now(), by: S.actor || '부모님' };
-    save();
-    render({ keepScroll: true });
     var p = D.parents.filter(function (x) { return x.id === id; })[0] || { name: '부모님' };
-    var o = key ? statusOption(key) : null;
-    UI.toast(o ? (p.name + ' · ' + o.emoji + ' ' + o.label) : '상태를 지웠어요', { emoji: '📍', kind: 'good' });
+    var label = '';
+    if (!key) {
+      delete S.parentStatus[id];
+    } else if (key === STATUS_CUSTOM_KEY) {
+      var t = statusTextClean(text);
+      if (!t) { UI.toast('상태 문구를 적어 주세요', { emoji: '✏️', kind: 'warn' }); return false; }
+      S.parentStatus[id] = { key: key, text: t, at: Date.now(), by: S.actor || '부모님' };
+      label = t;
+    } else {
+      var o = statusOption(key);
+      if (!o) return false;
+      S.parentStatus[id] = { key: key, at: Date.now(), by: S.actor || '부모님' };
+      label = o.emoji + ' ' + o.label;
+    }
+    saveNow();                       // 가족 클라우드로 바로 올려 태블릿에도 즉시 보이게
+    render({ keepScroll: true });
+    UI.toast(label ? (p.name + ' · ' + label) : '상태를 지웠어요', { emoji: '📍', kind: 'good' });
+    return true;
   }
   function pickStatusModal(parentId) {
     if (!needParent('상태는 부모님 모드에서 바꿀 수 있어요')) return;
     var p = D.parents.filter(function (x) { return x.id === parentId; })[0];
     if (!p) return;
     var cur = statusOf(parentId);
+    var curCustom = (cur && cur.key === STATUS_CUSTOM_KEY) ? statusTextClean(cur.text) : '';
     UI.modal({
       title: p.emoji + ' ' + p.name + '는 지금?',
+      focus: false,   // 태블릿에서 열자마자 키보드가 올라오지 않게
       bodyHTML: '<p class="help" style="margin-bottom:12px">한 번만 누르면 태블릿에도 몇 초 안에 보여요.</p>' +
         '<div class="chip-row">' + D.statusOptions.map(function (o) {
           return '<button type="button" class="chip ' + p.color + (cur && cur.key === o.key ? ' active' : '') + '" data-st="' + o.key + '">' + o.emoji + ' ' + esc(o.label) + '</button>';
         }).join('') + '</div>' +
+        '<div class="status-write' + (curCustom ? ' on' : '') + '">' +
+          '<label class="status-write-label" for="statusWriteInput">✏️ 내가 직접 적기</label>' +
+          '<div class="status-write-row">' +
+            '<input class="input" id="statusWriteInput" type="text" maxlength="' + STATUS_TEXT_MAX + '" autocomplete="off" ' +
+              'enterkeyhint="done" placeholder="예: 회의 중 📞 · 마트 갔다 올게 🛒" aria-label="상태 직접 적기" value="' + esc(curCustom) + '">' +
+            '<button type="button" class="btn btn-primary btn-sm" id="statusWriteSave">저장</button>' +
+          '</div>' +
+          '<p class="status-write-help">짧은 말이나 이모지를 그대로 적으면 홈 상태 칩에 그대로 보여요.</p>' +
+        '</div>' +
         (cur ? '<button type="button" class="btn btn-ghost btn-sm" data-st="__clear" style="margin-top:14px">상태 지우기</button>' : ''),
       actions: [{ label: '닫기', kind: 'ghost' }],
       onOpen: function (wrap, close) {
+        var inp = wrap.querySelector('#statusWriteInput');
+        function saveCustom() {
+          var t = statusTextClean(inp ? inp.value : '');
+          if (!t) {
+            UI.toast('상태 문구를 적어 주세요', { emoji: '✏️', kind: 'warn' });
+            if (inp) inp.focus();
+            return;
+          }
+          close();
+          setStatus(parentId, STATUS_CUSTOM_KEY, t);
+        }
         wrap.addEventListener('click', function (e) {
           var b = e.target.closest('[data-st]');
-          if (!b) return;
-          var key = b.getAttribute('data-st');
-          close();
-          setStatus(parentId, key === '__clear' ? null : key);
+          if (b) {
+            var key = b.getAttribute('data-st');
+            close();
+            setStatus(parentId, key === '__clear' ? null : key);
+            return;
+          }
+          if (e.target.closest('#statusWriteSave')) { e.preventDefault(); saveCustom(); }
         });
+        if (inp) {
+          inp.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); saveCustom(); }
+          });
+        }
       }
     });
   }
@@ -1282,11 +1345,11 @@
   /* ---- 홈: 엄마·아빠 지금 상태 ---- */
   function statusChipHTML(p) {
     var st = statusOf(p.id);
-    var opt = st ? statusOption(st.key) : null;
-    return '<button type="button" class="status-chip ' + p.id + (opt ? ' set' : '') + '" data-act="pick-status" data-id="' + p.id + '">' +
+    var label = statusLabel(st);
+    return '<button type="button" class="status-chip ' + p.id + (label ? ' set' : '') + '" data-act="pick-status" data-id="' + p.id + '">' +
         '<span class="sc-ava ' + p.color + '">' + p.emoji + '</span>' +
         '<span class="sc-txt"><b>' + esc(p.name) + '는 지금</b>' +
-          '<small>' + (opt ? opt.emoji + ' ' + esc(opt.label) : '상태를 알려 주세요') + '</small>' +
+          '<small>' + (label ? esc(label) : '상태를 알려 주세요') + '</small>' +
         '</span>' +
         (st && st.at ? '<span class="sc-time">' + UI.ago(st.at) + '</span>' : '') +
       '</button>';
