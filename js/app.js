@@ -3809,14 +3809,17 @@
     return PK.species[line.stages[st === 0 ? 0 : st][0]] || null;
   }
   function pkStageName(st) { return st <= 0 ? '알' : st + '단계'; }
-  function pkStateText(childId) {
+  /* 아이 화면 문구: 알 단계에서는 어떤 포켓몬인지 절대 말하지 않습니다.
+     부모님 관리 화면에서만 reveal=true 로 실제 라인을 함께 봅니다. */
+  function pkStateText(childId, reveal) {
     var p = pkOf(childId);
     var line = pkLine(p);
     var sp = pkSpecies(p);
     var stars = S.stars[childId] || 0;
     if (!line) return '아직 알을 안 골랐어요 · 별 ' + stars;
-    var who = sp ? sp.ko : '🥚 ' + line.name + ' 알';
-    return who + ' Lv.' + pkLevel(p.fed) + ' · 별 ' + stars;
+    if (sp) return sp.ko + ' Lv.' + pkLevel(p.fed) + ' · ' + pkStageName(pkStage(p)) + ' · 별 ' + stars;
+    return '🥚 신비한 알 Lv.' + pkLevel(p.fed) +
+      (reveal && line ? ' (속: ' + line.name + ' 라인)' : '') + ' · 별 ' + stars;
   }
   function pkRegisterDex(childId, id) {
     var p = pkOf(childId);
@@ -3974,16 +3977,37 @@
       actions: [{ label: '좋아! 🎉', kind: 'primary' }]
     });
   }
-  function pkPick(childId, lineKey) {
-    var line = PK.lines.filter(function (l) { return l.key === lineKey; })[0];
+  /* ---------- 신비한 알: 어떤 포켓몬이 나올지 화면에는 안 보이게 하고
+     알을 받는 순간 안에서 랜덤으로 정합니다 ---------- */
+  function pkRandomLine(childId) {
+    var p = pkOf(childId);
+    var got = {};
+    (p.dex || []).forEach(function (id) { got[id] = 1; });
+    function finalId(l) { return l.stages[l.stages.length - 1][0]; }
+    var pool = PK.lines.filter(function (l) { return !got[finalId(l)] && l.key !== p.line; });
+    if (!pool.length) pool = PK.lines.filter(function (l) { return l.key !== p.line; });
+    if (!pool.length) pool = PK.lines.slice();
+    return pool[Math.floor(Math.random() * pool.length)] || null;
+  }
+  function pkNewCount(childId) {
+    var p = pkOf(childId);
+    var got = {};
+    (p.dex || []).forEach(function (id) { got[id] = 1; });
+    return PK.lines.filter(function (l) { return !got[l.stages[l.stages.length - 1][0]]; }).length;
+  }
+  function pkPick(childId) {
+    /* 알 그림은 다 똑같고, 실제 포켓몬은 여기서 랜덤으로 정해집니다 */
+    var line = pkRandomLine(childId);
     if (!line) return;
     var p = pkOf(childId);
-    if (p.line && p.line !== lineKey && pkStage(p) > 0) {
-      UI.confirm('알을 바꿀까요?', '지금 ' + (pkSpecies(p) ? pkSpecies(p).ko : '알') + '(Lv.' + pkLevel(p.fed) + ')를 키우고 있어요. 새 알로 바꾸면 별 진행(' + pkProg(p.fed) + '/' + pkPerLevel() + ')은 처음부터 다시 쌓여요.', '새 알 고르기', 'danger')
-        .then(function (ok) { if (ok) pkApplyPick(childId, lineKey); });
+    if (p.line && pkStage(p) > 0) {
+      UI.confirm('새 신비한 알을 받을까요?', '지금 키우고 있는 ' + (pkSpecies(p) ? pkSpecies(p).ko : '포켓몬') +
+        '(Lv.' + pkLevel(p.fed) + ')가 알로 돌아가요. 새 알은 어떤 포켓몬일지 부화할 때까지 비밀이에요. 지금 별 진행(' +
+        pkProg(p.fed) + '/' + pkPerLevel() + ')은 처음부터 다시 쌓여요.', '새 알 받기', 'danger')
+        .then(function (ok) { if (ok) pkApplyPick(childId, pkRandomLine(childId).key); });
       return;
     }
-    pkApplyPick(childId, lineKey);
+    pkApplyPick(childId, line.key);
   }
   function pkApplyPick(childId, lineKey) {
     var p = pkOf(childId);
@@ -3994,17 +4018,30 @@
     render({ keepScroll: true });
     UI.confetti(24);
     pkSound('level');
-    UI.toast(childById(childId).name + '의 신비한 알이 도착했어요 🥚 별 ' + pkPerLevel() + '개를 모으면 부화해요!', { emoji: '⚡', kind: 'good', duration: 3600 });
+    UI.toast(childById(childId).name + '에게 신비한 알이 도착했어요 🥚 별 ' + pkPerLevel() + '개를 모으면 부화해요!', { emoji: '⚡', kind: 'good', duration: 3600 });
+  }
+  /* 부모님 모드: 같은 진행을 두고 다른 알을 다시 뽑기 */
+  function pkReroll(childId) {
+    if (!needParent('알 다시 뽑기는 부모님 모드에서만 돼요')) return;
+    var p = pkOf(childId);
+    UI.confirm('신비한 알을 다시 뽑을까요?', childById(childId).name + '의 지금 알을 내려놓고 다른 신비한 알을 새로 받아요. ' +
+      '별 진행(' + pkProg(p.fed) + '/' + pkPerLevel() + ')은 처음부터 다시 쌓이고, 도감 기록은 그대로 남아요.', '다시 뽑기', 'danger')
+      .then(function (ok) {
+        if (!ok) return;
+        var line = pkRandomLine(childId);
+        if (!line) return;
+        pkApplyPick(childId, line.key);
+        UI.toast('새 신비한 알을 뽑았어요 (부모님만 보임: ' + line.name + ' 라인)', { emoji: '🎲', kind: 'good', duration: 3200 });
+      });
   }
   function pkEggGridHTML(childId) {
-    return '<div class="pk-eggs">' + PK.lines.map(function (line) {
-      var base = PK.species[line.stages[0][0]];
-      var fin = PK.species[line.stages[2][0]];
-      return '<button type="button" class="pk-egg" data-act="pk-pick" data-child="' + childId + '" data-id="' + line.key + '">' +
-        '<img src="' + pkIcon(base.id) + '" alt="" loading="lazy">' +
-        '<b>' + esc(base.ko) + '</b>' +
-        '<small>' + esc(fin.ko) + '까지</small></button>';
-    }).join('') + '</div>';
+    var left = pkNewCount(childId);
+    return '<div class="pk-mystery">' +
+      '<button type="button" class="pk-mystery-egg" data-act="pk-pick" data-child="' + childId + '" aria-label="신비한 알 받기">' +
+        '<span class="pk-mystery-emoji" aria-hidden="true">🥚</span>' +
+        '<b>신비한 알 받기</b>' +
+        '<small>무슨 포켓몬이 나올까?<br>아직 만나지 못한 ' + left + '가지 중에서 와요</small>' +
+      '</button></div>';
   }
   function pkChooserModal(childId) {
     var c = childById(childId);
@@ -4012,7 +4049,8 @@
       size: 'wide',
       title: '🥚 신비한 알 고르기',
       bodyHTML: '<p class="help" style="margin-bottom:10px">' + esc(c.name) +
-        '의 알을 골라요. 별 ' + pkPerLevel() + '개를 모을 때마다 자라서, 최종 진화까지 4단계예요.</p>' +
+        '의 알을 골라요. 어떤 포켓몬이 나올지는 <b>부화하는 순간까지 비밀</b>이에요!<br>' +
+        '별 ' + pkPerLevel() + '개를 모으면 부화하고, 그때 정체가 짠 하고 나타나요.</p>' +
         pkEggGridHTML(childId),
       actions: [{ label: '닫기', kind: 'ghost' }]
     });
@@ -4035,9 +4073,14 @@
       var sp = PK.species[ids[0]];
       var on = st === i + 1;
       var done = st > i + 1;
+      /* 아직 도달하지 않은 단계는 그림도 이름도 보여 주지 않습니다 */
+      if (!on && !done) {
+        cells.push('<span class="pk-tr locked"><i>❔</i><em>???</em></span>');
+        return;
+      }
       cells.push('<span class="pk-tr' + (on ? ' on' : '') + (done ? ' done' : '') + '">' +
         '<img src="' + pkIcon(sp.id) + '" alt="' + esc(sp.ko) + '" loading="lazy">' +
-        '<em>' + (done || on ? esc(sp.ko) : '?') + '</em></span>');
+        '<em>' + esc(sp.ko) + '</em></span>');
     });
     return '<div class="pk-track">' + cells.join('') + '</div>';
   }
@@ -4053,7 +4096,7 @@
 
     if (!p.line) {
       return '<div class="card pk-card ' + c.color + '">' + head +
-        '<div class="pk-choose-help"><b>🥚 ' + esc(c.name) + '이랑</b> 함께할 신비한 알을 골라요</div>' +
+        '<div class="pk-choose-help"><b>🥚 ' + esc(c.name) + '이랑</b> 함께할 신비한 알을 받아요</div>' +
         pkEggGridHTML(c.id) + '</div>';
     }
 
@@ -4072,10 +4115,10 @@
         'onerror="this.onerror=null;this.src=\'' + pkIcon(sp.id) + '\'">';
     }
     var nextBlock = next
-      ? '<div class="pk-next"><span class="pk-next-label">다음 모습</span>' +
-          '<img src="' + pkIcon(next.id) + '" alt="" loading="lazy" class="pk-next-img">' +
-          '<b>' + esc(next.ko) + '</b>' +
-          '<small>' + (st === 0 ? 'Lv.2 부화' : 'Lv.' + (lvl + 1) + ' 진화') + '</small></div>'
+      ? '<div class="pk-next mystery"><span class="pk-next-label">다음 모습</span>' +
+          '<span class="pk-next-mystery" aria-hidden="true">❔</span>' +
+          '<b>???</b>' +
+          '<small>' + (st === 0 ? '별 ' + (per - prog) + '개 더 모으면 부화' : '별 ' + (per - prog) + '개 더 모으면 진화') + '</small></div>'
       : '<div class="pk-next done"><span class="pk-next-label">최종 진화 완료</span><b>🏅 도감 등록</b></div>';
 
     return '<div class="card pk-card ' + c.color + (maxed ? ' maxed' : '') + '">' + head +
@@ -4084,7 +4127,7 @@
         '<div class="pk-art" data-child="' + c.id + '">' + artInner + '</div>' +
         '<div class="pk-hero-info">' +
           '<div class="pk-name">' + (sp ? esc(sp.ko) : '신비한 알') + '<span class="pk-lv">Lv.' + lvl + '</span></div>' +
-          '<div class="pk-sub">' + esc(line.name) + ' 라인 · ' + pkStageName(st) + '</div>' +
+          '<div class="pk-sub">' + (st === 0 ? '무슨 포켓몬이 나올까? · 알' : esc(line.name) + ' 라인 · ' + pkStageName(st)) + '</div>' +
           '<div class="pk-bar"><i style="width:' + prog + '%"></i></div>' +
           '<div class="pk-progtxt"><span>' + (maxed ? '다음 별까지 ' : '다음 진화까지 ') + (per - prog) + '개</span><span>' + prog + ' / ' + per + ' ⭐</span></div>' +
         '</div>' +
@@ -4113,7 +4156,9 @@
         var sp = PK.species[id];
         var owned = !!got[id];
         return '<div class="pk-dex-cell' + (owned ? ' owned' : '') + '">' +
-          '<img src="' + pkIcon(id) + '" alt="" loading="lazy">' +
+          (owned
+            ? '<img src="' + pkIcon(id) + '" alt="" loading="lazy">'
+            : '<span class="pk-dex-mystery" aria-hidden="true">❔</span>') +
           '<span>' + (owned ? esc(sp.ko) : '???') + '</span></div>';
       }).join('') + '</div>' +
       '<p class="help" style="margin-top:8px">최종 진화한 포켓몬만 반짝이며 도감에 남아요. 별은 아이마다 따로 모여요.</p>' +
@@ -4124,7 +4169,8 @@
         '<div class="pk-rules-head"><b>⭐ 별 ' + pkPerLevel() + '개 모으면 진화!</b>' +
           '<span>' + D.children.map(function (c) { return c.emoji + ' ' + esc(c.name) + ' ⭐' + (S.stars[c.id] || 0); }).join(' · ') + '</span></div>' +
         '<p>할 일 체크 · 등교 준비 · 정리하기로 모은 별을 포켓몬에게 먹여 키워요.<br>' +
-        '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 단계마다 별 ' + pkPerLevel() + '개를 모아야 진화해요.</p>' +
+        '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 단계마다 별 ' + pkPerLevel() + '개를 모아야 진화해요.<br>' +
+        '알 속 포켓몬은 <b>부화하는 순간까지 비밀</b>! 다음 모습도 진화할 때 짠 하고 나타나요.</p>' +
         (S.mode === 'parent'
           ? '<div class="btn-row" style="margin-top:10px">' +
               D.children.map(function (c) {
@@ -4317,16 +4363,18 @@
       bodyHTML:
         '<div class="field"><label>진화에 필요한 별 개수 (기본 100개)</label>' +
           '<input class="input" id="edPerLevel" type="number" min="10" max="1000" step="10" value="' + pkPerLevel() + '">' +
-          '<p class="help">별 100개를 모을 때마다 알 → 1단계 → 2단계 → 3단계로 진화해요. 작게 넣으면 빨리 자라요(시험해 볼 때 좋아요).</p></div>' +
+          '<p class="help">별 100개를 모을 때마다 알 → 1단계 → 2단계 → 3단계로 진화해요. 작게 넣으면 빨리 자라요(시험해 볼 때 좋아요).<br>' +
+          '아이 화면에서는 알 단계·아직 진화 전 단계의 정체가 <b>???</b> 로 가려지고, 여기서만 실제 알을 보거나 새로 뽑을 수 있어요.</p></div>' +
         D.children.map(function (c) {
           var p = pkOf(c.id);
           var sp = pkSpecies(p);
           return '<div class="ed-block">' +
             '<div class="ed-block-head"><b>' + c.emoji + ' ' + esc(c.name) + '</b>' +
-              '<span id="pkSetState-' + c.id + '">' + pkStateText(c.id) + '</span></div>' +
+              '<span id="pkSetState-' + c.id + '">' + pkStateText(c.id, true) + '</span></div>' +
             '<div class="pk-set-row">' +
               '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="10">별 ＋10</button>' +
               '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="-10">별 －10</button>' +
+              '<button type="button" class="btn btn-soft btn-sm" data-pk="reroll" data-child="' + c.id + '">🎲 알 다시 뽑기</button>' +
               '<button type="button" class="btn btn-soft btn-sm" data-pk="choose" data-child="' + c.id + '">🥚 파트너 바꾸기</button>' +
               '<button type="button" class="btn btn-danger btn-sm" data-pk="reset" data-child="' + c.id + '">↺ 처음부터</button>' +
             '</div></div>';
@@ -4344,7 +4392,7 @@
       onOpen: function (wrap, close) {
         function refreshState(cid) {
           var el = document.getElementById('pkSetState-' + cid);
-          if (el) el.textContent = pkStateText(cid);
+          if (el) el.textContent = pkStateText(cid, true);
         }
         wrap.addEventListener('click', function (e) {
           var b = e.target.closest('[data-pk]');
@@ -4361,12 +4409,16 @@
           } else if (act === 'choose') {
             close();
             setTimeout(function () { pkChooserModal(cid); }, 220);
+          } else if (act === 'reroll') {
+            close();
+            setTimeout(function () { pkReroll(cid); }, 220);
           } else if (act === 'reset') {
             var px = pkOf(cid);
             var sx = pkSpecies(px);
             UI.confirm('포켓몬을 처음부터 다시 키울까요?',
-              childById(cid).name + '의 ' + (sx ? sx.ko + '이(가) 알로 돌아가요. ' : '') +
-              '지금 모은 별 진행(' + pkProg(px.fed) + '/' + pkPerLevel() + ')은 사라지고, 도감 기록은 그대로 남아요.',
+              childById(cid).name + '의 ' + (sx ? sx.ko + '이(가) 알로 돌아가요. ' : '지금 알을 그대로 두고 별만 0으로 돌려요. ') +
+              '지금 모은 별 진행(' + pkProg(px.fed) + '/' + pkPerLevel() + ')은 사라지고, 도감 기록은 그대로 남아요. ' +
+              '다른 알을 원하면 🎲 알 다시 뽑기를 눌러 주세요.',
               '처음부터', 'danger')
               .then(function (ok) {
                 if (!ok) return;
