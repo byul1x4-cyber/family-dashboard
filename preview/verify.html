@@ -5628,6 +5628,43 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   .home-main2 .kids-compact { grid-template-columns: 1fr; }
 }
 
+/* ---- 폰: 홈에서만 [🧹 정리][⏰ 그만! 알림] 한 줄 (헤더에는 없음) ---- */
+@media (max-width: 999px) {
+  body.on-home .hero {
+    display: flex !important;
+    align-items: stretch;
+    gap: 6px;
+    margin: 0 0 8px;
+    padding: 0;
+    border-top: 0;
+    width: 100%;
+  }
+  body.on-home .hero-brand,
+  body.on-home .hero-clock,
+  body.on-home .wx-head { display: none !important; }
+  body.on-home .hero-quick {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+  body.on-home .hero-quick .qb-btn,
+  body.on-home .hero-quick .stop-timer {
+    flex: 1 1 0;
+    min-height: 38px;
+    border-radius: 14px;
+    padding: 8px 10px;
+    font-size: 13px;
+    gap: 5px;
+    justify-content: center;
+  }
+  body.on-home .hero-quick .qb-ico,
+  body.on-home .hero-quick .st-ico { font-size: 16px; }
+  body.on-home .hero-quick .qb-label { display: inline; }
+  .tabrow .qb-btn, .tabrow .stop-timer { display: none !important; }
+}
+
 </style>
 </head>
 <body>
@@ -8903,8 +8940,9 @@ window.Ntfy = (function () {
     if (!stopBtn || !tidyBtn || !quick || !bar) return;
     var wide = false;
     try { wide = window.matchMedia('(min-width: 1000px)').matches; } catch (e) {}
-    var homeHost = (view === 'home' && wide) ? quick : bar;
-    var tidyHost = wide ? quick : bar;
+    /* 폰: 정리·그만 버튼은 헤더에 두지 않고 홈 화면 안(히어로 줄)에만 */
+    var homeHost = wide ? ((view === 'home') ? quick : bar) : quick;
+    var tidyHost = wide ? quick : quick;
     if (stopBtn.parentNode !== homeHost) homeHost.appendChild(stopBtn);
     if (tidyBtn.parentNode !== tidyHost) tidyHost.appendChild(tidyBtn);
   }
