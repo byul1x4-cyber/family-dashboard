@@ -2849,3 +2849,89 @@ body.on-home .wx-head { flex: 0 0 auto; margin-left: auto; display: block; }
   .hero-quick .qb-ico, .hero-quick .st-ico { font-size: 15px; }
   .hero-quick .stop-timer .st-label { font-size: 12px; }
 }
+
+/* =========================================================
+   10차 — ✅ 할 일: 네모 타일 그리드 (패드 3열 · 폰 2열), 타일 전체가 체크 버튼
+   ========================================================= */
+.routine-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 719px) {
+  .routine-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.routine-item {
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 7px 5px 6px;
+  border-radius: 14px;
+  text-align: center;
+  min-height: 58px;
+}
+.routine-item .r-main {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  text-align: center;
+}
+.routine-item .r-emoji {
+  width: auto; height: auto;
+  background: none;
+  font-size: 20px;
+  line-height: 1;
+}
+.routine-item .r-label {
+  flex: none;
+  font-size: 12.5px;
+  line-height: 1.2;
+  text-align: center;
+  word-break: keep-all;
+}
+.routine-check { display: none; }
+.routine-item .r-time { font-size: 8.5px; margin-top: 1px; }
+.routine-item.done {
+  background: linear-gradient(160deg, #EAFBF2, #D5F5E4);
+  border-color: #8FD9B6;
+}
+.routine-item.done::after {
+  content: '✓';
+  position: absolute;
+  top: 3px; right: 6px;
+  font-size: 12px; font-weight: 800; color: #2C8563;
+}
+.routine-item.done .r-label { color: #2C8563; }
+.routine-item.locked {
+  background: #F8F4EC;
+  border-style: dashed;
+}
+.routine-item .routine-check.lock {
+  display: grid !important;
+  position: absolute;
+  top: 2px; right: 4px;
+  width: auto; height: auto;
+  border: 0; background: none;
+  font-size: 11px; color: #9A9086;
+}
+.r-nostar {
+  position: absolute;
+  top: 4px; left: 5px;
+  font-size: 8px;
+  padding: 0 3px;
+  border-radius: 6px;
+  background: #F3EEE6;
+  color: #9A9086;
+}
+.r-del {
+  position: absolute;
+  bottom: 1px; right: 2px;
+  width: 17px; height: 17px;
+  border: 0; background: transparent;
+  font-size: 9px; opacity: .55;
+}
+@media (min-width: 1000px) {
+  .routine-item { min-height: 62px; padding: 8px 6px 7px; }
+  .routine-item .r-emoji { font-size: 22px; }
+  .routine-item .r-label { font-size: 13.5px; }
+}
