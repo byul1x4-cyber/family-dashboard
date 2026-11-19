@@ -3986,7 +3986,7 @@
      · 동시에 살아 있는 별은 MAX 개까지만 (넘치면 오래된 별부터 정리). */
   var pkFx = (function () {
     var cv = null, ctx = null, parts = [], raf = 0, W = 0, H = 0, lastT = 0;
-    var MAX = 460;
+    var MAX = 560;
     var COLORS = ['#FFD84D', '#FFC13B', '#FFF3B0', '#FF9AD5', '#9BE7FF', '#FFFFFF', '#FFB84D'];
     function ensure() {
       if (cv && cv.isConnected) { if (!ctx) ctx = cv.getContext('2d'); return; }
@@ -4022,7 +4022,7 @@
     function add(p) {
       if (parts.length >= MAX) parts.shift();
       parts.push(p);
-      diag.added += 1;
+      window.__pkStat.added += 1;
     }
     function kick() {
       if (raf) return;
@@ -4033,7 +4033,7 @@
     function tick(t) {
       raf = 0;
       if (!ctx) return;
-      diag.frames += 1;
+      window.__pkStat.frames += 1;
       var dt = lastT ? Math.min(0.06, (t - lastT) / 1000) : 0.016;
       lastT = t;
       ctx.clearRect(0, 0, W, H);
@@ -4045,14 +4045,11 @@
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.rot += p.vr * dt;
+        /* 화면 밖으로 나가면 살짝 튕겨서 별이 화면 안에 머물게 */
+        if (p.x < -24) { p.x = -24; p.vx = Math.abs(p.vx) * 0.55; }
+        if (p.x > W + 24) { p.x = W + 24; p.vx = -Math.abs(p.vx) * 0.55; }
         var k = 1 - p.life / p.ttl;
-        if (p.life > diag.maxLife) diag.maxLife = p.life;
-        if (p.x < diag.minX) diag.minX = p.x;
-        if (p.x > diag.maxX) diag.maxX = p.x;
-        if (p.y < diag.minY) diag.minY = p.y;
-        if (p.y > diag.maxY) diag.maxY = p.y;
-        if (k <= 0) { diag.ttlOut += 1; parts.splice(i, 1); continue; }
-        if (p.y > H + 60 || p.x < -80 || p.x > W + 80) { diag.boundsOut += 1; parts.splice(i, 1); continue; }
+        if (k <= 0 || p.y > H + 70) { parts.splice(i, 1); continue; }
         ctx.globalAlpha = k > 0.7 ? 1 : Math.max(0, k / 0.7);
         ctx.fillStyle = p.color;
         if (p.kind === 'dot') {
@@ -4067,33 +4064,31 @@
       if (parts.length) raf = requestAnimationFrame(tick);
       else { ctx.clearRect(0, 0, W, H); lastT = 0; }
     }
-    var lastCall = null;
-    var diag = { added: 0, ttlOut: 0, boundsOut: 0, frames: 0, maxLife: 0, minX: 9999, maxX: -9999, minY: 9999, maxY: -9999 };
+    function mk(x, y, vx, vy, g, opts) {
+      var big = Math.random() < 0.22;
+      return {
+        x: x, y: y, vx: vx, vy: vy, g: g,
+        r: big ? 10 + Math.random() * 7 : 4 + Math.random() * 6,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 6,
+        life: 0,
+        ttl: (opts && opts.ttl) || 2.6 + Math.random() * 1.2,
+        color: COLORS[(Math.random() * COLORS.length) | 0],
+        kind: Math.random() < 0.3 ? 'dot' : 'star'
+      };
+    }
     /* 한 점에서 사방으로 터지는 별 */
     function burst(cx, cy, n, opts) {
       opts = opts || {};
       ensure();
-      lastCall = { kind: 'burst', n: n, hidden: document.hidden, cx: cx, cy: cy, at: Date.now() };
       if (document.hidden) return;
       var power = opts.power || 1;
       for (var i = 0; i < n; i++) {
         var ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 2;
-        var sp = (90 + Math.random() * 340) * power;
-        var big = Math.random() < 0.22;
-        add({
-          x: cx + (Math.random() - 0.5) * 30,
-          y: cy + (Math.random() - 0.5) * 30,
-          vx: Math.cos(ang) * sp,
-          vy: Math.sin(ang) * sp * (opts.up ? 1.15 : 1) - (opts.up ? 110 : 40),
-          g: 480 + Math.random() * 360,
-          r: big ? 10 + Math.random() * 7 : 4 + Math.random() * 6,
-          rot: Math.random() * Math.PI,
-          vr: (Math.random() - 0.5) * 7,
-          life: 0,
-          ttl: 2.2 + Math.random() * 1.3,
-          color: COLORS[(Math.random() * COLORS.length) | 0],
-          kind: Math.random() < 0.3 ? 'dot' : 'star'
-        });
+        var sp = (70 + Math.random() * 210) * power;
+        add(mk(cx + (Math.random() - 0.5) * 30, cy + (Math.random() - 0.5) * 30,
+          Math.cos(ang) * sp, Math.sin(ang) * sp - (opts.up ? 60 : 20),
+          360 + Math.random() * 260, { ttl: 2.4 + Math.random() * 1.2 }));
       }
       kick();
     }
@@ -4103,29 +4098,30 @@
       if (document.hidden) return;
       for (var i = 0; i < n; i++) {
         var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.0;
-        var sp = 430 + Math.random() * 430;
-        add({
-          x: cx + (Math.random() - 0.5) * 150,
-          y: cy + Math.random() * 12,
-          vx: Math.cos(ang) * sp * 0.6,
-          vy: Math.sin(ang) * sp,
-          g: 760 + Math.random() * 320,
-          r: 4 + Math.random() * 8,
-          rot: Math.random() * Math.PI,
-          vr: (Math.random() - 0.5) * 8,
-          life: 0,
-          ttl: 2.3 + Math.random() * 1.3,
-          color: COLORS[(Math.random() * COLORS.length) | 0],
-          kind: Math.random() < 0.35 ? 'dot' : 'star'
-        });
+        var sp = 300 + Math.random() * 300;
+        add(mk(cx + (Math.random() - 0.5) * 160, cy + Math.random() * 12,
+          Math.cos(ang) * sp * 0.6, Math.sin(ang) * sp,
+          700 + Math.random() * 240, { ttl: 2.4 + Math.random() * 1.3 }));
       }
       kick();
     }
+    /* 화면 위에서 별이 쏟아지는 비 (별을 많이 먹이면 화면 가득) */
+    function rain(n) {
+      ensure();
+      if (document.hidden) return;
+      for (var i = 0; i < n; i++) {
+        add(mk(Math.random() * W, -20 - Math.random() * 160,
+          (Math.random() - 0.5) * 60, 90 + Math.random() * 180,
+          40 + Math.random() * 60, { ttl: 3.4 + Math.random() * 2 }));
+      }
+      kick();
+    }
+    window.__pkStat = window.__pkStat || { added: 0, frames: 0 };
     /* 화면 확인용(파티클 수·루프 상태) */
     window.__pkFxStat = function () {
-      return { parts: parts.length, raf: raf, w: W, h: H, cv: !!(cv && cv.isConnected), ctx: !!ctx, hidden: document.hidden, lastCall: lastCall, diag: diag };
+      return { parts: parts.length, raf: raf, w: W, h: H, cv: !!(cv && cv.isConnected), ctx: !!ctx, hidden: document.hidden, added: window.__pkStat.added, frames: window.__pkStat.frames };
     };
-    return { burst: burst, fountain: fountain, resize: resize };
+    return { burst: burst, fountain: fountain, rain: rain, resize: resize };
   })();
   /* 별을 먹인 만큼 화면에 별을 마구 뿌립니다 (1개→약 50개, 10개→약 250개)
      한 번에 다 터뜨리지 않고 몇 차례 더 터뜨려 별이 계속 쏟아지는 느낌을 냅니다. */
@@ -4141,14 +4137,15 @@
     var base = Math.min(window.innerHeight - 6, box.bottom);
     var amount = Math.max(1, Math.min(30, Number(n) || 1));
     var count = Math.min(150, 40 + Math.round(amount * 13) + (big ? 70 : 0));
-    var power = 1 + Math.min(0.8, amount / 16);
-    pkFx.burst(cx, cy, count, { power: power, up: true });
-    pkFx.fountain(cx, base, Math.round(count * 0.8));
+    var power = 1 + Math.min(0.6, amount / 22);
+    pkFx.rain(Math.round(count * 0.9));
+    pkFx.burst(cx, cy, Math.round(count * 0.5), { power: power, up: true });
+    pkFx.fountain(cx, base, Math.round(count * 0.6));
     /* 0.3초 간격으로 한 번씩 더 — 별이 마구 쏟아지며 1초 넘게 이어져요 */
-    [[320, 0.62], [660, 0.48], [1000, 0.36]].forEach(function (wv) {
+    [[300, 0.75], [650, 0.6], [1000, 0.45]].forEach(function (wv) {
       setTimeout(function () {
-        pkFx.fountain(cx, base, Math.round(count * wv[1] * 0.6));
-        pkFx.burst(cx, cy, Math.round(count * wv[1] * 0.5), { power: power * 0.9, up: true });
+        pkFx.rain(Math.round(count * wv[1] * 0.55));
+        pkFx.fountain(cx, base, Math.round(count * wv[1] * 0.35));
       }, wv[0]);
     });
   }
