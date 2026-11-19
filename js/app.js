@@ -983,9 +983,17 @@
   function unreadFor(recipientId) {
     return S.messages.filter(function (m) { return m.toId === recipientId && !m.read; }).length;
   }
-  function unreadTotal() {
-    return S.messages.filter(function (m) { return !m.read; }).length;
+  function isParentId(id) { return D.parents.some(function (p) { return p.id === id; }); }
+  /* 지금 모드에서 '내가 받은' 안 읽은 편지
+     · 부모님 모드: 아이가 보낸 편지 (부모가 아이에게 보낸 편지는 내가 보낸 것이라 안 셈)
+     · 아이 모드: 부모님이 보낸 편지 */
+  function unreadMine() {
+    return S.messages.filter(function (m) {
+      if (!m || m.read) return false;
+      return S.mode === 'parent' ? !isParentId(m.fromId) : isParentId(m.fromId);
+    });
   }
+  function unreadTotal() { return unreadMine().length; }
   function mealsTodayCount() {
     var t = todayKey();
     return D.children.filter(function (c) {
@@ -2581,12 +2589,12 @@
     return ok;
   }
   function renderMailbox() {
-    /* 보이는 편지는 읽음 처리 (배지 계산에만 사용) */
-    var changed = false;
-    D.mailRecipients.forEach(function (r) {
-      S.messages.forEach(function (m) { if (m.toId === r.id && !m.read) { m.read = true; changed = true; } });
-    });
-    if (changed) save();
+    /* 우체통을 열면 지금 모드로 받은 안 읽은 편지를 바로 읽음 처리 → 빨간 점·숫자 배지가 즉시 꺼져요 */
+    var mine = unreadMine();
+    if (mine.length) {
+      mine.forEach(function (m) { m.read = true; });
+      save();
+    }
 
     var events = mailEvents();
     var senderId = mailSenderId();
@@ -5875,7 +5883,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 53;             /* index.html 의 ?v=53 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 54;             /* index.html 의 ?v=54 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
