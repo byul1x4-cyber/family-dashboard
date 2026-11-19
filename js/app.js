@@ -4050,9 +4050,23 @@
         if (p.x < -24) { p.x = -24; p.vx = Math.abs(p.vx) * 0.55; }
         if (p.x > W + 24) { p.x = W + 24; p.vx = -Math.abs(p.vx) * 0.55; }
         var k = 1 - p.life / p.ttl;
-        if (p.life > dbg.maxLife) dbg.maxLife = p.life;
-        if (k <= 0) { dbg.ttl += 1; parts.splice(i, 1); continue; }
-        if (p.y > H + 70) { dbg.bottom += 1; parts.splice(i, 1); continue; }
+        /* 쏟아지는 별은 화면 아래로 내려가면 위에서 다시 내려오게 (쏟아지는 동안 계속) */
+        if (p.recycle && p.y > H + 30) {
+          if (Date.now() < p.until) {
+            p.x = Math.random() * W;
+            p.y = -20 - Math.random() * 70;
+            p.vy = 80 + Math.random() * 110;
+            p.vx = (Math.random() - 0.5) * 46;
+            p.life = 0;
+            continue;
+          }
+          parts.splice(i, 1); continue;
+        }
+        if (k <= 0) {
+          if (p.recycle && Date.now() < p.until) { p.life = 0; k = 1; }
+          else { parts.splice(i, 1); continue; }
+        }
+        if (p.y > H + 30) { parts.splice(i, 1); continue; }
         ctx.globalAlpha = k > 0.55 ? 1 : Math.max(0, k / 0.55);
         ctx.fillStyle = p.color;
         if (p.kind === 'dot') {
@@ -4114,14 +4128,18 @@
       }
       kick();
     }
-    /* 화면 위에서 별이 쏟아지는 비 (별을 많이 먹이면 화면 가득) */
-    function rain(n) {
+    /* 화면 위에서 별이 쏟아지는 비 — 쏟아지는 동안은 아래로 내려가면 다시 위에서 내려와요 */
+    function rain(n, durationMs) {
       ensure();
       if (document.hidden) return;
+      var until = Date.now() + (durationMs || 2600);
       for (var i = 0; i < n; i++) {
-        add(mk(Math.random() * W, -20 - Math.random() * 160,
-          (Math.random() - 0.5) * 60, 90 + Math.random() * 180,
-          40 + Math.random() * 60, { ttl: 3.8 + Math.random() * 2.2 }));
+        var p = mk(Math.random() * W, -20 - Math.random() * 480,
+          (Math.random() - 0.5) * 46, 80 + Math.random() * 110,
+          30 + Math.random() * 40, { ttl: 7 });
+        p.recycle = true;
+        p.until = until;
+        add(p);
       }
       kick();
     }
@@ -4143,21 +4161,16 @@
     var amount = Math.max(1, Math.min(30, Number(n) || 1));
     var count = Math.min(180, 34 + Math.round(amount * 15) + (big ? 70 : 0));
     var power = 1 + Math.min(0.6, amount / 22);
-    pkFx.rain(Math.round(count * 0.9));
+    pkFx.rain(Math.min(240, count + 50), 2400);
     pkFx.burst(cx, cy, Math.round(count * 0.5), { power: power, up: true });
-    pkFx.fountain(cx, base, Math.round(count * 0.6));
-    /* 0.11초마다 조금씩 계속 — 화면 위에서 아래로 별이 마구 쏟아져요 (약 1.2초) */
-    var waves = 16;
-    for (var w = 1; w <= waves; w++) {
-      (function (w) {
-        setTimeout(function () {
-          var soft = 1 - w / (waves + 4);
-          pkFx.rain(Math.max(4, Math.round(count * 0.16 * soft)));
-          if (w % 3 === 0) pkFx.fountain(cx, base, Math.round(count * 0.18));
-          if (w % 4 === 0) pkFx.burst(cx, cy, Math.round(count * 0.15), { power: power * 0.9, up: true });
-        }, w * 120);
-      })(w);
-    }
+    pkFx.fountain(cx, base, Math.round(count * 0.55));
+    /* 0.25초 간격으로 카드 위에서 한 번씩 더 터뜨려요 */
+    [[250, 0.7], [520, 0.55], [820, 0.42]].forEach(function (wv) {
+      setTimeout(function () {
+        pkFx.fountain(cx, base, Math.round(count * wv[1] * 0.4));
+        pkFx.burst(cx, cy, Math.round(count * wv[1] * 0.35), { power: power * 0.9, up: true });
+      }, wv[0]);
+    });
   }
   /* ---------- 반짝이 파티클 ---------- */
   function pkSparkle(host, n) {
