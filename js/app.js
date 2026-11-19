@@ -1776,6 +1776,9 @@
     var sp = p.line ? pkSpecies(p) : null;
     var lvl = pkLevel(p.fed);
     var pkName = p.line ? ((sp ? sp.ko : '🥚 알') + ' Lv.' + lvl) : '알 고르기';
+    var per = pkPerLevel() || 100;
+    var prog = Math.max(0, Math.min(per, pkProg(p.fed)));
+    var pkPct = Math.round(prog / per * 100);
     return '<button type="button" class="kid-mini ' + c.color + '" data-act="pick-kid" data-id="' + c.id + '" aria-pressed="false"' +
         ' aria-label="' + esc(c.name) + ' 오늘 ' + st.done + '/' + st.total + ' · ' + esc(c.name) + ' 할 일 보기">' +
         '<span class="km-ava">' + Art.kid(c.id) + '</span>' +
@@ -1786,6 +1789,9 @@
             '<span class="km-do">✅ ' + st.done + '/' + st.total + '</span>' +
           '</span>' +
           '<span class="km-pk">⚡ ' + esc(pkName) + '</span>' +
+          (p.line
+            ? '<span class="km-pk-line"><i class="km-pk-bar"><b style="width:' + pkPct + '%"></b></i><small>' + prog + '/' + per + '</small></span>'
+            : '') +
         '</span>' +
       '</button>';
   }
