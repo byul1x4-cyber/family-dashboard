@@ -1647,3 +1647,24 @@
   .tv-bubble { font-size: 16px; }
   .tv-actions { margin-top: 8px; }
 }
+
+/* 폰: 머리 두 줄(브랜드+시계 / 모드)로 확실히 정리 */
+@media (max-width: 719px) {
+  .brand-text p { display: none; }
+  .brand { flex: 0 1 auto; }
+  .clock { flex: none; }
+  .tbar-btn { padding: 7px 12px 9px; }
+  .tbar-left { font-size: 28px; }
+  .tbar-track { height: 16px; margin-top: 4px; }
+}
+@media (max-width: 619px) {
+  .tv-timer { padding: 6px 12px 10px; margin-bottom: 8px; }
+  .tv-left b { font-size: 36px; }
+  .tv-left span { font-size: 14px; }
+  .tv-track { height: 20px; margin: 8px 4px 0; }
+  .tv-stage { min-height: 150px; }
+  .tv-mon img { width: 124px; height: 124px; }
+  .tv-bubble { font-size: 15.5px; padding: 6px 12px; }
+  .tv-finish { min-height: 58px; font-size: 21px; }
+  .tv-mini { min-height: 42px; }
+}
