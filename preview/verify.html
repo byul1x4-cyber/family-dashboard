@@ -9011,21 +9011,6 @@ window.Ntfy = (function () {
   }
   function placeStopTimer() { placeQuickButtons(); }
 
-  /* ---- 날씨 카드 자리: 패드는 헤더 둘째 줄, 폰은 홈 본문 맨 위 ---- */
-  function placeWeather() {
-    var wx = document.getElementById('wxHead');
-    if (!wx) return;
-    var wide = false;
-    try { wide = window.matchMedia('(min-width: 1000px)').matches; } catch (e) {}
-    var slot = document.getElementById('wxSlot');
-    var hero = document.querySelector('.hero');
-    if (!wide && view === 'home' && slot) {
-      if (wx.parentNode !== slot) slot.appendChild(wx);
-    } else if (hero && wx.parentNode !== hero) {
-      hero.appendChild(wx);
-    }
-  }
-
   function updateChrome() {
     var mc = document.getElementById('modeChild');
     var mp = document.getElementById('modeParent');
@@ -9036,7 +9021,6 @@ window.Ntfy = (function () {
     /* 패드: 홈에서만 큰 시계·날씨 줄(#hero)을 보입니다 */
     document.body.classList.toggle('on-home', view === 'home');
     placeStopTimer();
-    placeWeather();
     paintWeather();
     var mailTabBtn = document.querySelector('.tab[data-view="mailbox"]');
     if (mailTabBtn) mailTabBtn.classList.toggle('has-dot', unreadTotal() > 0);
@@ -9145,7 +9129,7 @@ window.Ntfy = (function () {
                      오른쪽: 🏫 민국이 알림장(크게) → 엄마는 지금 · 아빠는 지금 네모 카드
        · 홈 아래 타일·약·장보기는 걷어냈습니다 (각 탭/상단 바로가기/식판·건강에 있음). */
     return '' +
-      '<div class="wx-slot" id="wxSlot"></div>' +
+      '<div class="wx-slot" id="wxSlot">' + heroWeatherHTML() + '</div>' +
 
       '<div class="home-main2">' +
         '<div class="hm-col hm-left">' +
