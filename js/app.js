@@ -1786,15 +1786,25 @@
   }
 
   /* ---- 홈: 엄마는 지금 · 아빠는 지금 네모 카드 ---- */
+  function firstEmoji(s) {
+    var m = String(s || '').match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F000}-\u{1F0FF}\u{FE0F}]/u);
+    return m ? m[0] : '';
+  }
   function parentSquareHTML(p) {
     var st = statusOf(p.id);
     var label = statusLabel(st);
+    var opt = (st && st.key !== STATUS_CUSTOM_KEY) ? statusOption(st.key) : null;
+    var big = opt ? opt.emoji : (firstEmoji(st && st.text) || '💬');
+    var txt = st ? (opt ? opt.label : statusTextClean(st.text).replace(firstEmoji(st.text), '').trim() || statusTextClean(st.text)) : '상태를 말해 주세요';
     return '<button type="button" class="parent-sq ' + p.id + (label ? ' set' : '') + '" data-act="pick-status" data-id="' + p.id + '"' +
         ' aria-label="' + esc(p.name) + '는 지금 ' + esc(label || '상태를 알려 주세요') + '">' +
-        '<span class="ps-ava "' + '>' + p.emoji + '</span>' +
-        '<b class="ps-name">' + esc(p.name) + '는 지금</b>' +
-        '<small class="ps-txt">' + (label ? esc(label) : '상태를 말해 주세요') + '</small>' +
-        (st && st.at ? '<span class="ps-ago">' + UI.ago(st.at) + '</span>' : '<span class="ps-ago">✎ 누르기</span>') +
+        '<span class="ps-top">' +
+          '<span class="ps-ava" aria-hidden="true">' + p.emoji + '</span>' +
+          '<b class="ps-name">' + esc(p.name) + '는 지금</b>' +
+        '</span>' +
+        '<span class="ps-big" aria-hidden="true">' + esc(big) + '</span>' +
+        '<span class="ps-txt">' + esc(txt) + '</span>' +
+        '<span class="ps-ago">' + (st && st.at ? UI.ago(st.at) : '✎ 눌러서 알리기') + '</span>' +
       '</button>';
   }
 
