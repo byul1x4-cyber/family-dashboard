@@ -2302,29 +2302,10 @@
     if (tidyActive) return renderTidyInline();
     /* 🌅 등교 시작이 켜져 있으면 '할 일' 탭은 등교 화면으로만 동작해요 */
     if (schoolActive) return renderSchoolInline();
-    var today = todayKey();
-    var slots = [{ key: 'all', label: '전체' }, { key: 'morning', label: '🌅 아침' }, { key: 'evening', label: '🌙 저녁' }];
-    var doneTotal = 0, allTotal = 0;
-    D.children.forEach(function (k) {
-      var st = routineStats(k.id, today);
-      doneTotal += st.done; allTotal += st.total;
-    });
-    /* 2026-11-19 개편: 시간대 배너와 🧹 정리시간을 한 줄에 나란히 두고,
-       큰「✅ 오늘 할 일」설명 상자를 없애 아이들 할 일 목록이 바로 위로 올라오게 했습니다. */
-    return '<div class="routine-top">' +
-        '<div class="rt-banner">' + timeBannerHTML() + '</div>' +
-        '<div class="rt-tidy">' + modeStripHTML('inline') + '</div>' +
-      '</div>' +
-      '<div class="routine-slots">' +
-        '<div class="growth-toggle">' + slots.map(function (s) {
-          return '<button type="button" class="chip' + (routineSlot === s.key ? ' active' : '') + '" data-act="pick-routine-slot" data-slot="' + s.key + '">' + s.label + '</button>';
-        }).join('') + '</div>' +
-        '<span class="rs-total">✅ 오늘 ' + doneTotal + '/' + allTotal + '</span>' +
-      '</div>' +
-      (S.mode !== 'parent' && schoolDeadlinePassed()
-        ? '<p class="routine-lockline">🔒 ' + esc(deadlineText()) + '이 지나서 아침 체크는 잠겼어요 · 부모님 모드는 언제든 체크할 수 있어요</p>'
-        : '') +
-      '<div class="duo-grid">' + D.children.map(routineKidCardHTML).join('') + '</div>' +
+    /* 2026-11-19 확정: 시간대 배너 · 정리시간 바 · 전체/아침/저녁 필터를 모두 걷어내고
+       민국(왼쪽) · 이준(오른쪽) 카드(아침+저녁 전체)만 바로 보이게 했습니다. */
+    routineSlot = 'all';
+    return '<div class="duo-grid">' + D.children.map(routineKidCardHTML).join('') + '</div>' +
       '<div class="lock-note">🔒 완료한 일은 부모님 모드에서 되돌릴 수 있어요. 완료할 때마다 별 ⭐ 1개가 쌓여요.</div>';
   }
 
