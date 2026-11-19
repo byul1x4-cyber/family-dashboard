@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/styles.css?v=42">
-<link rel="stylesheet" href="../css/fun.css?v=42">
+<link rel="stylesheet" href="../css/styles.css?v=43">
+<link rel="stylesheet" href="../css/fun.css?v=43">
 </head>
 <body>
 
@@ -107,8 +107,8 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="../js/data.js?v=42"></script>
-<script src="../js/storage.js?v=42"></script>
+<script src="../js/data.js?v=43"></script>
+<script src="../js/storage.js?v=43"></script>
 
 <script>
 /* 미리보기 전용 스텁 — 실제 가족 Firestore 문서는 읽지도 쓰지도 않습니다. */
@@ -123,7 +123,9 @@
         pictos: ['g-hw', 'g-love'], text: '엄마 오늘 숙제 다 했어요', ts: now - 5400000, read: true,
         replies: [ { id: 'pv-1-r', by: '엄마', text: '우리 민국이 최고! 저녁에 봐요', emoji: '❤️', ts: now - 3600000 } ] },
       { id: 'pv-2', fromId: 'ijun', fromName: '이준', toId: 'mom', toName: '엄마',
-        pictos: ['g-play'], text: '놀아주세요', ts: now - 7200000, read: true, replies: [] }
+        pictos: ['g-play'], text: '놀아주세요', ts: now - 7200000, read: true, replies: [] },
+      { id: 'pv-3', fromId: 'minguk', fromName: '민국', toId: 'mom', toName: '엄마',
+        pictos: [], text: '손글씨로 썼어요', hw: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3NjAiIGhlaWdodD0iMzgwIj48cmVjdCB3aWR0aD0iNzYwIiBoZWlnaHQ9IjM4MCIgZmlsbD0iI2ZmZmZmZiIvPjx0ZXh0IHg9IjQwIiB5PSIxNTAiIGZvbnQtc2l6ZT0iNjQiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmaWxsPSIjNEEzRjM1Ij7sl4Trp4gg7IKs656R7ZW07JqUPC90ZXh0PjxwYXRoIGQ9Ik00MCAyNTAgUSAyMDAgMTgwIDM4MCAyNjAgVCA3MjAgMjQwIiBzdHJva2U9IiNFMzZBOTMiIHN0cm9rZS13aWR0aD0iMTAiIGZpbGw9Im5vbmUiLz48L3N2Zz4=', ts: now - 600000, read: true, replies: [] }
     ],
     growth: { minguk: [{ date: '2026-11-15', height: 128, weight: 27 }], ijun: [] }
   };
@@ -138,10 +140,10 @@
   }
 })();
 </script>
-<script src="../js/ui.js?v=42"></script>
-<script src="../js/art.js?v=42"></script>
-<script src="../js/weather.js?v=42"></script>
-<script src="../js/ntfy.js?v=42"></script>
-<script src="../js/app.js?v=42"></script>
+<script src="../js/ui.js?v=43"></script>
+<script src="../js/art.js?v=43"></script>
+<script src="../js/weather.js?v=43"></script>
+<script src="../js/ntfy.js?v=43"></script>
+<script src="../js/app.js?v=43"></script>
 </body>
 </html>
