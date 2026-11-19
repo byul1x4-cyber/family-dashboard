@@ -4019,11 +4019,9 @@
       ctx.closePath();
       ctx.fill();
     }
-    var dbg = { added: 0, ttl: 0, bottom: 0, shift: 0, maxLife: 0, frames: 0 };
     function add(p) {
-      if (parts.length >= MAX) { parts.shift(); dbg.shift += 1; }
+      if (parts.length >= MAX) parts.shift();
       parts.push(p);
-      dbg.added += 1;
     }
     function kick() {
       if (raf) return;
@@ -4034,7 +4032,6 @@
     function tick(t) {
       raf = 0;
       if (!ctx) return;
-      dbg.frames += 1;
       var dt = lastT ? Math.min(0.06, (t - lastT) / 1000) : 0.016;
       lastT = t;
       ctx.clearRect(0, 0, W, H);
@@ -4143,7 +4140,6 @@
       }
       kick();
     }
-    window.__fx = function () { return { parts: parts.length, raf: raf, dbg: dbg, hidden: document.hidden, W: W, H: H }; };
     return { burst: burst, fountain: fountain, rain: rain, resize: resize };
   })();
   /* 별을 먹인 만큼 화면에 별을 마구 뿌립니다 (1개→약 50개, 10개→약 250개)
