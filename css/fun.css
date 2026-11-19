@@ -666,6 +666,9 @@
 .pk-evo-step { display: flex; flex-direction: column; align-items: center; }
 .pk-evo-step img { width: 52px; height: 52px; object-fit: contain; }
 .pk-evo-step b { font-size: 10.5px; font-weight: 800; color: var(--ink-soft); }
+.pk-evo-step.egg i { font-size: 38px; font-style: normal; line-height: 1.25; }
+.pk-evo-step.now b { color: #B4467A; }
+.pk-evo-step.now img { filter: drop-shadow(0 5px 9px rgba(200, 120, 60, .4)); animation: pkEvoIn .7s cubic-bezier(.16, 1.4, .4, 1) both; }
 .pk-evo-arrow { color: #C9B9A6; font-weight: 800; }
 .pk-evo-final {
   margin-top: 8px;

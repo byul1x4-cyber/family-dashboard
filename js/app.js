@@ -3813,8 +3813,10 @@
     var p = pkOf(childId);
     var line = pkLine(p);
     var sp = pkSpecies(p);
-    var who = sp ? sp.ko : (line ? '🥚 ' + line.name + ' 알' : '아직 알을 안 골랐어요');
-    return who + ' Lv.' + pkLevel(p.fed) + ' · 별 ' + (S.stars[childId] || 0);
+    var stars = S.stars[childId] || 0;
+    if (!line) return '아직 알을 안 골랐어요 · 별 ' + stars;
+    var who = sp ? sp.ko : '🥚 ' + line.name + ' 알';
+    return who + ' Lv.' + pkLevel(p.fed) + ' · 별 ' + stars;
   }
   function pkRegisterDex(childId, id) {
     var p = pkOf(childId);
@@ -3945,14 +3947,24 @@
     pkFlash();
     UI.confetti(isFinal ? 90 : 60);
     setTimeout(function () { UI.confetti(40); }, 350);
-    var rows = ids.map(function (id) {
-      return '<span class="pk-evo-step"><img src="' + pkArt(id) + '" alt="' + esc(PK.species[id].ko) + '"><b>' + esc(PK.species[id].ko) + '</b></span>';
-    }).join('<span class="pk-evo-arrow">→</span>');
+    /* 알부터 지금까지 한 줄로 보여 주기 */
+    var chainIds = [];
+    if (line) {
+      for (var ci = 0; ci < afterStage; ci++) chainIds.push(line.stages[ci][0]);
+    }
+    var rows = (line ? '<span class="pk-evo-step egg"><i>🥚</i><b>알</b></span><span class="pk-evo-arrow">→</span>' : '') +
+      chainIds.map(function (id, i) {
+        var last = i === chainIds.length - 1;
+        return '<span class="pk-evo-step' + (last ? ' now' : '') + '"><img src="' + pkArt(id) + '" alt="' + esc(PK.species[id].ko) + '"><b>' + esc(PK.species[id].ko) + '</b></span>';
+      }).join('<span class="pk-evo-arrow">→</span>');
+    var prev = (line && beforeStage >= 1) ? PK.species[line.stages[beforeStage - 1][0]] : null;
+    var lead = isHatch
+      ? esc(childById(childId).name) + '의 ' + (line ? esc(line.name) : '') + ' 알이 깨어났어요!'
+      : esc(childById(childId).name) + '의 ' + (prev ? esc(prev.ko) : '') + '가 ' + esc(sp.ko) + '(으)로 ' + (isFinal ? '최종 진화했어요!' : '진화했어요!');
     UI.modal({
       title: isHatch ? '🐣 알이 부화했어요!' : (isFinal ? '✨ 최종 진화!' : '⚡ 진화했어요!'),
       bodyHTML: '<div class="pk-evo-modal">' +
-          '<p class="pk-evo-lead">' + esc(childById(childId).name) + '의 ' + (line ? esc(line.name) : '') + ' ' +
-            (isHatch ? '알이 깨어났어요!' : (isFinal ? '가 마지막 모습이 됐어요!' : '가 자랐어요!')) + '</p>' +
+          '<p class="pk-evo-lead">' + lead + '</p>' +
           '<div class="pk-evo-stage"><img class="pk-evo-big" src="' + pkArt(sp.id) + '" alt="' + esc(sp.ko) + '"></div>' +
           '<p class="pk-evo-name">' + esc(sp.ko) + '</p>' +
           '<div class="pk-evo-chain">' + rows + '</div>' +
@@ -4041,7 +4053,7 @@
 
     if (!p.line) {
       return '<div class="card pk-card ' + c.color + '">' + head +
-        '<div class="pk-choose-help"><b>🥚 ' + esc(c.name) + '</b>와 함께할 신비한 알을 골라요</div>' +
+        '<div class="pk-choose-help"><b>🥚 ' + esc(c.name) + '이랑</b> 함께할 신비한 알을 골라요</div>' +
         pkEggGridHTML(c.id) + '</div>';
     }
 
@@ -4161,8 +4173,8 @@
     return '<div class="ed-row" data-id="' + esc(item.id || '') + '">' +
       '<input class="input ed-emoji" value="' + esc(item.emoji || '⭐') + '" maxlength="4" aria-label="그림">' +
       '<input class="input ed-label" value="' + esc(item.label || '') + '" maxlength="24" placeholder="할 일" aria-label="할 일">' +
-      '<button type="button" class="ed-btn" data-mv="-1" aria-label="위로">↑</button>' +
-      '<button type="button" class="ed-btn" data-mv="1" aria-label="아래로">↓</button>' +
+      '<button type="button" class="ed-btn" data-mv="-1" aria-label="위로">▲</button>' +
+      '<button type="button" class="ed-btn" data-mv="1" aria-label="아래로">▼</button>' +
       '<button type="button" class="ed-btn del" data-del="1" aria-label="지우기">✕</button>' +
     '</div>';
   }
