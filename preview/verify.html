@@ -5572,6 +5572,20 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   body.on-home .parent-sq { height: 100%; }
 }
 
+/* ---- 낮은 패드(≤740) 최종: 달력·알림장 내용을 줄여 두 열 모두 한 화면에 ---- */
+@media (min-width: 1000px) and (max-height: 740px) {
+  body.on-home .month-card .mini-day { min-height: 16px; font-size: 12px; border-radius: 7px; }
+  body.on-home .month-card .mini-dow { font-size: 9.5px; padding-bottom: 2px; }
+  body.on-home .month-card .mini-cal { gap: 2px; }
+  body.on-home .notice-card .card-head { margin-bottom: 3px; }
+  body.on-home .notice-card .card-head h2 { font-size: 16px; }
+  body.on-home .notice-card .notice-title { font-size: 13.5px; margin-bottom: 2px; }
+  body.on-home .notice-card .notice-msg { font-size: 12.5px; line-height: 1.4; padding: 4px 8px; }
+  body.on-home .notice-card .notice-item { font-size: 13px; padding: 5px 9px; }
+  body.on-home .notice-card .notice-check { width: 20px; height: 20px; }
+  body.on-home .notice-card .notice-foot { margin-top: 2px; }
+}
+
 </style>
 </head>
 <body>
