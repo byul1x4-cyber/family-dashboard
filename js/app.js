@@ -4074,7 +4074,7 @@
           '<div class="pk-name">' + (sp ? esc(sp.ko) : '신비한 알') + '<span class="pk-lv">Lv.' + lvl + '</span></div>' +
           '<div class="pk-sub">' + esc(line.name) + ' 라인 · ' + pkStageName(st) + '</div>' +
           '<div class="pk-bar"><i style="width:' + prog + '%"></i></div>' +
-          '<div class="pk-progtxt"><span>' + (st === 0 ? '부화까지 ' : maxed ? '다음 레벨까지 ' : '진화까지 ') + (per - prog) + '별</span><span>' + prog + ' / ' + per + ' ⭐</span></div>' +
+          '<div class="pk-progtxt"><span>' + (maxed ? '다음 별까지 ' : '다음 진화까지 ') + (per - prog) + '개</span><span>현재 단계 별 ' + prog + ' / ' + per + '</span></div>' +
         '</div>' +
       '</div>' +
       pkTrackHTML(p) +
@@ -4084,8 +4084,8 @@
           return '<button type="button" class="btn btn-sun btn-sm" data-act="pk-feed" data-child="' + c.id + '" data-n="' + n + '"' + (stars < n ? ' disabled' : '') + '>별 ' + n + '개 먹이기</button>';
         }).join('') +
       '</div>' +
-      '<p class="pk-help">별 ' + per + '개 모으면 Lv.' + (lvl + 1) + '! ' +
-        (st === 0 ? '알이 흔들리고 있어요 🥚' : maxed ? '새 알을 골라 다른 친구도 키워 보세요.' : '조금 더 모으면 진화해요 ✨') + '</p>' +
+      '<p class="pk-help"><b>별 ' + per + '개</b>를 모으면 ' +
+        (st === 0 ? '알이 부화해요 🥚' : maxed ? '다음 별이 쌓여요 (최종 진화 완료 · 새 알을 골라도 돼요)' : '한 단계 더 진화해요 ✨') + '</p>' +
       (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
       '</div>';
   }
@@ -4109,10 +4109,10 @@
   }
   function renderPokemon() {
     return '<div class="card soft-sun pk-rules">' +
-        '<div class="pk-rules-head"><b>⭐ 별 ' + pkPerLevel() + '개 = 레벨 1업!</b>' +
+        '<div class="pk-rules-head"><b>⭐ 별 ' + pkPerLevel() + '개 모으면 진화!</b>' +
           '<span>' + D.children.map(function (c) { return c.emoji + ' ' + esc(c.name) + ' ⭐' + (S.stars[c.id] || 0); }).join(' · ') + '</span></div>' +
         '<p>할 일 체크 · 등교 준비 · 정리하기로 모은 별을 포켓몬에게 먹여 키워요.<br>' +
-        '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 별 ' + pkPerLevel() + '개마다 한 단계씩 자라요.</p>' +
+        '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 단계마다 별 ' + pkPerLevel() + '개를 모아야 진화해요.</p>' +
         (S.mode === 'parent'
           ? '<div class="btn-row" style="margin-top:10px">' +
               D.children.map(function (c) {
@@ -4303,9 +4303,9 @@
       size: 'wide',
       title: '⚡ 포켓몬 관리',
       bodyHTML:
-        '<div class="field"><label>레벨업에 필요한 별 개수</label>' +
+        '<div class="field"><label>진화에 필요한 별 개수 (기본 100개)</label>' +
           '<input class="input" id="edPerLevel" type="number" min="10" max="1000" step="10" value="' + pkPerLevel() + '">' +
-          '<p class="help">기본 100개예요. 작게 넣으면 빨리 자라요(시험해 볼 때 좋아요).</p></div>' +
+          '<p class="help">별 100개를 모을 때마다 알 → 1단계 → 2단계 → 3단계로 진화해요. 작게 넣으면 빨리 자라요(시험해 볼 때 좋아요).</p></div>' +
         D.children.map(function (c) {
           var p = pkOf(c.id);
           var sp = pkSpecies(p);
@@ -4325,7 +4325,7 @@
             S.pkCfg = { perLevel: v };
             saveNow();
             render({ keepScroll: true });
-            UI.toast('레벨업 별 ' + v + '개로 저장했어요 · 아이 태블릿에도 바로 보여요', { emoji: '⚡', kind: 'good', duration: 3200 });
+            UI.toast('진화에 필요한 별 ' + v + '개로 저장했어요 · 아이 태블릿에도 바로 보여요', { emoji: '⚡', kind: 'good', duration: 3200 });
           } },
         { label: '닫기', kind: 'ghost' }
       ],
