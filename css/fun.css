@@ -3018,3 +3018,27 @@ body.on-home .wx-head { flex: 0 0 auto; margin-left: auto; display: block; }
   }
   body.on-home .wx-hero { width: 100%; }
 }
+
+/* ---- 날씨 폭 = 오른쪽 열 폭: 헤더 둘째 줄도 본문과 같은 2열 그리드로 ---- */
+@media (min-width: 1000px) {
+  body.on-home .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.06fr);
+    gap: 10px;
+    align-items: stretch;
+  }
+  body.on-home .hero-brand { flex: 0 1 auto; min-width: 0; padding: 0; }
+  body.on-home .hero-brand b { overflow: hidden; text-overflow: ellipsis; }
+  body.on-home .hero-clock { margin-left: 0; min-width: 0; flex: 1 1 auto; }
+  body.on-home .hero-quick { width: 92px; flex: 0 0 auto; }
+  body.on-home .wx-head { width: auto; max-width: none; margin-left: 0; }
+}
+/* 왼쪽 그룹(브랜드+시계+버튼)을 한 칸에 담기게 */
+body.on-home .hero > .hero-brand,
+body.on-home .hero > .hero-clock { grid-column: 1; }
+@media (min-width: 1000px) {
+  body.on-home .hero { grid-template-areas: "left wx"; }
+  body.on-home .hero-brand { grid-area: left; align-self: center; }
+  body.on-home .hero-clock { grid-area: left; margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  body.on-home .wx-head { grid-area: wx; }
+}
