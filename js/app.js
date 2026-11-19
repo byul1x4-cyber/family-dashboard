@@ -246,7 +246,10 @@
           if (typeof it === 'string') return { id: UI.uid('rt'), label: it, emoji: '⭐' };
           var label = String(it.label || '').trim();
           if (!label) return null;
-          return { id: it.id || UI.uid('rt'), label: label.slice(0, 24), emoji: String(it.emoji || '⭐').slice(0, 4) };
+          var out = { id: it.id || UI.uid('rt'), label: label.slice(0, 24), emoji: String(it.emoji || '⭐').slice(0, 4) };
+          /* ⭐ 별 없는 체크(알림장 체크) — 이 플래그는 꼭 살려 둡니다 */
+          if (it.noStar === true || it.noStar === 1 || it.noStar === 'true' || it.id === 'mg-e-notice') out.noStar = true;
+          return out;
         }).filter(Boolean);
       };
       s.customRoutines[c.id] = { morning: norm(cur.morning), evening: norm(cur.evening) };
@@ -772,6 +775,24 @@
     var m = D.scheduleMembers.filter(function (x) { return x.id === id; })[0];
     return m ? m.name : '가족';
   }
+  /* ⭐ 별 없는 체크 항목(noStar)인지 — 알림장 체크처럼 '체크만' 하는 할 일 */
+  function routineItemById(childId, itemId) {
+    var it = routineItems(childId);
+    return (it.morning || []).concat(it.evening || []).filter(function (i) { return i.id === itemId; })[0] || null;
+  }
+  function isNoStarItem(childId, itemId) {
+    var it = routineItemById(childId, itemId);
+    return !!(it && it.noStar);
+  }
+  /* 그 아이가 오늘 별을 받은 루틴 개수 (별 없는 항목은 빼고) */
+  function starredDoneCount(childId, date) {
+    var today = date || todayKey();
+    var it = routineItems(childId);
+    return (it.morning || []).concat(it.evening || []).filter(function (i) {
+      return !i.noStar && isDone(i.id, today);
+    }).length;
+  }
+
   function routineItems(childId) {
     var custom = S && S.customRoutines && S.customRoutines[childId];
     if (custom && (Array.isArray(custom.morning) || Array.isArray(custom.evening))) {
@@ -806,8 +827,8 @@
     if (!S.customRoutines[childId]) {
       var cur = routineItems(childId);
       S.customRoutines[childId] = {
-        morning: cur.morning.map(function (i) { return { id: i.id, label: i.label, emoji: i.emoji }; }),
-        evening: cur.evening.map(function (i) { return { id: i.id, label: i.label, emoji: i.emoji }; })
+        morning: cur.morning.map(function (i) { return { id: i.id, label: i.label, emoji: i.emoji, noStar: !!i.noStar }; }),
+        evening: cur.evening.map(function (i) { return { id: i.id, label: i.label, emoji: i.emoji, noStar: !!i.noStar }; })
       };
     }
     return S.customRoutines[childId];
@@ -1195,8 +1216,7 @@
         if (window.__lastMorningLock !== lm) {
           window.__lastMorningLock = lm;
           if (view === 'routine' || view === 'home') render({ keepScroll: true });
-          var scEl = document.getElementById('schoolLayer');
-          if (scEl && !scEl.hidden) paintSchool(true);
+          paintSchoolBar();
         }
       }
     }, 60000);
@@ -1282,6 +1302,8 @@
   /* ---------------- 화면 전환 ---------------- */
   function setView(name) {
     if (name === 'settings' && S.mode !== 'parent') name = 'home';   /* ⚙️ 설정 탭은 부모님 모드에서만 */
+    /* 🌅 08:00~08:30 아이 모드: 아침 준비를 다 하기 전엔 포켓몬 탭에 못 들어가요 */
+    if (name === 'pokemon' && schoolPokemonLocked()) { schoolPokemonLockToast(); return; }
     view = name;
     render({ scrollTop: true });
     /* 우체통은 손글씨 종이·최근 편지 카드가 그려진 뒤 높이가 변해서, 한 번 더 맨 위로 맞춥니다 */
@@ -1349,6 +1371,18 @@
     if (setTabBtn) setTabBtn.style.display = S.mode === 'parent' ? '' : 'none';
     var bb = document.getElementById('bannerBtn');
     if (bb) bb.hidden = S.mode !== 'parent';
+    /* 🌅 08:00~08:30 아이 모드: 포켓몬 탭 자물쇠 표시 */
+    var pkTab = document.querySelector('.tab[data-view="pokemon"]');
+    if (pkTab) {
+      var pkLock = schoolPokemonLocked();
+      pkTab.classList.toggle('locked', pkLock);
+      if (pkLock) pkTab.setAttribute('aria-label', '포켓몬 — 할 일을 다 체크하면 들어갈 수 있어요');
+      else pkTab.removeAttribute('aria-label');
+    }
+    /* 🌅 등교 시작 중이면 모든 탭 위에 남은 시간 바가 늘 보입니다 */
+    var sb = schoolBarEl();
+    if (sb) { sb.hidden = !schoolActive; if (schoolActive) paintSchoolBar(); }
+    document.body.classList.toggle('school-on', !!schoolActive);
   }
 
   /* ================= 홈 ================= */
@@ -2046,6 +2080,8 @@
   }
 
   function renderRoutine() {
+    /* 🌅 등교 시작이 켜져 있으면 '할 일' 탭은 등교 화면으로만 동작해요 */
+    if (schoolActive) return renderSchoolInline();
     var today = todayKey();
     var slots = [{ key: 'all', label: '전체' }, { key: 'morning', label: '🌅 아침' }, { key: 'evening', label: '🌙 저녁' }];
     var doneTotal = 0, allTotal = 0;
@@ -2092,6 +2128,8 @@
       '</div>' +
       '<div class="routine-list">' + list.map(function (i) {
         var done = isDone(i.id, today);
+        var noStar = !!i.noStar;   /* 알림장 체크처럼 별 없는 항목 */
+        var noStarTag = noStar ? '<span class="r-nostar">별 없음</span>' : '';
         var ts = done ? S.routine[today][i.id] : null;
         var del = parent
           ? '<button type="button" class="r-del" data-act="routine-del" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="' + esc(i.label) + ' 지우기" title="목록에서 지우기">🗑️</button>'
@@ -2099,7 +2137,7 @@
         if (done) {
           return '<div class="routine-item done">' +
               '<span class="r-emoji">' + i.emoji + '</span>' +
-              '<span class="r-label">' + esc(i.label) +
+              '<span class="r-label">' + esc(i.label) + noStarTag +
                 '<span class="r-time">' + (ts ? UI.timeKo(ts) + ' 완료' : '완료') + '</span></span>' +
               (parent
                 ? '<button type="button" class="icon-btn" data-act="routine-undo" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="되돌리기">↩</button>' : '') +
@@ -2110,7 +2148,7 @@
         if (locked) {
           return '<button type="button" class="routine-item locked" data-act="morning-locked" data-child="' + c.id + '" data-item="' + i.id + '">' +
               '<span class="r-emoji">' + i.emoji + '</span>' +
-              '<span class="r-label">' + esc(i.label) + '</span>' +
+              '<span class="r-label">' + esc(i.label) + noStarTag + '</span>' +
               '<span class="routine-check lock" aria-hidden="true">🔒</span>' +
             '</button>';
         }
@@ -2118,7 +2156,7 @@
           return '<div class="routine-item">' +
               '<button type="button" class="r-main" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '">' +
                 '<span class="r-emoji">' + i.emoji + '</span>' +
-                '<span class="r-label">' + esc(i.label) + '</span>' +
+                '<span class="r-label">' + esc(i.label) + noStarTag + '</span>' +
               '</button>' +
               '<button type="button" class="routine-check" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="' + esc(i.label) + ' 완료"></button>' +
               del +
@@ -2126,7 +2164,7 @@
         }
         return '<button type="button" class="routine-item" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '">' +
             '<span class="r-emoji">' + i.emoji + '</span>' +
-            '<span class="r-label">' + esc(i.label) + '</span>' +
+            '<span class="r-label">' + esc(i.label) + noStarTag + '</span>' +
             '<span class="routine-check" aria-hidden="true"></span>' +
           '</button>';
       }).join('') + '</div>' +
@@ -2249,20 +2287,24 @@
       morningLockToast();
       return;
     }
+    var noStar = isNoStarItem(childId, itemId);   /* 알림장 체크처럼 별 없는 항목 */
+    var item = routineItemById(childId, itemId);
     S.routine[today] = S.routine[today] || {};
     if (S.routine[today][itemId]) return;
     S.routine[today][itemId] = Date.now();
-    S.stars[childId] = (S.stars[childId] || 0) + 1;
+    if (!noStar) S.stars[childId] = (S.stars[childId] || 0) + 1;
     save();
     render({ keepScroll: true });
 
     var st = routineStats(childId, today);
     var key = today + ':' + childId;
-    if (st.done >= st.total && !S.celebrated[key]) {
+    if (noStar) {
+      UI.toast((item ? item.label : '체크') + ' 완료!', { emoji: '✅', kind: 'good', duration: 1800 });
+    } else if (st.done >= st.total && !S.celebrated[key]) {
       S.celebrated[key] = true;
       save();
       UI.confetti(46);
-      UI.toast('오늘 루틴을 모두 마쳤어요! 별 ' + st.done + '개 획득 ⭐', { emoji: '🎉', kind: 'good', duration: 3600 });
+      UI.toast('오늘 루틴을 모두 마쳤어요! 별 ' + starredDoneCount(childId, today) + '개 획득 ⭐', { emoji: '🎉', kind: 'good', duration: 3600 });
     } else {
       UI.toast('별 1개를 받았어요! ⭐', { emoji: '✅', kind: 'good' });
     }
@@ -2305,7 +2347,7 @@
     var today = todayKey();
     if (S.routine[today] && S.routine[today][itemId]) {
       delete S.routine[today][itemId];
-      takeStarsNote(childId, 1);   /* 보유 별이 없으면 포켓몬에게 먹인 별에서 뺌 */
+      if (!isNoStarItem(childId, itemId)) takeStarsNote(childId, 1);   /* 별 없는 항목은 그대로 */
       var key = today + ':' + childId;
       delete S.celebrated[key];
       save();
@@ -3812,18 +3854,11 @@
   }
 
   var schoolInt = null;
-  function schoolLayer() {
-    var el = document.getElementById('schoolLayer');
-    if (el) return el;
-    el = document.createElement('div');
-    el.id = 'schoolLayer';
-    el.className = 'sc-layer';
-    el.hidden = true;
-    el.addEventListener('click', onSchoolClick);
-    document.body.appendChild(el);
-    return el;
-  }
-  /* 등교 준비 체크 = 그 아이의 아침 할 일 (기본값 4개, 부모님이 직접 고쳐요) */
+  /* 🌅 등교 시작은 이제 '팝업'이 아니라 '할 일' 탭 안의 화면입니다.
+     남은 시간 바(#schoolBar)는 탭 바로 아래(전역)에 있어 어느 탭에서도 보여요. */
+  var schoolActive = false;
+
+  /* 등교 준비 체크 = 그 아이의 아침 할 일 (기본 5개, 부모님이 직접 고쳐요) */
   function schoolItems(childId) {
     return routineItems(childId).morning.slice();
   }
@@ -3850,156 +3885,203 @@
     save();
     return true;
   }
-  function schoolKidHTML(c) {
-    var today = todayKey();
-    var morning = schoolItems(c.id);
-    var done = morning.filter(function (i) { return isDone(i.id, today); }).length;
-    var all = morning.length > 0 && done >= morning.length;
-    var locked = morningLocked();
-    var steps = morning.map(function (i) {
-      var d = isDone(i.id, today);
-      var lockThis = locked && !d;
-      return '<button type="button" class="sc-step' + (d ? ' done' : '') + (lockThis ? ' locked' : '') + '" data-sch="step" data-child="' + c.id + '" data-item="' + esc(i.id) + '" aria-pressed="' + (d ? 'true' : 'false') + '">' +
-          '<span class="sc-emoji" aria-hidden="true">' + esc(i.emoji || '⭐') + '</span>' +
-          '<span class="sc-label">' + esc(i.label) + '</span>' +
-          '<span class="sc-tick" aria-hidden="true">' + (d ? '✓' : (lockThis ? '🔒' : '')) + '</span>' +
-        '</button>';
-    }).join('');
-    return '<div class="sc-kid ' + c.color + (all ? ' all' : '') + '">' +
-      '<div class="sc-kid-head">' +
-        kidAvaHTML(c) +
-        '<b>' + esc(c.name) + '</b>' +
-        '<span class="sc-kid-cnt">' + done + '/' + morning.length + '</span>' +
-      '</div>' +
-      '<div class="sc-steps">' +
-        (steps || '<p class="help">아침 할 일이 없어요. 부모님 모드에서 추가해 주세요.</p>') +
-      '</div>' +
-      (all ? '<div class="sc-kid-done">🎉 다 챙겼어요! ' + (schoolBonusGiven(c.id) ? '보너스 별 ' + schoolRewardStars() + '개 받았어요 ⭐' : '보너스 별이 기다려요') + '</div>' : '') +
-    '</div>';
+
+  /* ---------------- 모든 탭 위 남은 시간 바 ---------------- */
+  function schoolBarEl() { return document.getElementById('schoolBar'); }
+  function schoolLeftBig(ms) {
+    if (ms <= 0) return '학교 갈 시간이에요!';
+    var total = Math.floor(ms / 1000);
+    var h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+    if (h > 0) return h + '시간 ' + m + '분 남았어요';
+    if (m > 0) return m + '분 남았어요';
+    return s + '초 남았어요';
   }
-  function schoolPanelHTML() {
-    var bothDone = D.children.every(function (c) { return schoolAllDone(c.id); });
-    return '<div class="sc-panel" role="dialog" aria-modal="true" aria-label="등교 시작 모드">' +
-      '<div class="sc-head">' +
-        '<span class="sc-head-ico" aria-hidden="true">🌅</span>' +
-        '<div class="sc-head-txt"><b>등교 시작</b><small>' + esc(deadlineText()) + '까지 준비해요' +
-          (morningLocked() ? ' · 🔒 마감' : '') + '</small></div>' +
-        (schoolLockedOpen() ? '' : '<button type="button" class="sc-x" data-sch="close" aria-label="닫기">✕</button>') +
-      '</div>' +
-      '<div class="sc-clock">' +
-        '<div class="sc-big" id="scBig">--:--</div>' +
-        '<div class="sc-sub" id="scSub">남았어요</div>' +
-        '<div class="sc-bar"><i id="scBar" style="width:100%"></i></div>' +
-        '<p class="sc-note" id="scNote"></p>' +
-      '</div>' +
-      '<div class="sc-kids">' + D.children.map(schoolKidHTML).join('') + '</div>' +
-      '<div class="sc-foot">' +
-        (S.mode === 'parent' ? '<button type="button" class="btn btn-ghost btn-sm" data-sch="settings">⚙️ 등교 설정</button>' : '') +
-        '<button type="button" class="btn btn-primary" data-sch="go">학교 가자! 🎒</button>' +
-      '</div>' +
-      (bothDone ? '<div class="sc-all">🎉 오늘 등교 준비 끝! 정말 잘했어요</div>' : '') +
-    '</div>';
-  }
-  function paintSchool(full) {
-    var el = schoolLayer();
-    if (!el || el.hidden) return;
-
-    /* 등교 시각이 되면 열려 있던 창을 저절로 닫습니다 */
-    if (schoolAutoCloseAt && Date.now() >= schoolAutoCloseAt) {
-      schoolAutoCloseAt = 0;
-      closeSchoolMode();
-      UI.toast(deadlineText() + '이 되어 등교 시작을 접었어요', { emoji: '🌅', duration: 3000 });
-      return;
-    }
-
-    /* 아침 할 일을 다 끝낸 아이에게 보너스 별 (하루 한 번) */
-    var granted = [];
-    D.children.forEach(function (c) { if (grantSchoolBonus(c.id)) granted.push(c.id); });
-    if (granted.length) {
-      UI.confetti(40);
-      chime();
-      UI.toast(granted.map(function (id) { return childById(id).name; }).join('·') + ' 등교 준비 완료! 보너스 별 ' + schoolRewardStars() + '개 ⭐', { emoji: '🎉', kind: 'good', duration: 3800 });
-      render({ keepScroll: true });
-    }
-
-    /* 둘 다 아침 준비를 다 챙기면 축하하며 저절로 닫습니다 (하루 한 번) */
-    var allKidsDone = D.children.every(function (c) { return schoolAllDone(c.id); });
-    if (allKidsDone && !schoolAutoDoneToday()) {
-      finishSchoolDay();
-      return;
-    }
-
-    if (full || !el.querySelector('.sc-panel')) el.innerHTML = schoolPanelHTML();
-
+  function paintSchoolBar() {
+    var el = schoolBarEl();
+    if (!el) return;
+    el.hidden = !schoolActive;
+    if (!schoolActive) return;
     var ms = msLeftToSchool();
-    var big = el.querySelector('#scBig');
-    var sub = el.querySelector('#scSub');
-    var bar = el.querySelector('#scBar');
-    var note = el.querySelector('#scNote');
+    var today = todayKey();
+    var counts = D.children.map(function (c) {
+      var list = schoolItems(c.id);
+      var d = list.filter(function (i) { return isDone(i.id, today); }).length;
+      return c.name + ' ' + d + '/' + list.length + (list.length && d >= list.length ? ' ✓' : '');
+    });
     var winMs = Math.max(60000, (schoolTargetMin() - schoolStartMin()) * 60000);
     var pct = ms <= 0 ? 0 : Math.max(0, Math.min(100, (ms / winMs) * 100));
-    if (big) big.textContent = clockText(ms);
-    if (sub) sub.textContent = ms > 0 ? leftText(ms) : (S.schoolTime + '이 지났어요!');
-    if (bar) {
-      bar.style.width = pct + '%';
-      bar.className = ms <= 0 ? 'over' : (pct < 20 ? 'soon' : '');
+    var left = document.getElementById('sbLeft');
+    var kids = document.getElementById('sbKids');
+    var fill = document.getElementById('sbFill');
+    var run = document.getElementById('sbRunner');
+    if (left) left.textContent = ms > 0 ? clockText(ms) : '00:00';
+    if (kids) kids.textContent = counts.join(' · ');
+    if (fill) {
+      fill.style.width = pct + '%';
+      fill.className = 'sb-fill' + (ms <= 0 ? ' over' : (pct < 20 ? ' soon' : ''));
     }
-    if (note) {
-      if (ms <= 0) {
-        note.textContent = S.mode === 'parent'
-          ? deadlineText() + '이 지났어요! 부모님 모드에선 언제든 체크할 수 있어요 😊'
-          : deadlineText() + '이 지나서 아이 모드에선 체크할 수 없어요. 부모님께 부탁해 보세요!';
-      } else if (pct < 20) {
-        note.textContent = '거의 다 왔어요! 얼른 챙기고 나가요 🏃';
-      } else {
-        note.textContent = '남은 시간이 줄어들수록 막대도 줄어들어요. 하나 누를 때마다 별 ⭐ 1개!';
-      }
-    }
+    if (run) run.style.left = Math.max(5, Math.min(96, pct)) + '%';
+    el.classList.toggle('over', ms <= 0);
   }
-  function openSchoolMode() {
-    closeTidyMode();
-    var el = schoolLayer();
-    el.hidden = false;
-    document.body.classList.add('modal-open');
-    /* 등교 시각 전에 연 창만 그 시각에 저절로 닫습니다 (지난 뒤에 손으로 연 창은 그대로) */
-    var target = schoolTargetMsToday();
-    schoolAutoCloseAt = Date.now() < target ? target : 0;
-    paintSchool(true);
+  function schoolGrantBonuses() {
+    var granted = [];
+    D.children.forEach(function (c) { if (grantSchoolBonus(c.id)) granted.push(c.id); });
+    if (!granted.length) return;
+    UI.confetti(36);
+    chime();
+    UI.toast(granted.map(function (id) { return childById(id).name; }).join('·') +
+      ' 등교 준비 완료! 보너스 별 ' + schoolRewardStars() + '개 ⭐', { emoji: '🎉', kind: 'good', duration: 3800 });
+    render({ keepScroll: true });
+  }
+  /* 1초마다: 남은 시간·막대 갱신 · 08:30이면 자동 종료 · 둘 다 끝이면 축하하며 종료 */
+  function schoolTick() {
+    if (!schoolActive) return;
+    if (schoolAutoCloseAt && Date.now() >= schoolAutoCloseAt) {
+      schoolAutoCloseAt = 0;
+      endSchoolMode(deadlineText() + '이 되어 등교 시작을 접었어요');
+      return;
+    }
+    schoolGrantBonuses();
+    paintSchoolBar();
+    if (schoolBothDone()) finishSchoolDay();
+  }
+  function startSchoolTicker() {
     clearInterval(schoolInt);
-    schoolInt = setInterval(function () { paintSchool(false); }, 1000);
-  }
-  function closeSchoolMode() {
-    clearInterval(schoolInt); schoolInt = null;
-    var el = document.getElementById('schoolLayer');
-    if (el) el.hidden = true;
-    if (!document.querySelector('.modal-wrap')) document.body.classList.remove('modal-open');
+    paintSchoolBar();
+    schoolInt = setInterval(schoolTick, 1000);
   }
 
-  /* 🌅 등교 시작 자동 열림·자동 닫힘 ------------------------------------
-     · 등교 시각(기본 08:30) 30분 전 ~ 등교 시각 사이에 앱이 켜져 있으면 저절로 열려요.
-     · 그날 ✕로 닫았거나 [학교 가자!]로 마쳤으면 그날은 다시 열지 않습니다
-       (localStorage 에 오늘 날짜만 적어 둡니다 · 앱을 다시 켜도 기억).
-     · 등교 시각 전에 열려 있던 창은 그 시각이 되는 순간 저절로 닫히고,
-       등교 시각이 지난 뒤에 손으로 연 창은 그대로 둡니다. */
+  /* ---------------- 할 일 탭 안의 등교 화면 ---------------- */
+  /* 할 일 이름으로 어느 그림을 그릴지 고릅니다 (부모님이 이름을 바꿔도 알아보게) */
+  function prepKind(item, idx) {
+    var id = String((item && item.id) || '');
+    var label = String((item && item.label) || '');
+    if (/-wake/.test(id) || /일어나|기상/.test(label)) return 'wake';
+    if (/-wash/.test(id) || /세수|양치|씻/.test(label)) return 'wash';
+    if (/-dress/.test(id) || /옷/.test(label)) return 'dress';
+    if (/-break/.test(id) || /밥|아침|식사/.test(label)) return 'eat';
+    if (/-bag/.test(id) || /가방|물통|챙/.test(label)) return 'bag';
+    return ['wake', 'wash', 'dress', 'eat', 'bag'][idx % 5];
+  }
+  function schoolCardHTML(c, item, idx, locked) {
+    var today = todayKey();
+    var done = isDone(item.id, today);
+    var lockThis = locked && !done;
+    return '<button type="button" class="scard' + (done ? ' done' : '') + (lockThis ? ' locked' : '') + '"' +
+        ' data-act="school-step" data-child="' + c.id + '" data-item="' + esc(item.id) + '"' +
+        ' aria-pressed="' + (done ? 'true' : 'false') + '"' +
+        ' aria-label="' + (idx + 1) + '단계 ' + esc(item.label) + (done ? ' 완료' : '') + '">' +
+        '<span class="scard-num" aria-hidden="true">' + (idx + 1) + '</span>' +
+        (done ? '<span class="scard-check" aria-hidden="true">✓</span>' : '') +
+        '<span class="scard-art" aria-hidden="true">' + Art.schoolArt(prepKind(item, idx), c.id) + '</span>' +
+        '<span class="scard-body">' +
+          '<b class="scard-title">' + esc(item.label) + '</b>' +
+          '<span class="scard-cta">' + (done ? '✓ 다 했어요' : (lockThis ? '🔒 ' + esc(deadlineText()) + ' 마감' : '눌러서 완료')) + '</span>' +
+        '</span>' +
+      '</button>';
+  }
+  function schoolRowHTML(c, locked) {
+    var today = todayKey();
+    var items = schoolItems(c.id);
+    var done = items.filter(function (i) { return isDone(i.id, today); }).length;
+    var pct = items.length ? Math.round(done / items.length * 100) : 0;
+    var all = items.length > 0 && done >= items.length;
+    return '<section class="sc-row ' + c.color + (all ? ' all' : '') + '" aria-label="' + esc(c.name) + ' 등교 준비">' +
+      '<header class="sc-rowhead">' +
+        kidAvaHTML(c) +
+        '<b>' + esc(c.name) + '</b>' +
+        (all ? '<span class="sc-row-badge">🎉 다 챙겼어요</span>' : '') +
+        '<span class="sc-rowpct">' + done + '/' + items.length + '</span>' +
+        '<span class="sc-rowbar" aria-hidden="true"><i style="width:' + pct + '%"></i></span>' +
+      '</header>' +
+      (items.length
+        ? '<div class="sc-cards">' + items.map(function (i, idx) { return schoolCardHTML(c, i, idx, locked); }).join('') + '</div>'
+        : '<p class="help">아침 할 일이 없어요. 부모님 모드에서 추가해 주세요.</p>') +
+      '</section>';
+  }
+  function renderSchoolInline() {
+    var locked = morningLocked();
+    var lockedOpen = S.mode !== 'parent' && inSchoolAutoWindow();
+    var bothDone = schoolBothDone();
+    return '<div class="school-view">' +
+      '<div class="sv-head">' +
+        '<div class="sv-h1"><span class="sv-ico" aria-hidden="true">🌅</span>' +
+          '<span class="sv-h1t"><b>등교 시작</b><small>' + esc(deadlineText()) + '까지 준비해요 · 카드를 눌러 완료!' +
+          (locked ? ' · 🔒 마감' : '') + '</small></span></div>' +
+        '<div class="sv-actions">' +
+          (S.mode === 'parent' ? '<button type="button" class="btn btn-ghost btn-sm" data-act="school-settings">⚙️ 등교 설정</button>' : '') +
+          (lockedOpen ? '' : '<button type="button" class="btn btn-ghost btn-sm" data-act="school-close">일반 목록으로</button>') +
+        '</div>' +
+      '</div>' +
+      (bothDone ? '<div class="sv-all">🎉 오늘 등교 준비 끝! 정말 잘했어요</div>' : '') +
+      D.children.map(function (c) { return schoolRowHTML(c, locked); }).join('') +
+      '<div class="sv-foot">' +
+        '<p class="sv-note">' + (locked
+          ? '🔒 ' + esc(deadlineText()) + '이 지나서 아침 체크는 잠겼어요. 부모님 모드에서는 언제든 체크할 수 있어요.'
+          : '하나 누를 때마다 별 ⭐ 1개! 다섯 개를 다 챙기면 보너스 별 ' + schoolRewardStars() + '개가 더 쌓여요.') + '</p>' +
+        (bothDone ? '<button type="button" class="btn btn-primary" data-act="school-go">학교 가자! 🎒</button>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  /* ---------------- 켜기 / 끄기 ---------------- */
+  function startSchoolMode(opts) {
+    opts = opts || {};
+    closeTidyMode();
+    schoolActive = true;
+    var target = schoolTargetMsToday();
+    /* 등교 시각 전에 켠 것만 그 시각에 저절로 끝납니다 (지난 뒤에 켜면 그대로) */
+    schoolAutoCloseAt = Date.now() < target ? target : 0;
+    if (opts.goTab === false) render({ keepScroll: true });
+    else setView('routine');
+    startSchoolTicker();
+    if (opts.toast !== false) {
+      UI.toast('🌅 등교 시작! ' + deadlineText() + '까지 준비해요', { emoji: '🎒', kind: 'good', duration: 3000 });
+    }
+  }
+  function endSchoolMode(msg) {
+    schoolActive = false;
+    schoolAutoCloseAt = 0;
+    clearInterval(schoolInt); schoolInt = null;
+    var el = schoolBarEl();
+    if (el) el.hidden = true;
+    render({ keepScroll: true });
+    if (msg) UI.toast(msg, { emoji: '🌅', duration: 3200 });
+  }
+  /* 아이 모드 08:00~08:30: 두 아이 아침 5개를 다 챙기기 전에는 ⚡ 포켓몬 탭에 못 들어가요 */
+  function schoolPokemonLocked() {
+    if (!S) return false;
+    if (S.mode === 'parent') return false;      /* 부모님은 언제든 */
+    if (!inSchoolAutoWindow()) return false;    /* 평소 시간엔 언제든 자유 */
+    return !schoolBothDone();                   /* 다 챙기면 바로 들어갈 수 있어요 */
+  }
+  function schoolPokemonLockToast() {
+    UI.toast('할 일 체크되면 들어갈 수 있어요!', { emoji: '🔒', kind: 'warn', duration: 2600 });
+  }
+
   /* 아이 모드 + 08:00~08:30 자동 실행 구간: 아이가 직접 닫을 수 없어요 */
   function schoolLockedOpen() {
-    return !!(S && S.mode !== 'parent' && inSchoolAutoWindow());
+    return !!(S && S.mode !== 'parent' && inSchoolAutoWindow() && schoolActive);
   }
   /* 두 아이 모두 아침 준비를 다 챙겼는가 */
   function schoolBothDone() {
     return D.children.every(function (c) { return schoolAllDone(c.id); });
   }
-  /* 오늘 등교 시작 끝 (둘 다 챙김) — 축하하고 닫아요 */
+  /* 오늘 등교 시작 끝 (둘 다 챙김) — 축하하고 일반 목록으로 */
   function finishSchoolDay() {
     markSchoolAutoDone();
     schoolAutoCloseAt = 0;
-    closeSchoolMode();
+    schoolActive = false;
+    clearInterval(schoolInt); schoolInt = null;
+    var el = schoolBarEl();
+    if (el) el.hidden = true;
+    render({ keepScroll: true });
     UI.confetti(48);
     chime();
     UI.toast('둘 다 등교 준비 끝! 정말 잘했어요 ✨', { emoji: '🎒', kind: 'good', duration: 3600 });
     pushToPhones('🌅 등교 준비 완료!', '민국·이준 둘 다 아침 준비를 마쳤어요 ✨');
   }
-  /* [학교 가자!] — 둘 다 챙겼을 때만 닫혀요 */
+  /* [학교 가자!] — 둘 다 챙겼을 때만 */
   function schoolGoHome() {
     if (!schoolBothDone()) {
       UI.toast('아직 다 챙기지 않았어요! 하나씩 눌러서 준비해요', { emoji: '🎒', kind: 'warn', duration: 2800 });
@@ -4009,7 +4091,7 @@
   }
 
   var SCHOOL_AUTO_KEY = 'damoa-school-auto';   /* { date: 'YYYY-MM-DD' } */
-  var schoolAutoCloseAt = 0;                   /* 이 시각(ms)이 되면 자동으로 닫기 · 0이면 그대로 */
+  var schoolAutoCloseAt = 0;                   /* 이 시각(ms)이 되면 자동으로 끝내기 · 0이면 그대로 */
 
   function schoolAutoDoneToday() {
     try {
@@ -4026,18 +4108,17 @@
     var now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(tm / 60), tm % 60, 0, 0).getTime();
   }
-  /* 지금이 자동 열림 시간대(등교 30분 전 ~ 등교 시각)인가 */
+  /* 지금이 자동 실행 시간대(등교 30분 전 ~ 등교 시각)인가 */
   function inSchoolAutoWindow() {
     var now = Date.now();
     var target = schoolTargetMsToday();
     return now >= target - 30 * 60000 && now < target;
   }
-  /* 자동으로 열어도 되는 상황인가 (다른 창·정리시간·잠금 화면이 아닐 때) */
+  /* 지금 등교 화면을 저절로 켜도 되는 상황인가 */
   function schoolAutoOpenIdle() {
     if (!S || !Storage.hasGate()) return false;
     if (document.body.classList.contains('gated')) return false;
-    var el = schoolLayer();
-    if (el && !el.hidden) return false;
+    if (schoolActive) return false;
     var tidyEl = document.getElementById('tidyLayer');
     if (tidyEl && !tidyEl.hidden) return false;
     if (document.querySelector('.modal-wrap')) return false;
@@ -4045,14 +4126,13 @@
   }
   function maybeAutoOpenSchool() {
     if (!S) return;
-    if (S.mode === 'parent') return;          /* 부모님 모드에서는 자동으로 열지 않아요 */
+    if (S.mode === 'parent') return;          /* 부모님 모드에서는 자동으로 켜지지 않아요 */
     if (!inSchoolAutoWindow()) return;
     if (schoolAutoDoneToday()) return;
     if (!schoolAutoOpenIdle()) return;
-    openSchoolMode();
-    UI.toast('🌅 등교 시작! ' + deadlineText() + '까지 준비해요', { emoji: '🎒', kind: 'good', duration: 3000 });
+    startSchoolMode({ goTab: true, toast: true });
   }
-  /* 10초마다 자동 열림을 살펴봐요 (앱을 켜 둔 채 08:00이 되면 바로 열림) */
+  /* 10초마다 자동 실행을 살펴봐요 (앱을 켜 둔 채 08:00이 되면 바로 켜짐) */
   function startSchoolAutoWatch() {
     clearInterval(schoolAutoWatchInt);
     schoolAutoWatchInt = setInterval(maybeAutoOpenSchool, 10000);
@@ -4061,19 +4141,6 @@
     });
   }
   var schoolAutoWatchInt = null;
-  function onSchoolClick(e) {
-    var b = e.target.closest('[data-sch]');
-    if (!b) return;
-    var act = b.getAttribute('data-sch');
-    if (act === 'close') {
-      /* 아이 모드 08:00~08:30 에는 ✕가 없지만, 혹시 눌러도 닫히지 않게 한 번 더 막습니다 */
-      if (schoolLockedOpen()) { UI.toast('아직 다 챙기지 않았어요! ' + deadlineText() + '까지 준비해요', { emoji: '🎒', kind: 'warn', duration: 2600 }); return; }
-      markSchoolAutoDone(); schoolAutoCloseAt = 0; closeSchoolMode(); return;
-    }
-    if (act === 'go') { schoolGoHome(); return; }
-    if (act === 'settings') { schoolSettingsModal(); return; }
-    if (act === 'step') { schoolStep(b.getAttribute('data-child'), b.getAttribute('data-item')); return; }
-  }
   function schoolStep(childId, itemId) {
     var today = todayKey();
     if (!isDone(itemId, today) && morningLocked() && morningItemIds(childId).indexOf(itemId) >= 0) {
@@ -4081,14 +4148,17 @@
       return;
     }
     if (isDone(itemId, today)) {
-      if (S.mode === 'parent') { undoRoutine(childId, itemId); paintSchool(true); }
+      if (S.mode === 'parent') undoRoutine(childId, itemId);
       else UI.toast('이미 끝냈어요! ✓', { emoji: '✅', duration: 1300 });
       return;
     }
     completeRoutine(childId, itemId);   // 별 1개 + 저장 + 화면 갱신
     chime();
-    paintSchool(true);
+    paintSchoolBar();
+    schoolGrantBonuses();
+    if (schoolBothDone()) finishSchoolDay();
   }
+
   /* =========================================================
      🧹 정리시간 모드 (5 / 10 / 15분)
      ---------------------------------------------------------
@@ -4254,7 +4324,7 @@
   function startTidy(minutes, childId) {
     minutes = Number(minutes) || 10;
     if (minutes < 1 || minutes > 60) minutes = 10;
-    closeSchoolMode();
+    if (schoolActive) endSchoolMode(null);
     tidy = { minutes: minutes, endsAt: Date.now() + minutes * 60000, childId: childId || routineChild || D.children[0].id };
     var el = tidyLayer();
     el.hidden = false;
@@ -4271,10 +4341,7 @@
     tidy = null;
     var el = document.getElementById('tidyLayer');
     if (el) el.hidden = true;
-    if (!document.querySelector('.modal-wrap')) {
-      var sc = document.getElementById('schoolLayer');
-      if (!sc || sc.hidden) document.body.classList.remove('modal-open');
-    }
+    if (!document.querySelector('.modal-wrap')) document.body.classList.remove('modal-open');
   }
   function onTidyClick(e) {
     var b = e.target.closest('[data-td]');
@@ -5195,16 +5262,11 @@
     });
   }
 
-  /* 두 모드를 여는 버튼 (홈 · 할 일 위쪽) */
+  /* 홈 · 할 일 위쪽의 🧹 정리시간 버튼
+     · 🌅 등교 시작은 08:00~08:30 자동 실행이라 평소 화면에는 두지 않습니다
+       (부모님은 설정 → 🎛️ 새 기능 관리 → 등교 시작 설정에서 미리 볼 수 있어요). */
   function modeStripHTML() {
-    var ms = msLeftToSchool();
-    var left = ms > 0 ? leftText(ms) : '시간이 지났어요';
     return '<div class="mode-strip">' +
-      '<button type="button" class="ms-school" data-act="school-open">' +
-        '<span class="ms-ico" aria-hidden="true">🌅</span>' +
-        '<span class="ms-txt"><b>등교 시작</b><small>' + esc(S.schoolTime) + '까지 · ' + esc(left) + '</small></span>' +
-        '<span class="ms-go" aria-hidden="true">▶</span>' +
-      '</button>' +
       '<div class="ms-tidy">' +
         '<span class="ms-tidy-label">🧹 정리시간</span>' +
         ((S.tidyCfg && S.tidyCfg.mins && S.tidyCfg.mins.length) ? S.tidyCfg.mins : [5, 10, 15]).map(function (m) {
@@ -5266,9 +5328,10 @@
       size: 'wide',
       title: '🌅 등교 시작 설정',
       bodyHTML:
-        '<p class="help" style="margin-bottom:10px">등교 시작을 누르면 이 시각까지 남은 시간을 세요.<br>' +
-          '이 시각 30분 전(기본 08:00)에는 앱이 켜져 있으면 <b>저절로 열리고</b>, 등교 시간(기본 08:30)이 되면 저절로 닫혀요. ' +
-          '그날 ✕로 닫았거나 [학교 가자!]를 누르면 그날은 다시 열리지 않아요.</p>' +
+        '<p class="help" style="margin-bottom:8px">등교 시간 30분 전(기본 08:00)이 되면 아이 모드에서 <b>할 일 탭이 등교 준비 화면으로 저절로 바뀌고</b>, ' +
+          '모든 탭 위에 남은 시간 바가 떠요. 등교 시간(기본 08:30)이 되거나 둘 다 5개를 다 챙기면 저절로 일반 목록으로 돌아갑니다. ' +
+          '그날 이미 마쳤거나 [일반 목록으로]로 나가면 그날은 다시 켜지지 않아요.</p>' +
+        '<button type="button" class="btn btn-soft btn-sm" id="schoolPeek" style="margin-bottom:12px">👀 등교 화면 미리 보기</button>' +
         '<div class="field-row">' +
           '<div class="field"><label>등교 시간</label><input class="input" id="edSchoolTime" type="time" value="' + esc(S.schoolTime) + '"></div>' +
           '<div class="field"><label>남은 시간 막대 시작</label><input class="input" id="edSchoolStart" type="time" value="' + esc(S.schoolStart) + '"></div>' +
@@ -5301,7 +5364,9 @@
                 var lb = (r.querySelector('.ed-label').value || '').trim();
                 if (!lb) return;
                 var em = (r.querySelector('.ed-emoji').value || '').trim() || '⭐';
-                arr.push({ id: r.getAttribute('data-id') || UI.uid('rt'), label: lb.slice(0, 24), emoji: em.slice(0, 4) });
+                var rid = r.getAttribute('data-id') || UI.uid('rt');
+                var keepNoStar = (c.id && routineItemById(c.id, rid) && routineItemById(c.id, rid).noStar) ? 1 : 0;
+                arr.push({ id: rid, label: lb.slice(0, 24), emoji: em.slice(0, 4), noStar: !!keepNoStar });
               });
               if (!arr.length) return;
               var cur = ensureRoutineCustom(c.id);
@@ -5310,13 +5375,20 @@
             });
             saveNow();
             render({ keepScroll: true });
-            paintSchool(true);
+            paintSchoolBar();
             UI.confetti(14);
             UI.toast('등교 시작 설정을 저장했어요 · 아이 태블릿에도 바로 보여요', { emoji: '🌅', kind: 'good', duration: 3400 });
           } },
         { label: '닫기', kind: 'ghost' }
       ],
-      onOpen: function (wrap) { bindEditList(wrap); }
+      onOpen: function (wrap, close) {
+        bindEditList(wrap);
+        var peek = wrap.querySelector('#schoolPeek');
+        if (peek) peek.addEventListener('click', function () {
+          close();
+          startSchoolMode({ toast: false });
+        });
+      }
     });
     return m;
   }
@@ -5529,7 +5601,10 @@
       case 'view-hw': viewHandwriting(el.getAttribute('data-id')); break;
 
       /* 🌅 등교 시작 · 🧹 정리시간 */
-      case 'school-open': openSchoolMode(); break;
+      case 'school-open': startSchoolMode(); break;
+      case 'school-step': schoolStep(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
+      case 'school-close': endSchoolMode('일반 할 일 목록으로 돌아왔어요'); break;
+      case 'school-go': schoolGoHome(); break;
       case 'tidy-start': startTidy(el.getAttribute('data-min'), el.getAttribute('data-id')); break;
       case 'school-settings': schoolSettingsModal(); break;
       case 'tidy-settings': tidySettingsModal(); break;
@@ -5736,6 +5811,12 @@
     document.getElementById('modeChild').addEventListener('click', function () { setMode('child'); });
     document.getElementById('modeParent').addEventListener('click', function () { setMode('parent'); });
     document.getElementById('view').addEventListener('click', onViewClick);
+    /* 🌅 모든 탭 위 남은 시간 바 — 누르면 '할 일'(등교 화면)으로 이동 */
+    var sbBtn = document.getElementById('schoolBarBtn');
+    if (sbBtn) sbBtn.addEventListener('click', function () {
+      if (view === 'routine') window.scrollTo({ top: 0, behavior: 'smooth' });
+      else setView('routine');
+    });
     document.addEventListener('change', function (e) {
       if (e.target && e.target.id === 'importFile') onImportFile(e);
       if (e.target && e.target.id === 'deviceName') {
@@ -5883,7 +5964,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 56;             /* index.html 의 ?v=56 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 57;             /* index.html 의 ?v=57 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 

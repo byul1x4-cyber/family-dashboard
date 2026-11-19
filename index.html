@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=56">
-<link rel="stylesheet" href="css/fun.css?v=56">
+<link rel="stylesheet" href="css/styles.css?v=57">
+<link rel="stylesheet" href="css/fun.css?v=57">
 </head>
 <body>
 
@@ -95,6 +95,18 @@
     <button type="button" class="tab" data-view="settings"><span>⚙️</span><b>설정</b></button>
   </nav>
 
+  <!-- 🌅 등교 시작 중에만 보이는 남은 시간 바 (모든 탭 공통) -->
+  <div class="school-bar" id="schoolBar" hidden>
+    <button type="button" class="sb-btn" id="schoolBarBtn" aria-label="등교 준비 화면 열기">
+      <span class="sb-top">
+        <span class="sb-ico" aria-hidden="true">🌅</span>
+        <span class="sb-time"><b class="sb-left" id="sbLeft">14:52</b><span class="sb-say">남았어요</span></span>
+        <span class="sb-kids" id="sbKids"></span>
+      </span>
+      <span class="sb-track"><i class="sb-fill" id="sbFill"></i><b class="sb-runner" id="sbRunner" aria-hidden="true">🎒</b></span>
+    </button>
+  </div>
+
   <main id="view" class="view" tabindex="-1"></main>
 
   <div class="mode-banner" id="modeBanner" hidden>
@@ -107,12 +119,12 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="js/data.js?v=56"></script>
-<script src="js/storage.js?v=56"></script>
-<script src="js/ui.js?v=56"></script>
-<script src="js/art.js?v=56"></script>
-<script src="js/weather.js?v=56"></script>
-<script src="js/ntfy.js?v=56"></script>
-<script src="js/app.js?v=56"></script>
+<script src="js/data.js?v=57"></script>
+<script src="js/storage.js?v=57"></script>
+<script src="js/ui.js?v=57"></script>
+<script src="js/art.js?v=57"></script>
+<script src="js/weather.js?v=57"></script>
+<script src="js/ntfy.js?v=57"></script>
+<script src="js/app.js?v=57"></script>
 </body>
 </html>

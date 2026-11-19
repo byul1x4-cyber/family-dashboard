@@ -32,6 +32,7 @@ window.APP_DATA = {
         { id: 'mg-m-bag',    label: '가방·물통 챙기기',  emoji: '🎒' }
       ],
       evening: [
+        { id: 'mg-e-notice', label: '알림장 체크',      emoji: '📋', noStar: true },
         { id: 'mg-e-home',   label: '숙제하기',        emoji: '✏️' },
         { id: 'mg-e-bag',    label: '가방 정리하기',    emoji: '🎒' },
         { id: 'mg-e-toys',   label: '장난감 정리하기',  emoji: '🧸' },

@@ -994,3 +994,246 @@
   .pk-mystery-egg b { font-size: 16px; }
   .pk-feed .btn { min-width: 0; font-size: 11.5px; padding: 7px 6px; }
 }
+
+/* =========================================================
+   🌅 등교 시작 (2026-11-19 개편)
+   · 팝업 없이 '할 일' 탭 안의 화면 + 모든 탭 위 남은 시간 바
+   · 위 줄 민국 5장 / 아래 줄 이준 5장 = 10분할 큰 그림 카드
+   ========================================================= */
+
+/* ---- 모든 탭 위 남은 시간 바 ---- */
+.school-bar { margin: 2px 0 10px; }
+.school-bar[hidden] { display: none; }
+.sb-btn {
+  width: 100%;
+  display: grid;
+  gap: 7px;
+  padding: 10px 14px 12px;
+  border-radius: 22px;
+  border: 3px solid #fff;
+  background: linear-gradient(160deg, #FFFDF2, #FFF4DC 62%, #FFEFF3);
+  box-shadow: 0 8px 22px rgba(200, 160, 110, .2);
+  text-align: left;
+  transition: transform .12s, box-shadow .18s;
+}
+.sb-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(200, 160, 110, .26); }
+.sb-btn:active { transform: scale(.995); }
+.sb-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sb-ico { font-size: 22px; line-height: 1; flex: none; }
+.sb-time { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
+.sb-left {
+  font-family: var(--font-round);
+  font-size: 34px;
+  line-height: 1;
+  color: #C9603F;
+  letter-spacing: .5px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 0 #fff;
+}
+.sb-say { font-size: 14px; font-weight: 800; color: #B3724C; white-space: nowrap; }
+.sb-kids {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 800;
+  color: #8A7A66;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-track {
+  position: relative;
+  display: block;
+  height: 22px;
+  border-radius: 999px;
+  background: #F3E5CC;
+  box-shadow: inset 0 2px 4px rgba(160, 130, 90, .18);
+  margin: 0 6px;
+}
+.sb-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #FFE07A, #9BE3BF 45%, #57C795);
+  transition: width .9s linear, background .4s;
+}
+.sb-fill.soon { background: linear-gradient(90deg, #FFD27A, #FFA95E); }
+.sb-fill.over { background: linear-gradient(90deg, #FFC2B6, #FF8F7C); }
+.sb-runner {
+  position: absolute;
+  top: -14px;
+  left: 96%;
+  font-size: 28px;
+  line-height: 1;
+  transform: translateX(-50%);
+  transition: left .9s linear;
+  filter: drop-shadow(0 2px 3px rgba(150, 110, 70, .28));
+  font-weight: 400;
+}
+.school-bar.over .sb-left { color: #B3402A; }
+
+/* ---- 할 일 탭 안의 등교 화면 ---- */
+.school-view { animation: scFade .22s ease-out; }
+.sv-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  border-radius: 22px;
+  border: 3px solid #fff;
+  background: linear-gradient(160deg, #FFFDF4, #FFF3DC);
+  box-shadow: 0 6px 18px rgba(200, 165, 110, .16);
+}
+.sv-h1 { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.sv-ico { font-size: 30px; line-height: 1; }
+.sv-h1t { display: flex; flex-direction: column; min-width: 0; }
+.sv-h1t b { font-family: var(--font-round); font-weight: 400; font-size: 22px; color: #6B4A08; letter-spacing: 0; }
+.sv-h1t small { font-size: 12px; font-weight: 700; color: #A0763A; }
+.sv-actions { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.sv-all {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #FFF1C9, #FFE6F0);
+  text-align: center;
+  font-weight: 800;
+  color: #8A5A10;
+}
+.sv-foot { margin-top: 4px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sv-note { flex: 1; min-width: 200px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+
+/* ---- 아이 한 줄 (민국 / 이준) ---- */
+.sc-row {
+  margin-bottom: 13px;
+  padding: 9px 12px 12px;
+  border-radius: 26px;
+  border: 3px solid #fff;
+  background: linear-gradient(165deg, #F2FCF7, #FFFFFF 68%);
+  box-shadow: 0 8px 20px rgba(140, 180, 160, .14);
+}
+.sc-row.coral { background: linear-gradient(165deg, #FFF5F1, #FFFFFF 68%); }
+.sc-row.all { border-color: #FFE9A8; background: linear-gradient(165deg, #FFFBEA, #FFFFFF 68%); }
+.sc-rowhead { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.sc-rowhead b { font-size: 17px; }
+.sc-row-badge { font-size: 11.5px; font-weight: 800; color: #8A6412; background: #FFF1C9; border-radius: 999px; padding: 3px 8px; }
+.sc-rowpct { margin-left: auto; font-size: 12.5px; font-weight: 800; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.sc-rowbar { flex: 0 1 240px; height: 9px; border-radius: 999px; background: #EFE6D8; overflow: hidden; }
+.sc-rowbar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #9BE3BF, #57C795); transition: width .35s; }
+
+/* ---- 10분할 큰 그림 카드 ---- */
+.sc-cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.scard {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 0;
+  padding: 7px 7px 9px;
+  border-radius: 22px;
+  border: 3px solid #fff;
+  background: linear-gradient(#FFFFFF, #FFFCF4);
+  box-shadow: 0 7px 16px rgba(150, 120, 80, .12);
+  text-align: center;
+  overflow: hidden;
+  transition: transform .12s, box-shadow .18s, border-color .18s, background .18s;
+}
+.scard:hover { transform: translateY(-2px); box-shadow: 0 12px 22px rgba(150, 120, 80, .18); }
+.scard:active { transform: scale(.975); }
+.scard-art { display: block; }
+.scard-svg { display: block; width: 100%; height: auto; border-radius: 16px; }
+.scard-num {
+  position: absolute;
+  top: 12px; left: 12px;
+  z-index: 2;
+  width: 25px; height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #FFD98A;
+  color: #B4741E;
+  font-size: 12.5px;
+  font-weight: 900;
+  box-shadow: 0 3px 8px rgba(180, 140, 80, .2);
+}
+.scard-body { display: grid; justify-items: center; gap: 5px; padding: 7px 2px 0; }
+.scard-title { font-size: 14px; font-weight: 800; color: var(--ink); line-height: 1.22; word-break: keep-all; }
+.scard-cta {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #FFF3D6;
+  color: #A87A20;
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.scard-check {
+  position: absolute;
+  top: 12px; right: 12px;
+  z-index: 2;
+  width: 26px; height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #57C795;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 3px 8px rgba(60, 150, 110, .3);
+}
+.scard.done { background: linear-gradient(160deg, #EAFBF2, #F8FFFB); border-color: #B7E7CE; }
+.scard.done .scard-title { color: #2C8563; }
+.scard.done .scard-cta { background: #D6F5E5; color: #2C8563; }
+.scard.done .scard-svg { opacity: .92; }
+.scard.locked { background: #FAF7F2; border-color: #E5DED4; border-style: dashed; }
+.scard.locked .scard-svg { filter: grayscale(.55); opacity: .7; }
+.scard.locked .scard-cta { background: #EEE9E1; color: #8C8378; }
+
+.tab.locked { position: relative; }
+.tab.locked::after {
+  content: "🔒";
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  font-size: 12px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .18));
+}
+
+@media (max-width: 900px) {
+  .sc-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sc-rowbar { display: none; }
+  .sb-left { font-size: 28px; }
+}
+@media (max-width: 619px) {
+  .sc-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .scard { flex: 0 0 calc(50% - 4px); }
+  .scard-title { font-size: 13px; }
+  .sb-btn { padding: 9px 11px 11px; border-radius: 18px; gap: 6px; }
+  .sb-top { flex-wrap: wrap; row-gap: 2px; }
+  .sb-kids { width: 100%; margin-left: 0; padding-left: 32px; }
+  .sb-left { font-size: 30px; }
+  .sb-say { font-size: 12px; }
+  .sb-kids { font-size: 11px; }
+  .sb-track { height: 18px; }
+  .sb-runner { font-size: 24px; top: -12px; }
+  .sv-head { padding: 8px 10px; }
+  .sv-h1t b { font-size: 19px; }
+  .sv-actions .btn { font-size: 12px; padding: 7px 10px; }
+}
+
+/* ⭐ 별 없는 체크(알림장 체크) 표시 */
+.r-nostar {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #EFEAF7;
+  color: #7C6BA8;
+  font-size: 10.5px;
+  font-weight: 800;
+  vertical-align: 1px;
+}

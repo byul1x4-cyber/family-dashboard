@@ -265,6 +265,170 @@ window.Art = (function () {
       '</svg>';
   }
 
+  /* =========================================================
+     🌅 등교 준비 큰 그림 (10분할 카드용)
+     · 카드 하나에 200×150 그림 — 남자아이가 그 동작을 하는 모습
+     · 아이마다 머리·옷 색만 바꿔 같은 그림을 씁니다.
+     ========================================================= */
+  function schFace(c) {
+    var hair = hairPath(c.style).replace(/HAIR2/g, c.hair2).replace(/HAIR/g, c.hair);
+    return '<circle cx="24" cy="52" r="6" fill="' + c.skin + '"/><circle cx="76" cy="52" r="6" fill="' + c.skin + '"/>' +
+      '<circle cx="50" cy="50" r="27" fill="' + c.skin + '"/>' +
+      '<path d="M50 74c8 0 14-3 18-8-4 8-11 12-18 12s-14-4-18-12c4 5 10 8 18 8z" fill="' + c.skinShade + '" opacity=".38"/>' +
+      hair +
+      '<path d="M37 43c2-2 7-2 9 0" stroke="' + c.hair + '" stroke-width="2" stroke-linecap="round" fill="none" opacity=".8"/>' +
+      '<path d="M54 43c2-2 7-2 9 0" stroke="' + c.hair + '" stroke-width="2" stroke-linecap="round" fill="none" opacity=".8"/>' +
+      '<ellipse cx="41.5" cy="51" rx="3" ry="3.6" fill="#3B2F2A"/>' +
+      '<ellipse cx="58.5" cy="51" rx="3" ry="3.6" fill="#3B2F2A"/>' +
+      '<circle cx="42.6" cy="49.8" r="1.1" fill="#fff"/><circle cx="59.6" cy="49.8" r="1.1" fill="#fff"/>' +
+      '<circle cx="33" cy="58" r="4.4" fill="#FFA9B4" opacity=".5"/>' +
+      '<circle cx="67" cy="58" r="4.4" fill="#FFA9B4" opacity=".5"/>' +
+      '<path d="M44 60c2 4 5 5 6 5s4-1 6-5" stroke="#C4704F" stroke-width="2.4" stroke-linecap="round" fill="none"/>';
+  }
+  /* feet = (0,0) 기준으로 서 있는 아이 (머리 꼭대기 약 -106) */
+  function schBoy(c, o) {
+    o = o || {};
+    var arms = o.arms || 'down';
+    var shorts = o.shorts || '#7E9AD8';
+    var shoe = '#5B6C93';
+    var s = '';
+    var head = '<g transform="scale(.72) translate(-50,-50)">' + schFace(c) + '</g>';
+    var armL = function (up) {
+      return up
+        ? '<g transform="rotate(24 -18 -62)"><rect x="-25" y="-94" width="10" height="34" rx="5" fill="' + c.shirt + '"/><circle cx="-20" cy="-94" r="5.6" fill="' + c.skin + '"/></g>'
+        : '<rect x="-28" y="-67" width="10" height="30" rx="5" fill="' + c.shirt + '"/><circle cx="-23" cy="-35" r="5.6" fill="' + c.skin + '"/>';
+    };
+    var armR = function (up) {
+      return up
+        ? '<g transform="rotate(-24 18 -62)"><rect x="15" y="-94" width="10" height="34" rx="5" fill="' + c.shirt + '"/><circle cx="20" cy="-94" r="5.6" fill="' + c.skin + '"/></g>'
+        : '<rect x="18" y="-67" width="10" height="30" rx="5" fill="' + c.shirt + '"/><circle cx="23" cy="-35" r="5.6" fill="' + c.skin + '"/>';
+    };
+    var upL = arms === 'up' || arms === 'one-up';
+    var upR = arms === 'up';
+    /* 다리·신발 */
+    s += '<rect x="-16" y="-36" width="12" height="32" rx="6" fill="' + shorts + '"/>' +
+      '<rect x="4" y="-36" width="12" height="32" rx="6" fill="' + shorts + '"/>' +
+      '<ellipse cx="-10" cy="-3" rx="9.5" ry="5" fill="' + shoe + '"/>' +
+      '<ellipse cx="10" cy="-3" rx="9.5" ry="5" fill="' + shoe + '"/>';
+    /* 팔(뒤) — 몸통 뒤에 오도록 먼저 */
+    s += armL(upL) + armR(upR);
+    /* 몸통 */
+    s += '<rect x="-21" y="-71" width="42" height="42" rx="15" fill="' + c.shirt + '"/>' +
+      '<path d="M-6 -71h12v9a6 6 0 0 1-12 0z" fill="' + c.skin + '" opacity=".55"/>' +
+      '<circle cx="0" cy="-46" r="6" fill="#fff" opacity=".55"/>' +
+      '<path d="M-21 -34c4 3 9 4 21 4s17-1 21-4" stroke="' + c.shirt2 + '" stroke-width="3" fill="none" opacity=".8"/>';
+    /* 머리 */
+    s += '<rect x="-5" y="-73" width="10" height="7" rx="3" fill="' + c.skin + '"/>' + head;
+    return s;
+  }
+  function schoolArt(kind, childId) {
+    var c = KIDS[childId] || KIDS.minguk;
+    var g = uid('sa');
+    var bg = ['#FFF4DE', '#FFE8CE'], inner = '', label = '등교 준비';
+    if (kind === 'wash') { bg = ['#EAF8F2', '#DCF1E8']; }
+    else if (kind === 'dress') { bg = ['#FFF1F5', '#FFE1EB']; }
+    else if (kind === 'eat') { bg = ['#FFFAE2', '#FFF0C2']; }
+    else if (kind === 'bag') { bg = ['#EDF5FF', '#DDE9FF']; }
+
+    if (kind === 'wake') {
+      label = '스스로 일어나기 그림';
+      inner =
+        '<rect x="10" y="10" width="58" height="46" rx="10" fill="#EAF7FF" stroke="#fff" stroke-width="5"/>' +
+        '<path d="M39 13v40M13 33h52" stroke="#fff" stroke-width="4"/>' +
+        '<circle cx="27" cy="24" r="8" fill="#FFD24D"/>' +
+        '<g stroke="#FFD24D" stroke-width="2.6" stroke-linecap="round"><path d="M27 12v3M27 33v3M15 24h3M36 24h3M18 15l2 2M34 31l2 2"/></g>' +
+        '<g fill="#FFE9A8" opacity=".6"><circle cx="76" cy="20" r="3"/><circle cx="86" cy="38" r="2.2"/><circle cx="70" cy="44" r="2"/></g>' +
+        '<ellipse cx="112" cy="132" rx="26" ry="6" fill="#000" opacity=".06"/>' +
+        '<g transform="translate(112,132)">' + schBoy(c, { arms: 'up' }) + '</g>' +
+        '<rect x="58" y="112" width="134" height="26" rx="12" fill="#FFC9AC"/>' +
+        '<rect x="58" y="112" width="134" height="8" rx="4" fill="#FFE2D2"/>' +
+        '<rect x="100" y="101" width="92" height="16" rx="8" fill="#A5DBF3"/>' +
+        '<rect x="100" y="101" width="92" height="6" rx="3" fill="#CBEcFA"/>' +
+        '<rect x="62" y="99" width="34" height="16" rx="8" fill="#fff"/>' +
+        '<rect x="66" y="103" width="26" height="6" rx="3" fill="#F1F8FF"/>' +
+        '<g transform="translate(30,120)">' +
+          '<circle cx="0" cy="0" r="13" fill="#FFE9A8" stroke="#F0B44C" stroke-width="3"/>' +
+          '<path d="M0 0v-6M0 0l5 3" stroke="#B4741E" stroke-width="2.4" stroke-linecap="round"/>' +
+          '<circle cx="0" cy="0" r="2.6" fill="#B4741E"/>' +
+          '<path d="M-10-10l-4-4M10-10l4-4" stroke="#F0B44C" stroke-width="3.4" stroke-linecap="round"/>' +
+        '</g>' +
+        '<rect x="6" y="134" width="48" height="7" rx="3.5" fill="#E7C79C"/>';
+    } else if (kind === 'wash') {
+      label = '세수·양치하기 그림';
+      inner =
+        '<rect x="104" y="10" width="82" height="56" rx="14" fill="#DCEFFF" stroke="#fff" stroke-width="5"/>' +
+        '<path d="M112 22l16-6" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".9"/>' +
+        '<g fill="#CFE9F7" opacity=".7"><circle cx="150" cy="40" r="3"/><circle cx="166" cy="50" r="2"/></g>' +
+        '<ellipse cx="62" cy="142" rx="24" ry="5" fill="#000" opacity=".06"/>' +
+        '<g transform="translate(62,142)">' + schBoy(c, { arms: 'one-up' }) + '</g>' +
+        /* 칫솔 (들어 올린 손) */
+        '<g transform="rotate(-18 38 40)"><rect x="35" y="26" width="5" height="18" rx="2.5" fill="#9FD8F5"/>' +
+          '<rect x="34" y="20" width="8" height="9" rx="3" fill="#fff"/></g>' +
+        '<rect x="96" y="96" width="96" height="18" rx="9" fill="#F7F2E6"/>' +
+        '<ellipse cx="146" cy="98" rx="31" ry="11" fill="#CFE9F7" stroke="#fff" stroke-width="3"/>' +
+        '<path d="M146 74v-10a8 8 0 0 1 16 0" stroke="#B9CBD8" stroke-width="5" fill="none" stroke-linecap="round" transform="translate(-16 0)"/>' +
+        '<path d="M130 80c-3 4-3 8 0 10M130 94c-2 3-2 5 0 6" stroke="#9BD3F2" stroke-width="3" stroke-linecap="round" fill="none"/>' +
+        '<rect x="166" y="66" width="16" height="22" rx="6" fill="#FFD98A"/>' +
+        '<path d="M170 66v-8M176 66v-10" stroke="#9FD8F5" stroke-width="4" stroke-linecap="round"/>' +
+        '<g fill="#fff" opacity=".85"><circle cx="96" cy="52" r="6"/><circle cx="86" cy="38" r="4"/><circle cx="104" cy="30" r="3"/></g>';
+    } else if (kind === 'dress') {
+      label = '옷 갈아입기 그림';
+      inner =
+        '<rect x="142" y="14" width="48" height="128" rx="11" fill="#F6DFC6" stroke="#fff" stroke-width="5"/>' +
+        '<path d="M166 16v124" stroke="#fff" stroke-width="3" opacity=".8"/>' +
+        '<circle cx="162" cy="78" r="2.6" fill="#C79A63"/><circle cx="170" cy="78" r="2.6" fill="#C79A63"/>' +
+        '<g transform="translate(150,26)"><path d="M8 0l4 8h-8z" fill="#C79A63"/>' +
+          '<path d="M-4 32l12-24 12 24z" fill="#9ED9F3"/><rect x="-4" y="30" width="24" height="6" rx="3" fill="#7FC3EC"/></g>' +
+        '<ellipse cx="74" cy="142" rx="24" ry="5" fill="#000" opacity=".06"/>' +
+        '<g transform="translate(74,142)">' + schBoy(c, { arms: 'up' }) + '</g>' +
+        '<g transform="translate(24,120)"><rect x="0" y="8" width="34" height="9" rx="4.5" fill="#C9B7E8"/>' +
+          '<rect x="4" y="0" width="26" height="9" rx="4.5" fill="#FFD98A"/></g>' +
+        '<g fill="#FFC46B"><path d="M112 40l2.4 5.8 5.8 2.4-5.8 2.4-2.4 5.8-2.4-5.8-5.8-2.4 5.8-2.4z"/></g>' +
+        '<path d="M104 96c6-8 16-10 24-6" stroke="#FFC46B" stroke-width="4" fill="none" stroke-linecap="round" opacity=".8"/>';
+    } else if (kind === 'eat') {
+      label = '아침밥 먹기 그림';
+      inner =
+        '<ellipse cx="66" cy="142" rx="26" ry="5" fill="#000" opacity=".06"/>' +
+        '<g transform="translate(66,142)">' + schBoy(c, { arms: 'one-up' }) + '</g>' +
+        '<path d="M132 92c2-6 8-9 14-7 5 2 5 8 0 10z" fill="#fff"/>' +
+        '<ellipse cx="140" cy="104" rx="28" ry="11" fill="#FFFFFF" stroke="#CFE3F5" stroke-width="3"/>' +
+        '<path d="M124 100c4-8 28-8 32 0z" fill="#FFFDF3"/>' +
+        '<ellipse cx="172" cy="104" rx="14" ry="7" fill="#FFE1C4" stroke="#fff" stroke-width="2.5"/>' +
+        '<path d="M136 84c-3-6 3-8 0-13M148 84c-3-6 3-8 0-13" stroke="#E4D9C6" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+        '<rect x="4" y="108" width="192" height="16" rx="8" fill="#E9C79E"/>' +
+        '<rect x="4" y="108" width="192" height="5" rx="2.5" fill="#F6E0C4"/>' +
+        '<path d="M18 124h9v12H18zM172 124h9v12h-9z" fill="#D8B183"/>' +
+        '<g transform="rotate(28 40 70)"><ellipse cx="40" cy="70" rx="3" ry="9" fill="#C9BECB"/>' +
+          '<rect x="38" y="56" width="4" height="16" rx="2" fill="#C9BECB"/></g>';
+    } else {
+      label = '가방·물통 챙기기 그림';
+      inner =
+        '<rect x="8" y="16" width="60" height="126" rx="10" fill="#F3E1C6" stroke="#fff" stroke-width="5"/>' +
+        '<rect x="16" y="26" width="44" height="46" rx="6" fill="#FFF8EC"/>' +
+        '<circle cx="60" cy="80" r="4" fill="#C79A63"/>' +
+        '<ellipse cx="108" cy="142" rx="26" ry="5" fill="#000" opacity=".06"/>' +
+        /* 등 뒤 가방 */
+        '<g transform="translate(108,142)"><rect x="6" y="-78" width="34" height="48" rx="13" fill="#FF9E72"/>' +
+          '<rect x="6" y="-62" width="34" height="16" rx="7" fill="#FFB992"/>' +
+          '<rect x="16" y="-74" width="14" height="6" rx="3" fill="#FFD8C2"/></g>' +
+        '<g transform="translate(108,142)">' + schBoy(c, { arms: 'one-up' }) + '</g>' +
+        /* 가슴끈 */
+        '<path d="M96 62c8 6 20 6 28 0" stroke="#FF9E72" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="0"/>' +
+        /* 물통 */
+        '<g transform="translate(158,120)"><rect x="0" y="0" width="16" height="26" rx="6" fill="#9FD8F5"/>' +
+          '<rect x="3" y="-5" width="10" height="7" rx="3" fill="#7FC3EC"/></g>' +
+        '<g fill="#FFD24D"><path d="M150 34l2.4 5.6 5.6 2.4-5.6 2.4-2.4 5.6-2.4-5.6-5.6-2.4 5.6-2.4z"/></g>' +
+        '<g fill="#fff" opacity=".9"><circle cx="132" cy="26" r="3"/><circle cx="176" cy="60" r="2.4"/></g>';
+    }
+    return '<svg class="scard-svg" viewBox="0 0 200 150" role="img" aria-label="' + label + '">' +
+      '<defs><linearGradient id="' + g + '" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="' + bg[0] + '"/><stop offset="1" stop-color="' + bg[1] + '"/>' +
+      '</linearGradient></defs>' +
+      '<rect x="0" y="0" width="200" height="150" rx="20" fill="url(#' + g + ')"/>' +
+      inner +
+    '</svg>';
+  }
+
   /* ---------- 작은 장식 ---------- */
   function starRay() {
     return '<svg viewBox="0 0 24 24" class="mini-star" aria-hidden="true"><path d="M12 2l2.9 6.3L22 9.3l-5 4.9 1.2 7L12 17.8 5.8 21.2 7 14.2 2 9.3l7.1-1z" fill="#FFD24D"/></svg>';
@@ -282,6 +446,7 @@ window.Art = (function () {
     pillIcon: pillIcon,
     cartIcon: cartIcon,
     calendarIcon: calendarIcon,
-    weatherArt: weatherArt
+    weatherArt: weatherArt,
+    schoolArt: schoolArt
   };
 })();
