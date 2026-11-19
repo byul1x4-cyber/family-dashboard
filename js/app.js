@@ -5255,8 +5255,8 @@
       size: 'wide',
       title: '🌅 등교 시작 설정',
       bodyHTML:
-        '<p class="help" style="margin-bottom:10px">등교 시작을 누르면 이 시각까지 남은 시간을 세요.<br>'
-          '이 시각 30분 전(기본 08:00)에는 앱이 켜져 있으면 <b>저절로 열리고</b>, 등교 시간(기본 08:30)이 되면 저절로 닫혀요. '
+        '<p class="help" style="margin-bottom:10px">등교 시작을 누르면 이 시각까지 남은 시간을 세요.<br>' +
+          '이 시각 30분 전(기본 08:00)에는 앱이 켜져 있으면 <b>저절로 열리고</b>, 등교 시간(기본 08:30)이 되면 저절로 닫혀요. ' +
           '그날 ✕로 닫았거나 [학교 가자!]를 누르면 그날은 다시 열리지 않아요.</p>' +
         '<div class="field-row">' +
           '<div class="field"><label>등교 시간</label><input class="input" id="edSchoolTime" type="time" value="' + esc(S.schoolTime) + '"></div>' +
