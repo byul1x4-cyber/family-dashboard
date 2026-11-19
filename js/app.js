@@ -3490,8 +3490,14 @@
   function finishTidy() {
     if (!tidy) return;
     var left = tidy.endsAt - Date.now();
+    var totalMs = tidy.minutes * 60000;
+    var elapsed = totalMs - Math.max(0, left);
     var inTime = left > 0;
     var per = tidyReward(inTime);
+    /* 너무 빨리(전체 시간의 1/3도 안 되게) 끝내면 한 번만 막고, 별을 적게 줘서
+       시작→끝 버튼만 누르는 식으로 별을 모으지 못하게 합니다 */
+    var quick = elapsed < totalMs * 0.33;
+    if (quick) per = Math.min(per, 1);
     var ids = tidy.childId === 'family' ? D.children.map(function (c) { return c.id; }) : [tidy.childId];
     ids.forEach(function (id) { S.stars[id] = (S.stars[id] || 0) + per; });
     var who = tidy.childId === 'family' ? '가족 모두' : childById(tidy.childId).name;
@@ -3500,7 +3506,7 @@
     render({ keepScroll: true });
     UI.confetti(inTime ? 52 : 24);
     chime();
-    UI.toast((inTime ? '시간 안에 정리 끝! ' : '정리 끝! ') + who + ' 별 ' + per + '개 ⭐', { emoji: inTime ? '🎉' : '👏', kind: 'good', duration: 3600 });
+    UI.toast((quick ? '정말 빨랐어요! ' : inTime ? '시간 안에 정리 끝! ' : '정리 끝! ') + who + ' 별 ' + per + '개 ⭐', { emoji: inTime ? '🎉' : '👏', kind: 'good', duration: 3600 });
     pushToPhones('🧹 정리 끝!', who + (inTime ? '가 시간 안에 정리를 마쳤어요! 별 ' : ' 정리를 마무리했어요! 별 ') + per + '개 ⭐');
   }
 
@@ -3539,10 +3545,9 @@
     if (!cv) return;
     hwEnsure();
     var wrap = cv.parentNode;
-    var cssW = Math.max(240, Math.floor((wrap && wrap.clientWidth) || 320));
+    var cssW = Math.max(240, Math.floor(cv.getBoundingClientRect().width || (wrap && wrap.clientWidth) || 320));
     var cssH = Math.round(cssW * HW_H / HW_W);
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cv.style.width = cssW + 'px';
     cv.style.height = cssH + 'px';
     cv.width = Math.round(cssW * dpr);
     cv.height = Math.round(cssH * dpr);
