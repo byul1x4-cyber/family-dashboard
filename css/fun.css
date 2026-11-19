@@ -2554,3 +2554,21 @@
   body.on-home .notice-card .notice-item { padding: 9px 11px; font-size: 14.5px; }
   body.on-home .notice-card .notice-check { width: 22px; height: 22px; }
 }
+
+/* ---- 높이가 낮은 패드(≈680~720)에서도 두 열 하단선이 맞고 스크롤 0 ---- */
+@media (min-width: 1000px) and (max-height: 740px) {
+  .clock.big .clock-time { font-size: 44px; }
+  .wx-hero { padding: 4px 10px; gap: 3px; }
+  .wx-h-temp { font-size: 29px; }
+  .wx-h-art { font-size: 23px; }
+  .wx-h-hr { padding: 1px 8px; }
+  .wx-hero-tip { font-size: 11px; padding: 1px 9px; }
+  .card-head { margin-bottom: 4px; }
+  .notice-card .card-head { margin-bottom: 4px; }
+  .mini-day { min-height: 20px; font-size: 12.5px; }
+  .hm-col .day-block { padding: 5px 8px 6px; }
+  .notice-card .notice-item { padding: 7px 10px; font-size: 14px; }
+  .ps-ava { width: 50px; height: 50px; font-size: 27px; }
+  .parent-sq { padding: 7px 7px 6px; }
+  .km-ava { width: 48px; height: 48px; }
+}
