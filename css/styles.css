@@ -1974,6 +1974,9 @@ body.timer-ringing { overflow: hidden; }
   .duo-grid { grid-template-columns: 1fr 1fr; }
   /* 우체통: 편지 쓰기를 위에 전체 폭으로 — 안에서 글쓰기·음성·그림 | 손글씨 두 칸 */
   .mail-compose-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  /* 손글씨 종이 높이에 맞춰 왼쪽 그림 편지 칸도 채워 빈 공간을 남기지 않습니다 */
+  .mail-compose-left { grid-template-rows: auto auto 1fr; align-self: stretch; }
+  .mail-compose-left .picto-grid { grid-auto-rows: 1fr; }
   .settings-grid { grid-template-columns: 1fr 1fr; }
   .home-children .kid-card { min-height: 100%; }
 }
