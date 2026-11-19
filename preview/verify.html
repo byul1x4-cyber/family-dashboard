@@ -5686,6 +5686,19 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   .wx-strip-slot { display: block; width: 100%; }
 }
 
+/* ---- 폰 헤더 2줄: (시계 + 아이/부모님) / 탭 ---- */
+@media (max-width: 779px) {
+  .tabrow { flex-wrap: wrap; row-gap: 4px; }
+  .tabrow .brand { display: none; }
+  .tabrow .clock.mini { order: 1; display: inline-flex; flex: none; padding: 5px 10px; }
+  .tabrow .clock.mini .clock-time { font-size: 14px; }
+  .tabrow .mode-bar { order: 2; margin-left: auto; flex: none; gap: 4px; }
+  .tabrow .mode-switch { flex: 0 0 auto; }
+  .tabrow .mode-btn { padding: 6px 9px; font-size: 12px; }
+  .tabrow .banner-btn { padding: 6px 8px; font-size: 11.5px; }
+  .tabrow .tabs { order: 3; flex: 0 0 100%; width: 100%; margin-top: 3px; }
+}
+
 </style>
 </head>
 <body>
