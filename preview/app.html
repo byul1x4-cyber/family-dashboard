@@ -110,40 +110,64 @@
 <script src="../js/data.js?v=52"></script>
 <script src="../js/storage.js?v=52"></script>
 <script>
-/* 미리보기 전용 스텁 — 실제 가족 Firestore 문서는 읽지도 쓰지도 않습니다. */
+/* 미리보기 전용 스텁 — 실제 가족 Firestore 문서는 읽지도 쓰지도 않습니다.
+   ?mode=parent|child  ?seed=fresh|praise|pokemon|stars  ?at=HH:MM:SS  ?go=...  ?clean=1 */
 (function () {
   var qs = new URLSearchParams(location.search);
   var mode = qs.get('mode') === 'parent' ? 'parent' : 'child';
   var seedKind = qs.get('seed') || 'fresh';
+
   if (qs.get('clean') === '1') {
     try {
       localStorage.removeItem('family-dashboard-v1');
       localStorage.removeItem('family-dashboard-gate');
+      localStorage.removeItem('damoa-school-auto');
     } catch (e) {}
     return;
   }
+
+  /* 가상 시계 — ?at=HH:MM:SS 로 오늘 그 시각에 맞추고, 초는 실제로 흐릅니다 */
+  var at = qs.get('at');
+  if (at) {
+    var p = at.split(':');
+    var RealDate = Date;
+    var base = new RealDate();
+    var fixed = new RealDate(base.getFullYear(), base.getMonth(), base.getDate(),
+      Number(p[0] || 0), Number(p[1] || 0), Number(p[2] || 0), 0);
+    var skew = fixed.getTime() - RealDate.now();
+    function FakeDate(a, b, c, d, e, f, g) {
+      var t = RealDate.now() + skew;
+      if (!(this instanceof FakeDate)) return new RealDate(t).toString();
+      if (arguments.length === 0) return new RealDate(t);
+      if (arguments.length === 1) return new RealDate(a);
+      return new RealDate(a, b, c || 0, d || 0, e || 0, f || 0, g || 0);
+    }
+    FakeDate.prototype = RealDate.prototype;
+    FakeDate.now = function () { return RealDate.now() + skew; };
+    FakeDate.parse = RealDate.parse;
+    FakeDate.UTC = RealDate.UTC;
+    window.Date = FakeDate;
+  }
+
   var now = Date.now();
   var seed = {
     introSeen: true, mode: mode, actor: mode === 'parent' ? '엄마' : null,
     stars: { minguk: 0, ijun: 0 }, praiseCount: { minguk: 0, ijun: 0 },
     praiseLog: [], growth: { minguk: [], ijun: [] }, meals: {}, ntfyPush: false,
-    pokemon: {}
+    schoolTime: '08:30', schoolStart: '07:00', pokemon: {}
   };
   if (seedKind === 'praise') {
     seed.praiseCount = { minguk: 1, ijun: 0 };
     seed.praiseLog = [{ id: 'praise_seed1', childId: 'minguk', item: '스스로 숙제했어요', emoji: '🏅', by: '엄마', ts: now - 60000 }];
   } else if (seedKind === 'pokemon') {
-    /* 보유 별 0 · 포켓몬에게 먹인 별 2 — 취소하면 먹인 별에서 빠지는지 확인 */
     seed.praiseCount = { minguk: 1, ijun: 0 };
     seed.praiseLog = [{ id: 'praise_seed1', childId: 'minguk', item: '스스로 숙제했어요', emoji: '🏅', by: '엄마', ts: now - 60000 }];
     seed.pokemon = { minguk: { line: 'pichu', cur: 1, fed: 2, dex: [] } };
-  } else if (seedKind === 'stars') {
-    /* 정리시간 별 확인용 — 두 아이 모두 보유 별 0에서 시작 */
-    seed.stars = { minguk: 0, ijun: 0 };
   }
   try {
     localStorage.setItem('family-dashboard-v1', JSON.stringify(seed));
     localStorage.setItem('family-dashboard-gate', JSON.stringify({ id: 'fam_preview_only', at: now, v: 1 }));
+    localStorage.removeItem('damoa-school-auto');
   } catch (e) {}
   window.__PREVIEW_ONLY = true;
   window.__lastSaved = null;
@@ -164,14 +188,15 @@
 <script src="../js/ntfy.js?v=52"></script>
 <script src="../js/app.js?v=52"></script>
 <script>
-/* ?go=praise|settings|tidy|home — 해당 화면/버튼을 자동으로 열어 둡니다 */
+/* ?go=praise|settings|tidy  — 해당 화면을 자동으로 열어 둡니다 (없으면 그대로) */
 (function () {
   var qs = new URLSearchParams(location.search);
-  var go = qs.get('go') || 'praise';
+  var go = qs.get('go');
+  if (!go) return;
   var tries = 0;
   var t = setInterval(function () {
-    var tab = document.querySelector('.tab[data-view="' + (go === 'settings' ? 'settings' : go === 'tidy' ? 'home' : go) + '"]');
     var tidyBtn = document.querySelector('[data-act="tidy-start"][data-min="5"]');
+    var tab = document.querySelector('.tab[data-view="' + (go === 'tidy' ? 'home' : go) + '"]');
     if (go === 'tidy' && tidyBtn) { clearInterval(t); tidyBtn.click(); return; }
     if (go !== 'tidy' && tab) { clearInterval(t); tab.click(); }
     else if (++tries > 120) clearInterval(t);

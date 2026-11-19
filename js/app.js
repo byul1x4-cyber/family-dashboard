@@ -3893,6 +3893,14 @@
     var el = schoolLayer();
     if (!el || el.hidden) return;
 
+    /* 등교 시각이 되면 열려 있던 창을 저절로 닫습니다 */
+    if (schoolAutoCloseAt && Date.now() >= schoolAutoCloseAt) {
+      schoolAutoCloseAt = 0;
+      closeSchoolMode();
+      UI.toast(deadlineText() + '이 되어 등교 시작을 접었어요', { emoji: '🌅', duration: 3000 });
+      return;
+    }
+
     /* 아침 할 일을 다 끝낸 아이에게 보너스 별 (하루 한 번) */
     var granted = [];
     D.children.forEach(function (c) { if (grantSchoolBonus(c.id)) granted.push(c.id); });
@@ -3935,6 +3943,9 @@
     var el = schoolLayer();
     el.hidden = false;
     document.body.classList.add('modal-open');
+    /* 등교 시각 전에 연 창만 그 시각에 저절로 닫습니다 (지난 뒤에 손으로 연 창은 그대로) */
+    var target = schoolTargetMsToday();
+    schoolAutoCloseAt = Date.now() < target ? target : 0;
     paintSchool(true);
     clearInterval(schoolInt);
     schoolInt = setInterval(function () { paintSchool(false); }, 1000);
@@ -3945,11 +3956,70 @@
     if (el) el.hidden = true;
     if (!document.querySelector('.modal-wrap')) document.body.classList.remove('modal-open');
   }
+
+  /* 🌅 등교 시작 자동 열림·자동 닫힘 ------------------------------------
+     · 등교 시각(기본 08:30) 30분 전 ~ 등교 시각 사이에 앱이 켜져 있으면 저절로 열려요.
+     · 그날 ✕로 닫았거나 [학교 가자!]로 마쳤으면 그날은 다시 열지 않습니다
+       (localStorage 에 오늘 날짜만 적어 둡니다 · 앱을 다시 켜도 기억).
+     · 등교 시각 전에 열려 있던 창은 그 시각이 되는 순간 저절로 닫히고,
+       등교 시각이 지난 뒤에 손으로 연 창은 그대로 둡니다. */
+  var SCHOOL_AUTO_KEY = 'damoa-school-auto';   /* { date: 'YYYY-MM-DD' } */
+  var schoolAutoCloseAt = 0;                   /* 이 시각(ms)이 되면 자동으로 닫기 · 0이면 그대로 */
+
+  function schoolAutoDoneToday() {
+    try {
+      var v = JSON.parse(localStorage.getItem(SCHOOL_AUTO_KEY) || 'null');
+      return !!(v && v.date === todayKey());
+    } catch (e) { return false; }
+  }
+  function markSchoolAutoDone() {
+    try { localStorage.setItem(SCHOOL_AUTO_KEY, JSON.stringify({ date: todayKey(), at: Date.now() })); } catch (e) {}
+  }
+  /* 오늘 등교 시각(ms) */
+  function schoolTargetMsToday() {
+    var tm = schoolTargetMin();
+    var now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(tm / 60), tm % 60, 0, 0).getTime();
+  }
+  /* 지금이 자동 열림 시간대(등교 30분 전 ~ 등교 시각)인가 */
+  function inSchoolAutoWindow() {
+    var now = Date.now();
+    var target = schoolTargetMsToday();
+    return now >= target - 30 * 60000 && now < target;
+  }
+  /* 자동으로 열어도 되는 상황인가 (다른 창·정리시간·잠금 화면이 아닐 때) */
+  function schoolAutoOpenIdle() {
+    if (!S || !Storage.hasGate()) return false;
+    if (document.body.classList.contains('gated')) return false;
+    var el = schoolLayer();
+    if (el && !el.hidden) return false;
+    var tidyEl = document.getElementById('tidyLayer');
+    if (tidyEl && !tidyEl.hidden) return false;
+    if (document.querySelector('.modal-wrap')) return false;
+    return true;
+  }
+  function maybeAutoOpenSchool() {
+    if (!S) return;
+    if (!inSchoolAutoWindow()) return;
+    if (schoolAutoDoneToday()) return;
+    if (!schoolAutoOpenIdle()) return;
+    openSchoolMode();
+    UI.toast('🌅 등교 시작! ' + deadlineText() + '까지 준비해요', { emoji: '🎒', kind: 'good', duration: 3000 });
+  }
+  /* 10초마다 자동 열림을 살펴봐요 (앱을 켜 둔 채 08:00이 되면 바로 열림) */
+  function startSchoolAutoWatch() {
+    clearInterval(schoolAutoWatchInt);
+    schoolAutoWatchInt = setInterval(maybeAutoOpenSchool, 10000);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') maybeAutoOpenSchool();
+    });
+  }
+  var schoolAutoWatchInt = null;
   function onSchoolClick(e) {
     var b = e.target.closest('[data-sch]');
     if (!b) return;
     var act = b.getAttribute('data-sch');
-    if (act === 'close') { closeSchoolMode(); return; }
+    if (act === 'close') { markSchoolAutoDone(); schoolAutoCloseAt = 0; closeSchoolMode(); return; }
     if (act === 'settings') { schoolSettingsModal(); return; }
     if (act === 'step') { schoolStep(b.getAttribute('data-child'), b.getAttribute('data-item')); return; }
   }
@@ -4175,9 +4245,9 @@
     render({ keepScroll: true });
     UI.confetti(inTime ? 52 : 24);
     chime();
-    UI.toast('정리 끝! ' + who + (inTime ? '가 시간 안에 아주 깔끔하게 정리했어요 ✨' : ' 정리를 마무리했어요 ✨'),
+    UI.toast('정리 끝! ' + who + (inTime ? ' · 시간 안에 아주 깔끔하게 정리했어요 ✨' : ' · 끝까지 정리했어요 ✨'),
       { emoji: inTime ? '🎉' : '👏', kind: 'good', duration: 3400 });
-    pushToPhones('🧹 정리 끝!', who + (inTime ? '가 시간 안에 정리를 마쳤어요 ✨' : ' 정리를 마무리했어요 ✨'));
+    pushToPhones('🧹 정리 끝!', who + (inTime ? ' · 시간 안에 정리를 마쳤어요 ✨' : ' · 정리를 마무리했어요 ✨'));
   }
 
   /* =========================================================
@@ -5145,7 +5215,9 @@
       size: 'wide',
       title: '🌅 등교 시작 설정',
       bodyHTML:
-        '<p class="help" style="margin-bottom:10px">등교 시작을 누르면 이 시각까지 남은 시간을 세요.</p>' +
+        '<p class="help" style="margin-bottom:10px">등교 시작을 누르면 이 시각까지 남은 시간을 세요.<br>'
+          '이 시각 30분 전(기본 08:00)에는 앱이 켜져 있으면 <b>저절로 열리고</b>, 등교 시간(기본 08:30)이 되면 저절로 닫혀요. '
+          '그날 ✕로 닫았거나 [학교 가자!]를 누르면 그날은 다시 열리지 않아요.</p>' +
         '<div class="field-row">' +
           '<div class="field"><label>등교 시간</label><input class="input" id="edSchoolTime" type="time" value="' + esc(S.schoolTime) + '"></div>' +
           '<div class="field"><label>남은 시간 막대 시작</label><input class="input" id="edSchoolStart" type="time" value="' + esc(S.schoolStart) + '"></div>' +
@@ -5692,6 +5764,8 @@
     if (!S.introSeen) showIntro();
     save();
     maybeShowBanner();
+    startSchoolAutoWatch();
+    maybeAutoOpenSchool();
   }
 
   /* ---------- 가족 입장(잠금) 화면 ---------- */
