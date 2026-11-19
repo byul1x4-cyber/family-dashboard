@@ -5,6 +5,6 @@
 <iframe id="f" title="phone preview" src=""></iframe>
 <script>
 var q = location.search.replace(/^\?/, '');
-document.getElementById('f').src = 'app.html' + (q ? '?' + q : '');
+document.getElementById('f').src = 'app.html' + (q ? '?' + q + '&cb=' : '?cb=') + Date.now();
 </script>
 </body></html>
