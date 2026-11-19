@@ -3078,3 +3078,17 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   .kid-mini { padding: 6px 10px; }
   .km-name { font-size: 19px; }
 }
+
+/* ---- 알림장 카드가 남는 높이에 맞춰 줄고, 넘치면 카드 안에서만 스크롤 ---- */
+@media (min-width: 1000px) {
+  body.on-home .hm-right { min-height: 0; }
+  body.on-home .notice-card { min-height: 0; overflow: hidden; }
+  body.on-home .notice-card .notice-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: start;
+    padding-right: 2px;
+  }
+  body.on-home .kids-compact { min-height: 0; }
+}
