@@ -4059,10 +4059,12 @@
       if (parts.length) raf = requestAnimationFrame(tick);
       else { ctx.clearRect(0, 0, W, H); lastT = 0; }
     }
+    var lastCall = null;
     /* 한 점에서 사방으로 터지는 별 */
     function burst(cx, cy, n, opts) {
       opts = opts || {};
       ensure();
+      lastCall = { kind: 'burst', n: n, hidden: document.hidden, cx: cx, cy: cy, at: Date.now() };
       if (document.hidden) return;
       var power = opts.power || 1;
       for (var i = 0; i < n; i++) {
@@ -4112,7 +4114,7 @@
     }
     /* 화면 확인용(파티클 수·루프 상태) */
     window.__pkFxStat = function () {
-      return { parts: parts.length, raf: raf, w: W, h: H, cv: !!(cv && cv.isConnected), ctx: !!ctx, hidden: document.hidden };
+      return { parts: parts.length, raf: raf, w: W, h: H, cv: !!(cv && cv.isConnected), ctx: !!ctx, hidden: document.hidden, lastCall: lastCall };
     };
     return { burst: burst, fountain: fountain, resize: resize };
   })();
