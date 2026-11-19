@@ -159,6 +159,13 @@
   if (seedKind === 'praise') {
     seed.praiseCount = { minguk: 1, ijun: 0 };
     seed.praiseLog = [{ id: 'praise_seed1', childId: 'minguk', item: '스스로 숙제했어요', emoji: '🏅', by: '엄마', ts: now - 60000 }];
+  } else if (seedKind === 'almost') {
+    /* 민국 5/5 완료, 이준 4/5 — 마지막 하나만 남은 상태 */
+    seed.routine = {};
+    seed.routine[new Date().getFullYear() + '-' + ('0' + (new Date().getMonth() + 1)).slice(-2) + '-' + ('0' + new Date().getDate()).slice(-2)] = {
+      'mg-m-wake': 1, 'mg-m-wash': 1, 'mg-m-dress': 1, 'mg-m-break': 1, 'mg-m-bag': 1,
+      'ij-m-wake': 1, 'ij-m-wash': 1, 'ij-m-dress': 1, 'ij-m-break': 1
+    };
   } else if (seedKind === 'pokemon') {
     seed.praiseCount = { minguk: 1, ijun: 0 };
     seed.praiseLog = [{ id: 'praise_seed1', childId: 'minguk', item: '스스로 숙제했어요', emoji: '🏅', by: '엄마', ts: now - 60000 }];

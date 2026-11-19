@@ -3873,7 +3873,7 @@
         '<span class="sc-head-ico" aria-hidden="true">🌅</span>' +
         '<div class="sc-head-txt"><b>등교 시작</b><small>' + esc(deadlineText()) + '까지 준비해요' +
           (morningLocked() ? ' · 🔒 마감' : '') + '</small></div>' +
-        '<button type="button" class="sc-x" data-sch="close" aria-label="닫기">✕</button>' +
+        (schoolLockedOpen() ? '' : '<button type="button" class="sc-x" data-sch="close" aria-label="닫기">✕</button>') +
       '</div>' +
       '<div class="sc-clock">' +
         '<div class="sc-big" id="scBig">--:--</div>' +
@@ -3884,7 +3884,7 @@
       '<div class="sc-kids">' + D.children.map(schoolKidHTML).join('') + '</div>' +
       '<div class="sc-foot">' +
         (S.mode === 'parent' ? '<button type="button" class="btn btn-ghost btn-sm" data-sch="settings">⚙️ 등교 설정</button>' : '') +
-        '<button type="button" class="btn btn-primary" data-sch="close">학교 가자! 🎒</button>' +
+        '<button type="button" class="btn btn-primary" data-sch="go">학교 가자! 🎒</button>' +
       '</div>' +
       (bothDone ? '<div class="sc-all">🎉 오늘 등교 준비 끝! 정말 잘했어요</div>' : '') +
     '</div>';
@@ -3909,6 +3909,13 @@
       chime();
       UI.toast(granted.map(function (id) { return childById(id).name; }).join('·') + ' 등교 준비 완료! 보너스 별 ' + schoolRewardStars() + '개 ⭐', { emoji: '🎉', kind: 'good', duration: 3800 });
       render({ keepScroll: true });
+    }
+
+    /* 둘 다 아침 준비를 다 챙기면 축하하며 저절로 닫습니다 (하루 한 번) */
+    var allKidsDone = D.children.every(function (c) { return schoolAllDone(c.id); });
+    if (allKidsDone && !schoolAutoDoneToday()) {
+      finishSchoolDay();
+      return;
     }
 
     if (full || !el.querySelector('.sc-panel')) el.innerHTML = schoolPanelHTML();
@@ -3963,6 +3970,33 @@
        (localStorage 에 오늘 날짜만 적어 둡니다 · 앱을 다시 켜도 기억).
      · 등교 시각 전에 열려 있던 창은 그 시각이 되는 순간 저절로 닫히고,
        등교 시각이 지난 뒤에 손으로 연 창은 그대로 둡니다. */
+  /* 아이 모드 + 08:00~08:30 자동 실행 구간: 아이가 직접 닫을 수 없어요 */
+  function schoolLockedOpen() {
+    return !!(S && S.mode !== 'parent' && inSchoolAutoWindow());
+  }
+  /* 두 아이 모두 아침 준비를 다 챙겼는가 */
+  function schoolBothDone() {
+    return D.children.every(function (c) { return schoolAllDone(c.id); });
+  }
+  /* 오늘 등교 시작 끝 (둘 다 챙김) — 축하하고 닫아요 */
+  function finishSchoolDay() {
+    markSchoolAutoDone();
+    schoolAutoCloseAt = 0;
+    closeSchoolMode();
+    UI.confetti(48);
+    chime();
+    UI.toast('둘 다 등교 준비 끝! 정말 잘했어요 ✨', { emoji: '🎒', kind: 'good', duration: 3600 });
+    pushToPhones('🌅 등교 준비 완료!', '민국·이준 둘 다 아침 준비를 마쳤어요 ✨');
+  }
+  /* [학교 가자!] — 둘 다 챙겼을 때만 닫혀요 */
+  function schoolGoHome() {
+    if (!schoolBothDone()) {
+      UI.toast('아직 다 챙기지 않았어요! 하나씩 눌러서 준비해요', { emoji: '🎒', kind: 'warn', duration: 2800 });
+      return;
+    }
+    finishSchoolDay();
+  }
+
   var SCHOOL_AUTO_KEY = 'damoa-school-auto';   /* { date: 'YYYY-MM-DD' } */
   var schoolAutoCloseAt = 0;                   /* 이 시각(ms)이 되면 자동으로 닫기 · 0이면 그대로 */
 
@@ -4000,6 +4034,7 @@
   }
   function maybeAutoOpenSchool() {
     if (!S) return;
+    if (S.mode === 'parent') return;          /* 부모님 모드에서는 자동으로 열지 않아요 */
     if (!inSchoolAutoWindow()) return;
     if (schoolAutoDoneToday()) return;
     if (!schoolAutoOpenIdle()) return;
@@ -4019,7 +4054,12 @@
     var b = e.target.closest('[data-sch]');
     if (!b) return;
     var act = b.getAttribute('data-sch');
-    if (act === 'close') { markSchoolAutoDone(); schoolAutoCloseAt = 0; closeSchoolMode(); return; }
+    if (act === 'close') {
+      /* 아이 모드 08:00~08:30 에는 ✕가 없지만, 혹시 눌러도 닫히지 않게 한 번 더 막습니다 */
+      if (schoolLockedOpen()) { UI.toast('아직 다 챙기지 않았어요! ' + deadlineText() + '까지 준비해요', { emoji: '🎒', kind: 'warn', duration: 2600 }); return; }
+      markSchoolAutoDone(); schoolAutoCloseAt = 0; closeSchoolMode(); return;
+    }
+    if (act === 'go') { schoolGoHome(); return; }
     if (act === 'settings') { schoolSettingsModal(); return; }
     if (act === 'step') { schoolStep(b.getAttribute('data-child'), b.getAttribute('data-item')); return; }
   }
