@@ -76,7 +76,21 @@
       /* 📲 폰·패드 잠금화면 알림(ntfy) 보내기 — 가족 전체 설정 (기본 켜짐) */
       ntfyPush: true,
       /* 부모님이 고친 할 일 목록 (없으면 data.js 기본값을 씁니다) */
-      customRoutines: {}
+      customRoutines: {},
+
+      /* 🌅 등교 시작 모드 기준 시각 (부모님 모드 > 설정에서 바꿔요) */
+      schoolTime: (D.school && D.school.targetTime) || '08:30',
+      schoolStart: (D.school && D.school.windowStart) || '07:00',
+      /* 등교 시작 보너스 별을 하루 한 번만 주려고 적어 두는 곳: { '2026-11-19': { minguk: 1 } } */
+      schoolBonus: {},
+      /* ⚡ 포켓몬: { minguk: { cur: 4, fed: 0, dex: [] } } — fed는 먹인 별 수(레벨업 별 개수 기준) */
+      pokemon: {},
+      /* 🧹 정리시간 설정 (부모님이 바꿔요) */
+      tidyCfg: { mins: [5, 10, 15], reward: 3, rewardLate: 1, music: true },
+      /* ⚡ 포켓몬 설정 */
+      pkCfg: { perLevel: 100 },
+      /* 🌅 등교 준비 다 끝냈을 때 보너스 별 */
+      schoolReward: 2
     };
   }
 
@@ -155,9 +169,46 @@
     /* 📲 폰·패드 잠금화면 알림 — 값이 없으면 기본 켜짐 */
     s.ntfyPush = raw.ntfyPush === false ? false : true;
 
-    /* 부모님이 고친 할 일 (아침·저녁) */
-    s.customRoutines = {};
+    /* 🌅 등교 시작 시각 (HH:MM 형식만 받습니다) */
+    s.schoolTime = hhmmOk(raw.schoolTime) ? raw.schoolTime : base.schoolTime;
+    s.schoolStart = hhmmOk(raw.schoolStart) ? raw.schoolStart : base.schoolStart;
+    s.schoolBonus = (raw.schoolBonus && typeof raw.schoolBonus === 'object' && !Array.isArray(raw.schoolBonus)) ? raw.schoolBonus : {};
+
+    /* ⚡ 포켓몬 (예전 문서에는 없는 값이라 없으면 비워 둡니다) */
+    s.pokemon = {};
     D.children.forEach(function (c) {
+      var p = (raw.pokemon && raw.pokemon[c.id]) || null;
+      if (!p || typeof p !== 'object') return;
+      var cur = Number(p.cur) || 0;
+      s.pokemon[c.id] = {
+        cur: (D.pokemonNames && D.pokemonNames[cur]) ? cur : 0,
+        fed: Math.max(0, Math.min(100000, Math.floor(Number(p.fed) || 0))),
+        dex: (Array.isArray(p.dex) ? p.dex : []).map(Number)
+          .filter(function (id, i, arr) { return D.pokemonNames[id] && arr.indexOf(id) === i; })
+      };
+    });
+
+    /* 🧹 정리시간 설정 (부모님이 바꾼 값) */
+    var tc = (raw.tidyCfg && typeof raw.tidyCfg === 'object') ? raw.tidyCfg : {};
+    var mins = (Array.isArray(tc.mins) ? tc.mins : base.tidyCfg.mins)
+      .map(function (n) { return Math.round(Number(n)); })
+      .filter(function (n) { return n >= 1 && n <= 60; });
+    s.tidyCfg = {
+      mins: mins.length ? mins.slice(0, 4) : base.tidyCfg.mins.slice(),
+      reward: clampNum(tc.reward, 0, 20, base.tidyCfg.reward),
+      rewardLate: clampNum(tc.rewardLate, 0, 20, base.tidyCfg.rewardLate),
+      music: tc.music === false ? false : true
+    };
+
+    /* ⚡ 포켓몬 설정 */
+    var pc = (raw.pkCfg && typeof raw.pkCfg === 'object') ? raw.pkCfg : {};
+    s.pkCfg = { perLevel: clampNum(pc.perLevel, 10, 1000, base.pkCfg.perLevel) };
+
+    /* 🌅 등교 준비 보너스 별 */
+    s.schoolReward = clampNum(raw.schoolReward, 0, 20, base.schoolReward);
+
+    /* 부모님이 고친 할 일 (아침·저녁) */
+    s.customRoutines = {};    D.children.forEach(function (c) {
       var cur = raw.customRoutines && raw.customRoutines[c.id];
       if (!cur || typeof cur !== 'object') return;
       if (!Array.isArray(cur.morning) && !Array.isArray(cur.evening)) return;
@@ -176,7 +227,10 @@
     return s;
   }
 
-  function save() { Storage.save(S); }
+  function save() {
+    pruneHandwriting();          // 손글씨 편지 그림이 문서를 너무 무겁게 하지 않게 정리
+    Storage.save(S);
+  }
 
   function needParent(message) {
     if (S.mode === 'parent') return true;
@@ -271,9 +325,11 @@
     data = data || {};
     var to = data.toName ? ' → ' + data.toName : '';
     if (kind === 'letter') {
-      var body = data.text ? ntfyShort(data.text, 80)
+      var body = data.hand
+        ? ('손글씨 편지' + (data.text ? ' · ' + ntfyShort(data.text, 60) : ''))
+        : data.text ? ntfyShort(data.text, 80)
         : (data.count ? '그림 ' + data.count + '개를 보냈어요' : '그림 편지를 보냈어요');
-      return pushToPhones('💌 ' + (data.fromName || '가족') + '이 편지를 보냈어요', body + to);
+      return pushToPhones((data.hand ? '✍️ ' : '💌 ') + (data.fromName || '가족') + '이 편지를 보냈어요', body + to);
     }
     var who = data.by || '부모님';
     return pushToPhones('💬 ' + who + '의 답장이 도착했어요', ntfyShort(data.text, 120) + to);
@@ -1053,6 +1109,7 @@
     scrollChatToEnd();
     if (opts.keepScroll) window.scrollTo(0, y);
     else if (opts.scrollTop) window.scrollTo(0, 0);
+    afterRender();
   }
 
   /* 가족방 대화는 항상 맨 아래(최근 말풍선)가 보이게 */
@@ -1094,6 +1151,8 @@
     if (!m) return '';
     var text = String(m.text || '').trim();
     if (text) return text;
+    if (m.hw) return '✍️ 손글씨 편지';
+    if (m.hwDropped) return '✍️ 손글씨 편지(그림은 정리됨)';
     var words = (m.pictos || []).map(function (id) {
       var p = D.pictograms.filter(function (x) { return x.id === id; })[0];
       return p ? p.label : '';
@@ -1163,6 +1222,8 @@
       '</div>' +
 
       '<div class="kids-row">' + D.children.map(kidCardHTML).join('') + '</div>' +
+
+      modeStripHTML() +
 
       '<div class="tile-grid">' + homeTilesHTML(left, upcoming) + '</div>' +
 
@@ -1728,6 +1789,7 @@
       doneTotal += st.done; allTotal += st.total;
     });
     return timeBannerHTML() +
+      modeStripHTML() +
       '<div class="card soft-mint routine-card">' +
         '<div class="routine-head">' +
           '<strong>✅ 오늘 할 일</strong>' +
@@ -2142,7 +2204,7 @@
     return (S.mode === 'parent' ? bannerComposeHTML() : '') +
       '<div class="mail-layout">' +
       '<div class="card soft-rose mail-compose-card">' +
-        cardHead('✏️', '그림 편지 쓰기', '누구에게, 무슨 말을 할까요?') +
+        cardHead('✏️', '편지 쓰기', '손글씨로도, 그림으로도 보내요') +
         '<div class="pick-child">' + D.children.map(function (k) {
           return '<button type="button" class="' + (k.id === mailSender ? 'active ' + (k.color === 'coral' ? 'coral' : '') : '') + '" data-act="pick-mail-sender" data-id="' + k.id + '">' +
             '<span class="avatar sm ' + k.color + '">' + k.emoji + '</span>' + esc(k.name) + '</button>';
@@ -2151,7 +2213,10 @@
           return '<button type="button" class="mail-recipient' + (r.id === mailRecipient ? ' active' : '') + '" data-act="pick-mail-recipient" data-id="' + r.id + '">' +
             '<span class="emoji">' + r.emoji + '</span>' + esc(r.name) + '</button>';
         }).join('') + '</div>' +
-        '<p class="help" style="margin:12px 0 8px">그림을 몇 개든 골라 마음껏 보내요.</p>' +
+        '<div class="field" style="margin-top:10px"><input class="input" id="mailText" maxlength="40" placeholder="짧은 말도 함께 보낼 수 있어요 (선택)"></div>' +
+        handLetterHTML() +
+        '<div class="mail-ornament"><span>🖼️ 그림 편지로 보내기</span></div>' +
+        '<p class="help" style="margin:4px 0 8px">그림을 몇 개든 골라 마음껏 보내요.</p>' +
         '<div class="picto-grid">' + D.pictograms.map(function (p) {
           return '<button type="button" class="picto" data-act="pick-picto" data-id="' + p.id + '">' +
             '<span class="emoji">' + p.emoji + '</span>' + esc(p.label) + '</button>';
@@ -2160,7 +2225,6 @@
           '<span class="mic-ico" aria-hidden="true">🎤</span>' +
           '<span class="mic-text"><b>눌러서 말하기</b><small id="mailMicHint">버튼을 누르고 말해요. 다시 누르면 끝나요.</small></span>' +
         '</button>' +
-        '<div class="field" style="margin-top:10px"><input class="input" id="mailText" maxlength="40" placeholder="짧은 말도 함께 보낼 수 있어요 (선택)"></div>' +
         '<div class="mail-compose-foot">' +
           '<span class="counter" id="mailCounter">' + (window.__pictos || []).length + '개 골랐어요</span>' +
           '<button type="button" class="btn btn-rose" data-act="send-mail">편지 보내기 💌</button>' +
@@ -2228,6 +2292,9 @@
           '<span class="chat-time">' + UI.ago(m.ts) + '</span></div>' +
         '<div class="chat-bubble them">' +
           (pictos ? '<div class="chat-pictos">' + pictos + '</div>' : '') +
+          (m.hw
+            ? '<button type="button" class="chat-hw-btn" data-act="view-hw" data-id="' + m.id + '" aria-label="손글씨 편지 크게 보기"><img class="chat-hw" src="' + m.hw + '" alt="' + esc(from.name) + '의 손글씨 편지" loading="lazy"></button>'
+            : (m.hwDropped ? '<div class="chat-hw-gone">✍️ 손글씨 편지 (그림은 오래되어 정리했어요)</div>' : '')) +
           (m.text ? '<div class="chat-text">' + esc(m.text) + '</div>' : '') +
           '<button type="button" class="chat-speak" data-act="read-letter" data-id="' + m.id + '" aria-label="소리 내어 읽어주기" title="읽어주기">🔊</button>' +
         '</div>' +
@@ -2395,8 +2462,9 @@
       var p = D.pictograms.filter(function (x) { return x.id === pid; })[0];
       return p ? p.label : '';
     }).filter(Boolean).join(', ');
-    UI.speak(from.name + '이 보낸 편지. ' + (words ? words + '. ' : '') + (m.text || ''));
-    UI.toast('편지를 읽어줄게요', { emoji: '🔊' });
+    var lead = m.hw ? '손글씨 편지예요. ' : '';
+    UI.speak(from.name + '이 보낸 편지. ' + lead + (words ? words + '. ' : '') + (m.text || ''));
+    UI.toast(m.hw ? '손글씨 편지를 읽어줄게요' : '편지를 읽어줄게요', { emoji: '🔊' });
   }
 
   /* ================= 식판 · 약 · 성장 ================= */
@@ -2834,6 +2902,18 @@
       ntfyCardHTML() +
 
       '<div class="card">' +
+        cardHead('🎛️', '새 기능 관리', '등교 시작 · 정리시간 · 포켓몬') +
+        '<p class="help">등교 시각과 등교 준비 항목, 정리시간 버튼·보상·노래, 포켓몬 레벨업 별을 여기서 바로 고쳐요.<br>' +
+        '저장하면 <b>아이 태블릿에도 새로고침 없이</b> 바로 보여요.</p>' +
+        '<div class="admin-grid">' +
+          '<button type="button" class="admin-btn" data-act="school-settings"><span>🌅</span><b>등교 시작 설정</b><small>' + esc(S.schoolTime) + ' · 준비 ' + schoolItems(D.children[0].id).length + '개</small></button>' +
+          '<button type="button" class="admin-btn" data-act="tidy-settings"><span>🧹</span><b>정리시간 설정</b><small>' + ((S.tidyCfg && S.tidyCfg.mins) || [5, 10, 15]).join('·') + '분 · 별 ' + tidyReward(true) + '개</small></button>' +
+          '<button type="button" class="admin-btn" data-act="pk-settings"><span>⚡</span><b>포켓몬 관리</b><small>별 ' + pkPerLevel() + '개 = Lv.1업</small></button>' +
+          '<button type="button" class="admin-btn" data-act="edit-routines"><span>✅</span><b>아침·저녁 할 일</b><small>할 일 탭에서 바로 고치기</small></button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="card">' +
         cardHead('🧰', '데이터 관리', '내보내기 · 가져오기') +
         '<p class="help">기기를 바꾸거나 백업할 때 써요.</p>' +
         '<div class="btn-row">' +
@@ -2986,6 +3066,1202 @@
     el.hidden = false;
   }
 
+  /* =========================================================
+     🌅 등교 시작 모드 (오전 8:30 기준 남은 시간)
+     ---------------------------------------------------------
+     · '등교 시작' 버튼 → 화면 전체가 등교 준비 모드로 열립니다.
+     · 오늘 등교 시간(기본 08:30)까지 남은 시간 + 남은 시간 막대 + 준비 체크리스트.
+     · 체크리스트는 그 아이의 '아침 할 일'과 그대로 연동되고, 하나 누를 때 별 1개,
+       아침 할 일을 다 끝내면 하루 한 번 보너스 별 2개를 더 줍니다.
+     ========================================================= */
+  function hhmmOk(v) {
+    return typeof v === 'string' && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(v);
+  }
+  function clampNum(v, min, max, dflt) {
+    var n = Number(v);
+    if (!isFinite(n)) return dflt;
+    n = Math.round(n);
+    return Math.max(min, Math.min(max, n));
+  }
+  /* 부모님이 바꾼 설정은 바로 클라우드에 올려 아이 태블릿에도 바로 보이게 */
+  function saveNow() {
+    pruneHandwriting();
+    Storage.save(S, { immediate: true });
+  }
+  function hhmmMin(v, fallback) {
+    if (!hhmmOk(v)) return fallback;
+    var p = v.split(':');
+    return Number(p[0]) * 60 + Number(p[1]);
+  }
+  function minHHMM(m) {
+    m = ((Math.round(m) % 1440) + 1440) % 1440;
+    return UI.pad(Math.floor(m / 60)) + ':' + UI.pad(m % 60);
+  }
+  function schoolTargetMin() { return hhmmMin(S.schoolTime, hhmmMin(D.school && D.school.targetTime, 510)); }
+  function schoolStartMin() {
+    var t = schoolTargetMin();
+    var st = hhmmMin(S.schoolStart, null);
+    if (st == null || st >= t) st = t - 90;
+    return Math.max(0, st);
+  }
+  /* 오늘 등교 시간까지 남은 ms (이미 지났으면 음수) */
+  function msLeftToSchool() {
+    var now = new Date();
+    var tm = schoolTargetMin();
+    var target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(tm / 60), tm % 60, 0, 0);
+    return target.getTime() - now.getTime();
+  }
+  function clockText(ms) {
+    var total = Math.floor(Math.max(0, ms) / 1000);
+    var h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+    return h > 0 ? h + ':' + UI.pad(m) + ':' + UI.pad(s) : UI.pad(m) + ':' + UI.pad(s);
+  }
+  function leftText(ms) {
+    var total = Math.floor(Math.max(0, ms) / 1000);
+    var h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+    if (h > 0) return h + '시간 ' + m + '분 남았어요';
+    if (m > 0) return m + '분 ' + s + '초 남았어요';
+    return s + '초 남았어요';
+  }
+
+  var schoolInt = null;
+  function schoolLayer() {
+    var el = document.getElementById('schoolLayer');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'schoolLayer';
+    el.className = 'sc-layer';
+    el.hidden = true;
+    el.addEventListener('click', onSchoolClick);
+    document.body.appendChild(el);
+    return el;
+  }
+  /* 등교 준비 체크 = 그 아이의 아침 할 일 (기본값 4개, 부모님이 직접 고쳐요) */
+  function schoolItems(childId) {
+    return routineItems(childId).morning.slice();
+  }
+  function schoolAllDone(childId) {
+    var today = todayKey();
+    var morning = schoolItems(childId);
+    return morning.length > 0 && morning.every(function (i) { return isDone(i.id, today); });
+  }
+  function schoolBonusGiven(childId) {
+    var t = todayKey();
+    return !!(S.schoolBonus && S.schoolBonus[t] && S.schoolBonus[t][childId]);
+  }
+  /* 아침 할 일을 다 끝냈으면 하루 한 번 보너스 별 */
+  function schoolRewardStars() {
+    return clampNum(S.schoolReward, 0, 20, 2);
+  }
+  function grantSchoolBonus(childId) {
+    if (!schoolAllDone(childId) || schoolBonusGiven(childId)) return false;
+    var t = todayKey();
+    S.schoolBonus = S.schoolBonus || {};
+    S.schoolBonus[t] = S.schoolBonus[t] || {};
+    S.schoolBonus[t][childId] = 1;
+    S.stars[childId] = (S.stars[childId] || 0) + schoolRewardStars();
+    save();
+    return true;
+  }
+  function schoolKidHTML(c) {
+    var today = todayKey();
+    var morning = schoolItems(c.id);
+    var done = morning.filter(function (i) { return isDone(i.id, today); }).length;
+    var all = morning.length > 0 && done >= morning.length;
+    var steps = morning.map(function (i) {
+      var d = isDone(i.id, today);
+      return '<button type="button" class="sc-step' + (d ? ' done' : '') + '" data-sch="step" data-child="' + c.id + '" data-item="' + esc(i.id) + '" aria-pressed="' + (d ? 'true' : 'false') + '">' +
+          '<span class="sc-emoji" aria-hidden="true">' + esc(i.emoji || '⭐') + '</span>' +
+          '<span class="sc-label">' + esc(i.label) + '</span>' +
+          '<span class="sc-tick" aria-hidden="true">' + (d ? '✓' : '') + '</span>' +
+        '</button>';
+    }).join('');
+    return '<div class="sc-kid ' + c.color + (all ? ' all' : '') + '">' +
+      '<div class="sc-kid-head">' +
+        '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span>' +
+        '<b>' + esc(c.name) + '</b>' +
+        '<span class="sc-kid-cnt">' + done + '/' + morning.length + '</span>' +
+      '</div>' +
+      '<div class="sc-steps">' +
+        (steps || '<p class="help">아침 할 일이 없어요. 부모님 모드에서 추가해 주세요.</p>') +
+      '</div>' +
+      (all ? '<div class="sc-kid-done">🎉 다 챙겼어요! ' + (schoolBonusGiven(c.id) ? '보너스 별 ' + schoolRewardStars() + '개 받았어요 ⭐' : '보너스 별이 기다려요') + '</div>' : '') +
+    '</div>';
+  }
+  function schoolPanelHTML() {
+    var bothDone = D.children.every(function (c) { return schoolAllDone(c.id); });
+    return '<div class="sc-panel" role="dialog" aria-modal="true" aria-label="등교 시작 모드">' +
+      '<div class="sc-head">' +
+        '<span class="sc-head-ico" aria-hidden="true">🌅</span>' +
+        '<div class="sc-head-txt"><b>등교 시작</b><small>' + esc(S.schoolTime) + '까지 준비해요</small></div>' +
+        '<button type="button" class="sc-x" data-sch="close" aria-label="닫기">✕</button>' +
+      '</div>' +
+      '<div class="sc-clock">' +
+        '<div class="sc-big" id="scBig">--:--</div>' +
+        '<div class="sc-sub" id="scSub">남았어요</div>' +
+        '<div class="sc-bar"><i id="scBar" style="width:100%"></i></div>' +
+        '<p class="sc-note" id="scNote"></p>' +
+      '</div>' +
+      '<div class="sc-kids">' + D.children.map(schoolKidHTML).join('') + '</div>' +
+      '<div class="sc-foot">' +
+        (S.mode === 'parent' ? '<button type="button" class="btn btn-ghost btn-sm" data-sch="settings">⚙️ 등교 설정</button>' : '') +
+        '<button type="button" class="btn btn-primary" data-sch="close">학교 가자! 🎒</button>' +
+      '</div>' +
+      (bothDone ? '<div class="sc-all">🎉 오늘 등교 준비 끝! 정말 잘했어요</div>' : '') +
+    '</div>';
+  }
+  function paintSchool(full) {
+    var el = schoolLayer();
+    if (!el || el.hidden) return;
+
+    /* 아침 할 일을 다 끝낸 아이에게 보너스 별 (하루 한 번) */
+    var granted = [];
+    D.children.forEach(function (c) { if (grantSchoolBonus(c.id)) granted.push(c.id); });
+    if (granted.length) {
+      UI.confetti(40);
+      chime();
+      UI.toast(granted.map(function (id) { return childById(id).name; }).join('·') + ' 등교 준비 완료! 보너스 별 ' + schoolRewardStars() + '개 ⭐', { emoji: '🎉', kind: 'good', duration: 3800 });
+      render({ keepScroll: true });
+    }
+
+    if (full || !el.querySelector('.sc-panel')) el.innerHTML = schoolPanelHTML();
+
+    var ms = msLeftToSchool();
+    var big = el.querySelector('#scBig');
+    var sub = el.querySelector('#scSub');
+    var bar = el.querySelector('#scBar');
+    var note = el.querySelector('#scNote');
+    var winMs = Math.max(60000, (schoolTargetMin() - schoolStartMin()) * 60000);
+    var pct = ms <= 0 ? 0 : Math.max(0, Math.min(100, (ms / winMs) * 100));
+    if (big) big.textContent = clockText(ms);
+    if (sub) sub.textContent = ms > 0 ? leftText(ms) : (S.schoolTime + '이 지났어요!');
+    if (bar) {
+      bar.style.width = pct + '%';
+      bar.className = ms <= 0 ? 'over' : (pct < 20 ? 'soon' : '');
+    }
+    if (note) {
+      if (ms <= 0) {
+        note.textContent = S.schoolTime + '이 지났어요! 그래도 준비는 할 수 있어요. 하나씩 차근차근 😊';
+      } else if (pct < 20) {
+        note.textContent = '거의 다 왔어요! 얼른 챙기고 나가요 🏃';
+      } else {
+        note.textContent = '남은 시간이 줄어들수록 막대도 줄어들어요. 하나 누를 때마다 별 ⭐ 1개!';
+      }
+    }
+  }
+  function openSchoolMode() {
+    closeTidyMode();
+    var el = schoolLayer();
+    el.hidden = false;
+    document.body.classList.add('modal-open');
+    paintSchool(true);
+    clearInterval(schoolInt);
+    schoolInt = setInterval(function () { paintSchool(false); }, 1000);
+  }
+  function closeSchoolMode() {
+    clearInterval(schoolInt); schoolInt = null;
+    var el = document.getElementById('schoolLayer');
+    if (el) el.hidden = true;
+    if (!document.querySelector('.modal-wrap')) document.body.classList.remove('modal-open');
+  }
+  function onSchoolClick(e) {
+    var b = e.target.closest('[data-sch]');
+    if (!b) return;
+    var act = b.getAttribute('data-sch');
+    if (act === 'close') { closeSchoolMode(); return; }
+    if (act === 'settings') { schoolSettingsModal(); return; }
+    if (act === 'step') { schoolStep(b.getAttribute('data-child'), b.getAttribute('data-item')); return; }
+  }
+  function schoolStep(childId, itemId) {
+    var today = todayKey();
+    if (isDone(itemId, today)) {
+      if (S.mode === 'parent') { undoRoutine(childId, itemId); paintSchool(true); }
+      else UI.toast('이미 끝냈어요! ✓', { emoji: '✅', duration: 1300 });
+      return;
+    }
+    completeRoutine(childId, itemId);   // 별 1개 + 저장 + 화면 갱신
+    chime();
+    paintSchool(true);
+  }
+  /* =========================================================
+     🧹 정리시간 모드 (5 / 10 / 15분)
+     ---------------------------------------------------------
+     · 5·10·15분 버튼 → 바로 집중 타이머 화면.
+     · 남은 시간 막대가 줄어들고, 신나는 동요 멜로디를 Web Audio로 직접 연주합니다
+       (외부 음원 링크를 쓰지 않아 끊기지 않아요. 음소거·일시정지 토글 있음).
+     · '정리 끝!'을 누르면 별 보상(시간 안에 끝내면 별 3개, 시간이 지나면 별 1개).
+     ========================================================= */
+  var tidy = null;
+  var tidyInt = null;
+
+  function tidyReward(inTime) {
+    var c = (S && S.tidyCfg) || {};
+    return clampNum(inTime ? c.reward : c.rewardLate, 0, 20, inTime ? 3 : 1);
+  }
+
+  var TM = { ctx: null, master: null, timer: null, playing: false, muted: false, paused: false };
+  var TM_BEAT = 0.34;
+  var TM_NOTES = [
+    [523.25, 1], [523.25, 1], [783.99, 1], [783.99, 1], [880, 1], [880, 1], [783.99, 2],
+    [698.46, 1], [698.46, 1], [659.25, 1], [659.25, 1], [587.33, 1], [587.33, 1], [523.25, 2],
+    [783.99, 1], [783.99, 1], [698.46, 1], [698.46, 1], [659.25, 1], [659.25, 1], [587.33, 2],
+    [783.99, 1], [783.99, 1], [698.46, 1], [698.46, 1], [659.25, 1], [659.25, 1], [587.33, 2],
+    [523.25, 1], [523.25, 1], [783.99, 1], [783.99, 1], [880, 1], [880, 1], [783.99, 2],
+    [698.46, 1], [698.46, 1], [659.25, 1], [659.25, 1], [587.33, 1], [587.33, 1], [523.25, 2]
+  ];
+  var TM_BASS = [130.81, 174.61, 130.81, 174.61, 130.81, 174.61];
+  function tmBeats() {
+    var n = 0;
+    TM_NOTES.forEach(function (x) { n += x[1]; });
+    return n;
+  }
+  function tmPlayNote(freq, start, dur, type, vol) {
+    var ctx = TM.ctx;
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || 'triangle';
+    o.frequency.setValueAtTime(freq, start);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, vol), start + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    o.connect(g);
+    g.connect(TM.master);
+    o.start(start);
+    o.stop(start + dur + 0.03);
+  }
+  function tmScheduleLoop() {
+    if (!TM.ctx || !TM.playing || TM.paused) return;
+    var t = TM.ctx.currentTime + 0.1;
+    var beat = TM_BEAT;
+    TM_NOTES.forEach(function (n) {
+      var dur = n[1] * beat;
+      tmPlayNote(n[0], t, Math.max(0.12, dur * 0.86), 'triangle', 0.16);
+      tmPlayNote(n[0] * 2, t, Math.max(0.1, dur * 0.5), 'sine', 0.05);
+      t += dur;
+    });
+    /* 저음 베이스: 한 마디(8박)마다 */
+    var barLen = 8 * beat;
+    var total = tmBeats() * beat;
+    for (var i = 0; i * barLen < total; i++) {
+      var f = TM_BASS[i % TM_BASS.length];
+      var st = TM.ctx.currentTime + 0.1 + i * barLen;
+      tmPlayNote(f, st, barLen * 0.5, 'sine', 0.12);
+      tmPlayNote(f * 1.5, st + barLen * 0.5, barLen * 0.4, 'sine', 0.09);
+    }
+  }
+  function tmStart() {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try { TM.ctx = TM.ctx || new AC(); } catch (e) { return; }
+    if (!TM.ctx) return;
+    try { if (TM.ctx.state === 'suspended') TM.ctx.resume(); } catch (e) {}
+    if (!TM.master) {
+      TM.master = TM.ctx.createGain();
+      TM.master.connect(TM.ctx.destination);
+    }
+    TM.master.gain.value = TM.muted ? 0 : 0.5;
+    TM.playing = true;
+    TM.paused = false;
+    tmScheduleLoop();
+    clearInterval(TM.timer);
+    var loopMs = Math.round(tmBeats() * TM_BEAT * 1000) - 80;
+    TM.timer = setInterval(tmScheduleLoop, Math.max(1000, loopMs));
+  }
+  function tmStop() {
+    clearInterval(TM.timer); TM.timer = null;
+    TM.playing = false;
+    TM.paused = false;
+    if (TM.master) { try { TM.master.gain.value = 0; } catch (e) {} }
+    if (TM.ctx) { try { TM.ctx.suspend(); } catch (e) {} }
+  }
+  function tmToggleMute() {
+    TM.muted = !TM.muted;
+    if (TM.master) TM.master.gain.value = TM.muted ? 0 : 0.5;
+    UI.toast(TM.muted ? '음악을 껐어요 🔇' : '음악을 켰어요 🔊', { emoji: '🎵', duration: 1400 });
+    paintTidy(true);
+  }
+  function tmTogglePause() {
+    if (!TM.playing) { tmStart(); paintTidy(true); return; }
+    TM.paused = !TM.paused;
+    if (TM.paused) {
+      clearInterval(TM.timer); TM.timer = null;
+      if (TM.ctx) { try { TM.ctx.suspend(); } catch (e) {} }
+    } else {
+      try { if (TM.ctx && TM.ctx.state === 'suspended') TM.ctx.resume(); } catch (e) {}
+      tmScheduleLoop();
+      var loopMs = Math.round(tmBeats() * TM_BEAT * 1000) - 80;
+      clearInterval(TM.timer);
+      TM.timer = setInterval(tmScheduleLoop, Math.max(1000, loopMs));
+    }
+    paintTidy(true);
+  }
+
+  function tidyLayer() {
+    var el = document.getElementById('tidyLayer');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'tidyLayer';
+    el.className = 'td-layer';
+    el.hidden = true;
+    el.addEventListener('click', onTidyClick);
+    document.body.appendChild(el);
+    return el;
+  }
+  function tidyPanelHTML() {
+    var who = tidy.childId;
+    var chips = D.children.map(function (c) {
+      return '<button type="button" class="chip ' + c.color + (who === c.id ? ' active' : '') + '" data-td="who" data-id="' + c.id + '">' + c.emoji + ' ' + esc(c.name) + '</button>';
+    }).join('') + '<button type="button" class="chip' + (who === 'family' ? ' active' : '') + '" data-td="who" data-id="family">👪 가족 모두</button>';
+    var reward = tidy.endsAt - Date.now() > 0 ? tidyReward(true) : tidyReward(false);
+    return '<div class="td-panel" role="dialog" aria-modal="true" aria-label="정리시간">' +
+      '<div class="td-head">' +
+        '<span class="td-ico" aria-hidden="true">🧹</span>' +
+        '<div class="td-head-txt"><b>정리시간</b><small>' + tidy.minutes + '분 동안 힘내요!</small></div>' +
+        '<button type="button" class="sc-x" data-td="close" aria-label="그만하기">✕</button>' +
+      '</div>' +
+      '<div class="td-who">누가 정리할까요? <span class="td-who-chips">' + chips + '</span></div>' +
+      '<div class="td-time" id="tdBig">--:--</div>' +
+      '<div class="td-bar"><i id="tdBar" style="width:100%"></i></div>' +
+      '<p class="td-note" id="tdNote">🎵 노래가 나와요! 신나게 정리해요</p>' +
+      '<div class="td-actions">' +
+        '<button type="button" class="td-mini" data-td="music" aria-label="음악 켜기/끄기">' + (TM.muted ? '🔇' : '🔊') + '</button>' +
+        '<button type="button" class="td-mini" data-td="pause" aria-label="음악 멈춤">' + (TM.paused ? '▶️' : '⏸️') + '</button>' +
+        '<button type="button" class="btn btn-primary td-finish" data-td="finish">정리 끝! 🎉 <span id="tdReward">별 ' + reward + '개</span></button>' +
+      '</div>' +
+    '</div>';
+  }
+  function paintTidy(full) {
+    var el = tidyLayer();
+    if (!el || el.hidden || !tidy) return;
+    if (full || !el.querySelector('.td-panel')) el.innerHTML = tidyPanelHTML();
+    var left = Math.max(0, tidy.endsAt - Date.now());
+    var big = el.querySelector('#tdBig');
+    var bar = el.querySelector('#tdBar');
+    var note = el.querySelector('#tdNote');
+    var rew = el.querySelector('#tdReward');
+    var total = tidy.minutes * 60000;
+    var pct = Math.max(0, Math.min(100, (left / total) * 100));
+    if (big) big.textContent = clockText(left);
+    if (bar) {
+      bar.style.width = pct + '%';
+      bar.className = pct < 20 ? 'soon' : '';
+    }
+    if (note) {
+      note.textContent = left > 0
+        ? '🎵 노래가 나와요! 신나게 정리해요'
+        : '⏰ 시간이 다 됐어요! 정리를 마무리하고 [정리 끝!]을 눌러요';
+    }
+    if (rew) rew.textContent = '별 ' + (left > 0 ? tidyReward(true) : tidyReward(false)) + '개';
+  }
+  function startTidy(minutes, childId) {
+    minutes = Number(minutes) || 10;
+    if (minutes < 1 || minutes > 60) minutes = 10;
+    closeSchoolMode();
+    tidy = { minutes: minutes, endsAt: Date.now() + minutes * 60000, childId: childId || routineChild || D.children[0].id };
+    var el = tidyLayer();
+    el.hidden = false;
+    document.body.classList.add('modal-open');
+    TM.muted = !(S.tidyCfg && S.tidyCfg.music !== false); TM.paused = false;
+    paintTidy(true);
+    tmStart();
+    clearInterval(tidyInt);
+    tidyInt = setInterval(function () { paintTidy(false); }, 500);
+  }
+  function closeTidyMode() {
+    clearInterval(tidyInt); tidyInt = null;
+    tmStop();
+    tidy = null;
+    var el = document.getElementById('tidyLayer');
+    if (el) el.hidden = true;
+    if (!document.querySelector('.modal-wrap')) {
+      var sc = document.getElementById('schoolLayer');
+      if (!sc || sc.hidden) document.body.classList.remove('modal-open');
+    }
+  }
+  function onTidyClick(e) {
+    var b = e.target.closest('[data-td]');
+    if (!b || !tidy) return;
+    var act = b.getAttribute('data-td');
+    if (act === 'close') { closeTidyMode(); return; }
+    if (act === 'music') { tmToggleMute(); return; }
+    if (act === 'pause') { tmTogglePause(); return; }
+    if (act === 'who') { tidy.childId = b.getAttribute('data-id') || D.children[0].id; paintTidy(true); return; }
+    if (act === 'finish') { finishTidy(); return; }
+  }
+  function finishTidy() {
+    if (!tidy) return;
+    var left = tidy.endsAt - Date.now();
+    var inTime = left > 0;
+    var per = tidyReward(inTime);
+    var ids = tidy.childId === 'family' ? D.children.map(function (c) { return c.id; }) : [tidy.childId];
+    ids.forEach(function (id) { S.stars[id] = (S.stars[id] || 0) + per; });
+    var who = tidy.childId === 'family' ? '가족 모두' : childById(tidy.childId).name;
+    save();
+    closeTidyMode();
+    render({ keepScroll: true });
+    UI.confetti(inTime ? 52 : 24);
+    chime();
+    UI.toast((inTime ? '시간 안에 정리 끝! ' : '정리 끝! ') + who + ' 별 ' + per + '개 ⭐', { emoji: inTime ? '🎉' : '👏', kind: 'good', duration: 3600 });
+    pushToPhones('🧹 정리 끝!', who + (inTime ? '가 시간 안에 정리를 마쳤어요! 별 ' : ' 정리를 마무리했어요! 별 ') + per + '개 ⭐');
+  }
+
+  /* =========================================================
+     ✍️ 우체통 손글씨 편지 (스티커 아님 · 진짜 손글씨)
+     ---------------------------------------------------------
+     · 캔버스에 손가락/마우스로 쓰고, 색·굵기·지우개·처음부터를 고를 수 있어요.
+     · 보내면 그림(이미지)으로 가족방에 저장되고 잠금화면 알림도 갑니다.
+     · 그림은 JPEG로 작게 압축하고, 문서가 너무 무거워지면 오래된 그림부터 정리합니다.
+     ========================================================= */
+  var HW_W = 900, HW_H = 560;
+  var HW = { draft: null, dctx: null, ink: false, color: '#4A3F35', size: 7, eraser: false, bound: false, op: false, last: null };
+  var HW_COLORS = ['#4A3F35', '#E2554B', '#2F8F5B', '#2F7BC4', '#8A5BD0', '#E27AA8'];
+  var HW_SIZES = [{ v: 5, label: '얇게' }, { v: 9, label: '보통' }, { v: 16, label: '굵게' }];
+  var HW_LIMIT = 480000;   // 손글씨 그림 전체 길이 상한(글자 수)
+
+  function hwEnsure() {
+    if (HW.draft) return HW.draft;
+    var c = document.createElement('canvas');
+    c.width = HW_W; c.height = HW_H;
+    var g = c.getContext('2d');
+    g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, HW_W, HW_H);
+    HW.draft = c; HW.dctx = g; HW.ink = false;
+    return c;
+  }
+  function hwReset() {
+    hwEnsure();
+    HW.dctx.fillStyle = '#FFFFFF';
+    HW.dctx.fillRect(0, 0, HW_W, HW_H);
+    HW.ink = false;
+    HW.last = null;
+    hwMount();
+  }
+  function hwMount() {
+    var cv = document.getElementById('hwCanvas');
+    if (!cv) return;
+    hwEnsure();
+    var wrap = cv.parentNode;
+    var cssW = Math.max(240, Math.floor((wrap && wrap.clientWidth) || 320));
+    var cssH = Math.round(cssW * HW_H / HW_W);
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.style.width = cssW + 'px';
+    cv.style.height = cssH + 'px';
+    cv.width = Math.round(cssW * dpr);
+    cv.height = Math.round(cssH * dpr);
+    var g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, cssW, cssH);
+    g.drawImage(HW.draft, 0, 0, cssW, cssH);
+    cv.__cssW = cssW; cv.__cssH = cssH;
+    hwRefreshHint();
+    if (cv.__bound) return;
+    cv.__bound = true;
+
+    function norm(ev) {
+      var r = cv.getBoundingClientRect();
+      if (!r.width || !r.height) return null;
+      return { x: (ev.clientX - r.left) / r.width, y: (ev.clientY - r.top) / r.height };
+    }
+    function drawDot(p) {
+      var r = cv.getBoundingClientRect();
+      var col = HW.eraser ? '#FFFFFF' : HW.color;
+      var wCss = HW.eraser ? HW.size * 3 : HW.size;
+      var g2 = cv.getContext('2d');
+      g2.fillStyle = col;
+      g2.beginPath();
+      g2.arc(p.x * r.width, p.y * r.height, wCss / 2, 0, Math.PI * 2);
+      g2.fill();
+      var d = HW.dctx;
+      d.fillStyle = col;
+      d.beginPath();
+      d.arc(p.x * HW_W, p.y * HW_H, (wCss * (HW_W / r.width)) / 2, 0, Math.PI * 2);
+      d.fill();
+      HW.ink = HW.ink || !HW.eraser;
+      hwRefreshHint();
+    }
+    function drawSeg(a, b) {
+      var r = cv.getBoundingClientRect();
+      if (!r.width) return;
+      var col = HW.eraser ? '#FFFFFF' : HW.color;
+      var wCss = HW.eraser ? HW.size * 3 : HW.size;
+      var g2 = cv.getContext('2d');
+      g2.strokeStyle = col; g2.lineWidth = wCss; g2.lineCap = 'round'; g2.lineJoin = 'round';
+      g2.beginPath();
+      g2.moveTo(a.x * r.width, a.y * r.height);
+      g2.lineTo(b.x * r.width, b.y * r.height);
+      g2.stroke();
+      var d = HW.dctx;
+      d.strokeStyle = col; d.lineWidth = wCss * (HW_W / r.width); d.lineCap = 'round'; d.lineJoin = 'round';
+      d.beginPath();
+      d.moveTo(a.x * HW_W, a.y * HW_H);
+      d.lineTo(b.x * HW_W, b.y * HW_H);
+      d.stroke();
+      HW.ink = HW.ink || !HW.eraser;
+    }
+    cv.addEventListener('pointerdown', function (ev) {
+      ev.preventDefault();
+      try { cv.setPointerCapture(ev.pointerId); } catch (e) {}
+      var p = norm(ev);
+      if (!p) return;
+      HW.op = true; HW.last = p;
+      drawDot(p);
+    });
+    cv.addEventListener('pointermove', function (ev) {
+      if (!HW.op) return;
+      ev.preventDefault();
+      var p = norm(ev);
+      if (!p) return;
+      if (HW.last) drawSeg(HW.last, p);
+      HW.last = p;
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (k) {
+      cv.addEventListener(k, function () { HW.op = false; HW.last = null; hwRefreshHint(); });
+    });
+  }
+  function hwRefreshHint() {
+    var hint = document.getElementById('hwHint');
+    if (hint) hint.style.display = HW.ink ? 'none' : '';
+    var block = document.querySelector('.hw-block');
+    if (block) block.classList.toggle('has-ink', !!HW.ink);
+  }
+  function hwPaintTools() {
+    $$('.hw-swatch').forEach(function (b) {
+      b.classList.toggle('active', !HW.eraser && b.getAttribute('data-color') === HW.color);
+    });
+    $$('.hw-size').forEach(function (b) {
+      b.classList.toggle('active', !HW.eraser && Number(b.getAttribute('data-size')) === HW.size);
+    });
+    var er = document.querySelector('.hw-eraser');
+    if (er) er.classList.toggle('active', HW.eraser);
+  }
+  function hwExport() {
+    hwEnsure();
+    var w = 760, h = Math.round(w * HW_H / HW_W);
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var g = c.getContext('2d');
+    g.fillStyle = '#FFFFFF';
+    g.fillRect(0, 0, w, h);
+    g.drawImage(HW.draft, 0, 0, w, h);
+    var url = c.toDataURL('image/jpeg', 0.72);
+    if (url.length > 100000) url = c.toDataURL('image/jpeg', 0.5);
+    return url;
+  }
+  /* 문서 크기 보호: 손글씨 그림이 많아지면 오래된 것부터 그림만 비웁니다 */
+  function pruneHandwriting() {
+    if (!S || !Array.isArray(S.messages)) return;
+    var total = 0;
+    S.messages.forEach(function (m) { if (m && typeof m.hw === 'string') total += m.hw.length; });
+    if (total <= HW_LIMIT) return;
+    var list = S.messages.filter(function (m) { return m && typeof m.hw === 'string'; })
+      .sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+    for (var i = 0; i < list.length && total > HW_LIMIT; i++) {
+      total -= list[i].hw.length;
+      list[i].hw = null;
+      list[i].hwDropped = 1;
+    }
+  }
+  function handLetterHTML() {
+    return '<div class="hw-block">' +
+      '<div class="hw-head"><b>✍️ 손글씨 편지</b><span>손가락이나 펜으로 마음을 적어요</span></div>' +
+      '<div class="hw-tools">' +
+        '<div class="hw-colors">' + HW_COLORS.map(function (c) {
+          return '<button type="button" class="hw-swatch' + (!HW.eraser && HW.color === c ? ' active' : '') + '" style="background:' + c + '" data-act="hw-color" data-color="' + c + '" aria-label="연필 색"></button>';
+        }).join('') + '</div>' +
+        '<div class="hw-sizes">' + HW_SIZES.map(function (s) {
+          return '<button type="button" class="hw-size' + (!HW.eraser && HW.size === s.v ? ' active' : '') + '" data-act="hw-size" data-size="' + s.v + '">' + s.label + '</button>';
+        }).join('') + '</div>' +
+        '<button type="button" class="hw-eraser' + (HW.eraser ? ' active' : '') + '" data-act="hw-eraser">🧽 지우개</button>' +
+        '<button type="button" class="hw-clear" data-act="hw-clear">🔄 처음부터</button>' +
+      '</div>' +
+      '<div class="hw-stage">' +
+        '<canvas id="hwCanvas" class="hw-canvas" aria-label="손글씨 편지 쓰는 종이"></canvas>' +
+        '<div class="hw-hint" id="hwHint">여기에 손가락으로 써 보세요 ✍️</div>' +
+      '</div>' +
+      '<button type="button" class="btn btn-rose btn-block hw-send" data-act="send-hand">손글씨 편지 보내기 ✍️</button>' +
+    '</div>';
+  }
+  function sendHandLetter() {
+    if (!HW.ink) {
+      UI.toast('먼저 손글씨로 편지를 써 주세요 ✍️', { emoji: '✍️', kind: 'warn' });
+      return;
+    }
+    var url = hwExport();
+    var text = ((document.getElementById('mailText') || {}).value || '').trim();
+    var rec = D.mailRecipients.filter(function (r) { return r.id === mailRecipient; })[0] || D.mailRecipients[0];
+    var sender = childById(mailSender);
+    S.messages.unshift({
+      id: UI.uid('letter'),
+      fromId: sender.id, fromName: sender.name,
+      toId: rec.id, toName: rec.name,
+      pictos: [], text: text, hw: url,
+      ts: Date.now(), read: false, replies: []
+    });
+    var tIn = document.getElementById('mailText');
+    if (tIn) tIn.value = '';
+    lastMsgAt = Date.now();
+    HW.ink = false;
+    hwEnsure();
+    HW.dctx.fillStyle = '#FFFFFF';
+    HW.dctx.fillRect(0, 0, HW_W, HW_H);
+    save();
+    render({ keepScroll: true });
+    UI.confetti(20);
+    UI.toast(rec.name + '에게 손글씨 편지를 보냈어요', { emoji: '✍️', kind: 'good' });
+    sendMailboxMessage('letter', { fromName: sender.name, toName: rec.name, text: text, hand: true });
+  }
+  function viewHandwriting(id) {
+    var m = S.messages.filter(function (x) { return x.id === id; })[0];
+    if (!m || !m.hw) return;
+    UI.modal({
+      title: (m.fromName || '아이') + '의 손글씨 편지',
+      bodyHTML: '<img class="hw-big" src="' + m.hw + '" alt="손글씨 편지">' +
+        (m.text ? '<p class="help" style="margin-top:8px">' + esc(m.text) + '</p>' : ''),
+      actions: [{ label: '닫기', kind: 'ghost' }]
+    });
+  }
+
+  /* =========================================================
+     ⚡ 별 모아서 포켓몬 키우기
+     ---------------------------------------------------------
+     · 진화 라인 20가지, 별 100개를 먹일 때마다 Lv.1 → Lv.2 → Lv.3
+     · Lv.2에서 1차 진화, Lv.3에서 최종 진화(2단계 라인은 Lv.2가 마지막)
+     · 최종 진화하면 도감에 등록되고 새 알을 고를 수 있어요.
+     ========================================================= */
+  var PK = (function () {
+    var species = {};
+    var lines = [];
+    (D.pokemonLines || []).forEach(function (line) {
+      var stages = (line.ids || []).map(function (id) { return [id]; });
+      if (line.branches && line.branches.length && stages.length) {
+        stages[stages.length - 1] = line.branches.slice();
+      }
+      lines.push({ key: line.key, name: line.name, stages: stages });
+      stages.forEach(function (ids, si) {
+        ids.forEach(function (id) {
+          species[id] = {
+            id: id,
+            ko: (D.pokemonNames && D.pokemonNames[id]) || String(id),
+            line: line.key,
+            stage: si,
+            stageCount: stages.length,
+            next: (stages[si + 1] || []).slice(),
+            final: si === stages.length - 1
+          };
+        });
+      });
+    });
+    var finals = Object.keys(species).map(Number).filter(function (id) { return species[id].final; });
+    return { species: species, lines: lines, finals: finals };
+  })();
+  function pkArt(id) {
+    return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + id + '.png';
+  }
+  function pkIcon(id) {
+    return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + id + '.png';
+  }
+  function pkOf(childId) {
+    S.pokemon = S.pokemon || {};
+    if (!S.pokemon[childId]) S.pokemon[childId] = { cur: 0, fed: 0, dex: [] };
+    var p = S.pokemon[childId];
+    p.cur = Number(p.cur) || 0;
+    p.fed = Math.max(0, Number(p.fed) || 0);
+    if (!Array.isArray(p.dex)) p.dex = [];
+    return p;
+  }
+  function pkPerLevel() {
+    return clampNum((S && S.pkCfg && S.pkCfg.perLevel), 10, 1000, 100);
+  }
+  function pkLevel(fed) { return 1 + Math.floor(Math.max(0, fed) / pkPerLevel()); }
+  function pkProg(fed) { return Math.max(0, Math.floor(fed)) % pkPerLevel(); }
+  function pkRegisterDex(childId, id) {
+    var p = pkOf(childId);
+    if (p.dex.indexOf(id) >= 0) return false;
+    p.dex.push(id);
+    return true;
+  }
+  function pkEvolveChain(childId) {
+    var p = pkOf(childId);
+    var sp = PK.species[p.cur];
+    var chain = [];
+    var guard = 0;
+    while (sp && sp.next.length && pkLevel(p.fed) >= sp.stage + 2 && guard++ < 6) {
+      if (sp.next.length > 1) break;            // 이브이: 모달에서 고름
+      p.cur = sp.next[0];
+      sp = PK.species[p.cur];
+      chain.push(sp.id);
+      if (sp.final) pkRegisterDex(childId, sp.id);
+    }
+    return chain;
+  }
+  function pkFeed(childId, n) {
+    var p = pkOf(childId);
+    if (!p.cur || !PK.species[p.cur]) {
+      UI.toast('먼저 함께할 포켓몬을 골라 주세요 🥚', { emoji: '⚡', kind: 'warn' });
+      return;
+    }
+    n = Math.max(1, Math.min(50, Math.floor(Number(n) || 1)));
+    var have = S.stars[childId] || 0;
+    if (have < n) {
+      UI.toast('별이 모자라요. 지금 별 ' + have + '개 있어요', { emoji: '⭐', kind: 'warn' });
+      return;
+    }
+    var beforeLv = pkLevel(p.fed);
+    S.stars[childId] = have - n;
+    p.fed += n;
+    save();
+    var afterLv = pkLevel(p.fed);
+    var per = pkPerLevel();
+    var sp = PK.species[p.cur];
+    var chain = [];
+    var branch = null;
+    if (afterLv > beforeLv) {
+      if (sp.next.length > 1 && afterLv >= sp.stage + 2) {
+        branch = sp;
+      } else {
+        chain = pkEvolveChain(childId);
+      }
+      save();
+    }
+    render({ keepScroll: true });
+    if (branch) {
+      pkBranchModal(childId, branch);
+    } else if (chain.length) {
+      pkEvolvedModal(childId, chain);
+    } else if (afterLv > beforeLv) {
+      UI.confetti(26);
+      chime();
+      UI.toast('Lv.' + afterLv + '이 됐어요! 별 ' + pkProg(p.fed) + '/' + per + ' ⭐', { emoji: '⚡', kind: 'good', duration: 3000 });
+    } else {
+      UI.toast('별 ' + n + '개를 먹였어요 · ' + pkProg(p.fed) + '/' + per + ' ⭐', { emoji: '⭐', kind: 'good', duration: 1600 });
+    }
+  }
+  function pkEvolvedModal(childId, chain) {
+    var p = pkOf(childId);
+    var sp = PK.species[p.cur];
+    var names = chain.map(function (id) { return PK.species[id].ko; }).join(' → ');
+    UI.confetti(56);
+    chime();
+    UI.modal({
+      title: '⚡ 진화했어요!',
+      bodyHTML: '<div class="pk-evo-modal">' +
+          '<img src="' + pkArt(sp.id) + '" alt="' + esc(sp.ko) + '">' +
+          '<p><b>' + esc(sp.ko) + '</b>(으)로 진화했어요!</p>' +
+          '<p class="help">' + esc(childById(childId).name) + '의 포켓몬 · Lv.' + pkLevel(p.fed) + ' · ' + esc(names) + '</p>' +
+          (sp.final ? '<p class="help"><b>🏅 도감에 등록됐어요!</b> 이제 새 알을 골라 다른 친구도 키울 수 있어요.</p>' : '') +
+        '</div>',
+      actions: [{ label: '좋아!', kind: 'primary' }]
+    });
+  }
+  function pkBranchModal(childId, sp) {
+    UI.modal({
+      title: '어떤 모습으로 자랄까요?',
+      bodyHTML: '<p class="help" style="margin-bottom:10px">' + esc(sp.ko) + '이(가) 진화해요! 한 가지만 고를 수 있어요.</p>' +
+        '<div class="pk-branches">' + sp.next.map(function (id) {
+          var s = PK.species[id];
+          return '<button type="button" class="pk-branch" data-branch="' + id + '">' +
+            '<img src="' + pkArt(id) + '" alt="' + esc(s.ko) + '">' +
+            '<b>' + esc(s.ko) + '</b></button>';
+        }).join('') + '</div>',
+      actions: [{ label: '나중에 고를래요', kind: 'ghost' }],
+      onOpen: function (wrap, close) {
+        wrap.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-branch]');
+          if (!b) return;
+          var id = Number(b.getAttribute('data-branch'));
+          var p = pkOf(childId);
+          p.cur = id;
+          pkRegisterDex(childId, id);
+          save();
+          close();
+          render({ keepScroll: true });
+          pkEvolvedModal(childId, [id]);
+        });
+      }
+    });
+  }
+  function pkPick(childId, id) {
+    var sp = PK.species[id];
+    if (!sp) return;
+    var p = pkOf(childId);
+    var cur = PK.species[p.cur];
+    if (cur && !cur.final) {
+      UI.confirm('포켓몬을 바꿀까요?', '지금 ' + cur.ko + '(Lv.' + pkLevel(p.fed) + ')를 키우고 있어요. 새 알로 바꾸면 모은 별(' + pkProg(p.fed) + '/' + pkPerLevel() + ')은 새 알에서 처음부터 쌓여요.', '새 알 고르기', 'danger')
+        .then(function (ok) { if (ok) pkApplyPick(childId, id); });
+      return;
+    }
+    pkApplyPick(childId, id);
+  }
+  function pkApplyPick(childId, id) {
+    var p = pkOf(childId);
+    p.cur = id;
+    p.fed = 0;
+    save();
+    render({ keepScroll: true });
+    UI.confetti(24);
+    chime();
+    UI.toast(childById(childId).name + '의 새 친구 ' + PK.species[id].ko + '! 알에서 태어났어요 🥚', { emoji: '⚡', kind: 'good', duration: 3200 });
+  }
+  function pkChooserModal(childId) {
+    var c = childById(childId);
+    UI.modal({
+      title: '🥚 새 알 고르기',
+      bodyHTML: '<p class="help" style="margin-bottom:10px">' + esc(c.name) + '와 함께할 포켓몬을 골라요. 별 ' + pkPerLevel() + '개를 먹일 때마다 레벨이 올라요.</p>' +
+        '<div class="pk-eggs">' + PK.lines.map(function (line) {
+          var base = PK.species[line.stages[0][0]];
+          return '<button type="button" class="pk-egg" data-pick="' + base.id + '">' +
+            '<img src="' + pkIcon(base.id) + '" alt="" loading="lazy">' +
+            '<b>' + esc(base.ko) + '</b>' +
+            '<small>' + line.stages.length + '단계</small></button>';
+        }).join('') + '</div>',
+      actions: [{ label: '닫기', kind: 'ghost' }],
+      onOpen: function (wrap, close) {
+        wrap.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-pick]');
+          if (!b) return;
+          var id = Number(b.getAttribute('data-pick'));
+          close();
+          pkPick(childId, id);
+        });
+      }
+    });
+  }
+  function pkTestStars(childId) {
+    if (!needParent('별 테스트 지급은 부모님 모드에서만 돼요')) return;
+    var per = pkPerLevel();
+    S.stars[childId] = (S.stars[childId] || 0) + per;
+    saveNow();
+    render({ keepScroll: true });
+    UI.toast('테스트로 별 ' + per + '개를 넣었어요 (레벨업 확인용)', { emoji: '🧪', kind: 'good', duration: 3000 });
+  }
+  function pkCardHTML(c) {
+    var p = pkOf(c.id);
+    var stars = S.stars[c.id] || 0;
+    var head = '<div class="rk-head">' +
+      '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span><strong>' + esc(c.name) + '</strong>' +
+      '<span class="rk-spacer"></span>' +
+      '<span class="badge sun">⭐ ' + stars + '</span>' +
+      '</div>';
+    if (!p.cur || !PK.species[p.cur]) {
+      return '<div class="card pk-card ' + c.color + '">' + head +
+        '<div class="pk-choose-help"><b>🥚 ' + esc(c.name) + '</b>와 함께할 포켓몬을 골라요</div>' +
+        '<div class="pk-eggs">' + PK.lines.map(function (line) {
+          var base = PK.species[line.stages[0][0]];
+          return '<button type="button" class="pk-egg" data-act="pk-pick" data-child="' + c.id + '" data-id="' + base.id + '">' +
+            '<img src="' + pkIcon(base.id) + '" alt="" loading="lazy">' +
+            '<b>' + esc(base.ko) + '</b>' +
+            '<small>' + line.stages.length + '단계</small></button>';
+        }).join('') + '</div></div>';
+    }
+    var sp = PK.species[p.cur];
+    var lvl = pkLevel(p.fed);
+    var prog = pkProg(p.fed);
+    var per = pkPerLevel();
+    var nextNames = sp.next.map(function (id) { return PK.species[id].ko; }).join(' / ');
+    return '<div class="card pk-card ' + c.color + '">' + head +
+      '<div class="pk-main">' +
+        '<div class="pk-art"><img src="' + pkArt(sp.id) + '" alt="' + esc(sp.ko) + '" loading="lazy" onerror="this.onerror=null;this.src=&#39;' + pkIcon(sp.id) + '&#39;"></div>' +
+        '<div class="pk-info">' +
+          '<div class="pk-name">' + esc(sp.ko) + '<span class="pk-lv">Lv.' + lvl + '</span></div>' +
+          '<div class="pk-bar"><i style="width:' + prog + '%"></i></div>' +
+          '<div class="pk-progtxt"><span>다음 레벨까지 ' + (per - prog) + '별</span><span>' + prog + ' / ' + per + ' ⭐</span></div>' +
+          (sp.final
+            ? '<div class="pk-tag done">🏅 최종 진화 완료 · 도감 등록</div>'
+            : '<div class="pk-tag">Lv.' + (sp.stage + 2) + '에서 ' + esc(nextNames) + '(으)로 진화!</div>') +
+        '</div>' +
+      '</div>' +
+      '<div class="pk-feed">' +
+        [1, 5, 10].map(function (n) {
+          return '<button type="button" class="btn btn-sun btn-sm" data-act="pk-feed" data-child="' + c.id + '" data-n="' + n + '"' + (stars < n ? ' disabled' : '') + '>별 ' + n + '개 먹이기</button>';
+        }).join('') +
+      '</div>' +
+      '<p class="pk-help">별 ' + per + '개를 먹이면 Lv.' + (lvl + 1) + '이 되고, 별이 떨어지면 할 일·등교·정리로 다시 모아요.</p>' +
+      (sp.final ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
+      '</div>';
+  }
+  function pkDexHTML() {
+    var got = {};
+    D.children.forEach(function (c) {
+      (pkOf(c.id).dex || []).forEach(function (id) { got[id] = 1; });
+    });
+    var count = Object.keys(got).length;
+    return '<div class="card pk-dex">' +
+      cardHead('📖', '내 포켓몬 도감', '모은 포켓몬 ' + count + ' / ' + PK.finals.length + '마리') +
+      '<div class="pk-dex-grid">' + PK.finals.map(function (id) {
+        var sp = PK.species[id];
+        var owned = !!got[id];
+        return '<div class="pk-dex-cell' + (owned ? ' owned' : '') + '">' +
+          '<img src="' + pkIcon(id) + '" alt="" loading="lazy">' +
+          '<span>' + (owned ? esc(sp.ko) : '???') + '</span></div>';
+      }).join('') + '</div>' +
+      '<p class="help" style="margin-top:8px">최종 진화한 포켓몬만 도감에 남아요. 별은 아이마다 따로 모여요.</p>' +
+    '</div>';
+  }
+  function renderPokemon() {
+    return '<div class="card soft-sun pk-rules">' +
+        '<div class="pk-rules-head"><b>⭐ 별 ' + pkPerLevel() + '개 = 레벨 1업!</b>' +
+          '<span>' + D.children.map(function (c) { return c.emoji + ' ' + esc(c.name) + ' ⭐' + (S.stars[c.id] || 0); }).join(' · ') + '</span></div>' +
+        '<p>할 일 체크 · 등교 준비 · 정리하기로 모은 별을 포켓몬에게 먹여 키워요.<br>' +
+        '<b>Lv.2에 1차 진화, Lv.3에 최종 진화</b>하고, 최종 진화하면 도감에 등록돼요. (2단계 포켓몬은 Lv.2가 마지막)</p>' +
+        (S.mode === 'parent'
+          ? '<div class="btn-row" style="margin-top:10px">' +
+              D.children.map(function (c) {
+                return '<button type="button" class="btn btn-ghost btn-sm" data-act="pk-test" data-child="' + c.id + '">🧪 ' + esc(c.name) + ' 별 ' + pkPerLevel() + '개</button>';
+              }).join('') +
+              '<button type="button" class="btn btn-soft btn-sm" data-act="pk-settings">⚙️ 포켓몬 관리</button>' +
+            '</div>'
+          : '') +
+      '</div>' +
+      '<div class="duo-grid">' + D.children.map(pkCardHTML).join('') + '</div>' +
+      pkDexHTML();
+  }
+
+  /* 화면을 다시 그린 뒤 해야 하는 일 (손글씨 캔버스 붙이기) */
+  function afterRender() {
+    if (view === 'mailbox') hwMount();
+  }
+
+  /* 두 모드를 여는 버튼 (홈 · 할 일 위쪽) */
+  function modeStripHTML() {
+    var ms = msLeftToSchool();
+    var left = ms > 0 ? leftText(ms) : '시간이 지났어요';
+    return '<div class="mode-strip">' +
+      '<button type="button" class="ms-school" data-act="school-open">' +
+        '<span class="ms-ico" aria-hidden="true">🌅</span>' +
+        '<span class="ms-txt"><b>등교 시작</b><small>' + esc(S.schoolTime) + '까지 · ' + esc(left) + '</small></span>' +
+        '<span class="ms-go" aria-hidden="true">▶</span>' +
+      '</button>' +
+      '<div class="ms-tidy">' +
+        '<span class="ms-tidy-label">🧹 정리시간</span>' +
+        ((S.tidyCfg && S.tidyCfg.mins && S.tidyCfg.mins.length) ? S.tidyCfg.mins : [5, 10, 15]).map(function (m) {
+          return '<button type="button" class="ms-min" data-act="tidy-start" data-min="' + m + '">' + m + '분</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }
+
+  /* =========================================================
+     🎛️ 부모님 모드 · 새 기능 관리
+     ---------------------------------------------------------
+     · 등교 시각·등교 준비 4개, 정리시간 버튼·보상·노래,
+       포켓몬 레벨업 별·파트너·별 조정을 폰에서 톡톡 고칩니다.
+     · 저장은 바로 클라우드(saveNow)로 올려 아이 태블릿에도 바로 보입니다.
+     ========================================================= */
+  function editRowHTML(item) {
+    return '<div class="ed-row" data-id="' + esc(item.id || '') + '">' +
+      '<input class="input ed-emoji" value="' + esc(item.emoji || '⭐') + '" maxlength="4" aria-label="그림">' +
+      '<input class="input ed-label" value="' + esc(item.label || '') + '" maxlength="24" placeholder="할 일" aria-label="할 일">' +
+      '<button type="button" class="ed-btn" data-mv="-1" aria-label="위로">↑</button>' +
+      '<button type="button" class="ed-btn" data-mv="1" aria-label="아래로">↓</button>' +
+      '<button type="button" class="ed-btn del" data-del="1" aria-label="지우기">✕</button>' +
+    '</div>';
+  }
+  function bindEditList(wrap) {
+    if (wrap.__edBound) return;
+    wrap.__edBound = true;
+    wrap.addEventListener('click', function (e) {
+      var mv = e.target.closest('[data-mv]');
+      if (mv) {
+        var row = mv.closest('.ed-row');
+        if (!row) return;
+        var dir = Number(mv.getAttribute('data-mv'));
+        if (dir < 0 && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
+        if (dir > 0 && row.nextElementSibling) row.parentNode.insertBefore(row.nextElementSibling, row);
+        return;
+      }
+      var del = e.target.closest('[data-del]');
+      if (del) { var r = del.closest('.ed-row'); if (r) r.remove(); return; }
+      var add = e.target.closest('[data-add-row]');
+      if (add) {
+        var block = add.closest('.ed-block');
+        var list = block && block.querySelector('.ed-list');
+        if (!list) return;
+        var tmp = document.createElement('div');
+        tmp.innerHTML = editRowHTML({ emoji: '⭐', label: '' });
+        list.appendChild(tmp.firstChild);
+        var inp = list.lastElementChild.querySelector('.ed-label');
+        if (inp) inp.focus();
+      }
+    });
+  }
+
+  /* 🌅 등교 시작 설정 */
+  function schoolSettingsModal() {
+    if (!needParent('등교 시작 설정은 부모님 모드에서 바꿀 수 있어요')) return;
+    var m = UI.modal({
+      size: 'wide',
+      title: '🌅 등교 시작 설정',
+      bodyHTML:
+        '<p class="help" style="margin-bottom:10px">등교 시작을 누르면 이 시각까지 남은 시간을 세요.</p>' +
+        '<div class="field-row">' +
+          '<div class="field"><label>등교 시간</label><input class="input" id="edSchoolTime" type="time" value="' + esc(S.schoolTime) + '"></div>' +
+          '<div class="field"><label>남은 시간 막대 시작</label><input class="input" id="edSchoolStart" type="time" value="' + esc(S.schoolStart) + '"></div>' +
+        '</div>' +
+        '<div class="field"><label>등교 준비를 다 했을 때 보너스 별</label><input class="input" id="edSchoolReward" type="number" min="0" max="20" value="' + S.schoolReward + '"></div>' +
+        D.children.map(function (c) {
+          var items = schoolItems(c.id);
+          return '<div class="ed-block">' +
+            '<div class="ed-block-head"><b>' + c.emoji + ' ' + esc(c.name) + ' 등교 준비</b><span>' + items.length + '개</span></div>' +
+            '<div class="ed-list" data-child="' + c.id + '">' + items.map(editRowHTML).join('') + '</div>' +
+            '<button type="button" class="btn btn-soft btn-sm" data-add-row="' + c.id + '">＋ 항목 추가</button>' +
+          '</div>';
+        }).join(''),
+      actions: [
+        { label: '저장', kind: 'primary', onClick: function () {
+            var t = (document.getElementById('edSchoolTime') || {}).value || '';
+            var st = (document.getElementById('edSchoolStart') || {}).value || '';
+            var rw = (document.getElementById('edSchoolReward') || {}).value || '';
+            if (!hhmmOk(t)) { UI.toast('등교 시간을 다시 골라 주세요', { kind: 'warn' }); return false; }
+            S.schoolTime = t;
+            S.schoolStart = hhmmOk(st) && hhmmMin(st, 0) < hhmmMin(t, 0) ? st : minHHMM(hhmmMin(t, 510) - 90);
+            S.schoolReward = clampNum(rw, 0, 20, 2);
+            var changed = 0;
+            D.children.forEach(function (c) {
+              var list = document.querySelector('.ed-list[data-child="' + c.id + '"]');
+              if (!list) return;
+              var rows = Array.prototype.slice.call(list.querySelectorAll('.ed-row'));
+              var arr = [];
+              rows.forEach(function (r) {
+                var lb = (r.querySelector('.ed-label').value || '').trim();
+                if (!lb) return;
+                var em = (r.querySelector('.ed-emoji').value || '').trim() || '⭐';
+                arr.push({ id: r.getAttribute('data-id') || UI.uid('rt'), label: lb.slice(0, 24), emoji: em.slice(0, 4) });
+              });
+              if (!arr.length) return;
+              var cur = ensureRoutineCustom(c.id);
+              cur.morning = arr;
+              changed++;
+            });
+            saveNow();
+            render({ keepScroll: true });
+            paintSchool(true);
+            UI.confetti(14);
+            UI.toast('등교 시작 설정을 저장했어요 · 아이 태블릿에도 바로 보여요', { emoji: '🌅', kind: 'good', duration: 3400 });
+          } },
+        { label: '닫기', kind: 'ghost' }
+      ],
+      onOpen: function (wrap) { bindEditList(wrap); }
+    });
+    return m;
+  }
+
+  /* 🧹 정리시간 설정 */
+  function tidySettingsModal() {
+    if (!needParent('정리시간 설정은 부모님 모드에서 바꿀 수 있어요')) return;
+    var mins = (S.tidyCfg && S.tidyCfg.mins && S.tidyCfg.mins.length) ? S.tidyCfg.mins : [5, 10, 15];
+    UI.modal({
+      title: '🧹 정리시간 설정',
+      bodyHTML:
+        '<p class="help" style="margin-bottom:10px">홈·할 일 화면에 있는 5·10·15분 버튼을 원하는 대로 바꿔요. (1~60분)</p>' +
+        '<div class="field-row">' + [0, 1, 2].map(function (i) {
+          return '<div class="field"><label>' + (i + 1) + '번째 버튼 (분)</label>' +
+            '<input class="input ed-min" data-i="' + i + '" type="number" min="1" max="60" value="' + (mins[i] || [5, 10, 15][i]) + '"></div>';
+        }).join('') + '</div>' +
+        '<div class="field-row">' +
+          '<div class="field"><label>시간 안에 끝냈을 때 별</label><input class="input" id="edTidyReward" type="number" min="0" max="20" value="' + S.tidyCfg.reward + '"></div>' +
+          '<div class="field"><label>시간이 지나서 끝냈을 때 별</label><input class="input" id="edTidyLate" type="number" min="0" max="20" value="' + S.tidyCfg.rewardLate + '"></div>' +
+        '</div>' +
+        '<label class="sw-row"><input type="checkbox" id="edTidyMusic"' + (S.tidyCfg.music !== false ? ' checked' : '') + '>' +
+          '<span class="sw-box" aria-hidden="true"></span><span class="sw-txt">정리 노래를 기본으로 틀기</span></label>',
+      actions: [
+        { label: '저장', kind: 'primary', onClick: function () {
+            var vals = Array.prototype.slice.call(document.querySelectorAll('.ed-min')).map(function (inp) {
+              return clampNum(inp.value, 1, 60, 10);
+            });
+            var uniq = [];
+            vals.forEach(function (v) { if (uniq.indexOf(v) < 0) uniq.push(v); });
+            S.tidyCfg = {
+              mins: uniq.length ? uniq : [5, 10, 15],
+              reward: clampNum((document.getElementById('edTidyReward') || {}).value, 0, 20, 3),
+              rewardLate: clampNum((document.getElementById('edTidyLate') || {}).value, 0, 20, 1),
+              music: !!(document.getElementById('edTidyMusic') || {}).checked
+            };
+            saveNow();
+            render({ keepScroll: true });
+            paintTidy(true);
+            UI.toast('정리시간 설정을 저장했어요', { emoji: '🧹', kind: 'good' });
+          } },
+        { label: '닫기', kind: 'ghost' }
+      ]
+    });
+  }
+
+  /* ⚡ 포켓몬 관리 */
+  function pkSettingsModal() {
+    if (!needParent('포켓몬 관리는 부모님 모드에서 바꿀 수 있어요')) return;
+    UI.modal({
+      size: 'wide',
+      title: '⚡ 포켓몬 관리',
+      bodyHTML:
+        '<div class="field"><label>레벨업에 필요한 별 개수</label>' +
+          '<input class="input" id="edPerLevel" type="number" min="10" max="1000" step="10" value="' + pkPerLevel() + '">' +
+          '<p class="help">기본 100개예요. 작게 넣으면 빨리 자라요(시험해 볼 때 좋아요).</p></div>' +
+        D.children.map(function (c) {
+          var p = pkOf(c.id);
+          var sp = PK.species[p.cur];
+          return '<div class="ed-block">' +
+            '<div class="ed-block-head"><b>' + c.emoji + ' ' + esc(c.name) + '</b>' +
+              '<span id="pkSetState-' + c.id + '">' + (sp ? esc(sp.ko) + ' Lv.' + pkLevel(p.fed) : '아직 알을 안 골랐어요') + ' · 별 ' + (S.stars[c.id] || 0) + '</span></div>' +
+            '<div class="pk-set-row">' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="10">별 ＋10</button>' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="-10">별 －10</button>' +
+              '<button type="button" class="btn btn-soft btn-sm" data-pk="choose" data-child="' + c.id + '">🥚 파트너 바꾸기</button>' +
+              '<button type="button" class="btn btn-danger btn-sm" data-pk="reset" data-child="' + c.id + '">↺ 처음부터</button>' +
+            '</div></div>';
+        }).join(''),
+      actions: [
+        { label: '저장', kind: 'primary', onClick: function () {
+            var v = clampNum((document.getElementById('edPerLevel') || {}).value, 10, 1000, 100);
+            S.pkCfg = { perLevel: v };
+            saveNow();
+            render({ keepScroll: true });
+            UI.toast('레벨업 별 ' + v + '개로 저장했어요 · 아이 태블릿에도 바로 보여요', { emoji: '⚡', kind: 'good', duration: 3200 });
+          } },
+        { label: '닫기', kind: 'ghost' }
+      ],
+      onOpen: function (wrap, close) {
+        function refreshState(cid) {
+          var el = document.getElementById('pkSetState-' + cid);
+          if (!el) return;
+          var p = pkOf(cid);
+          var sp = PK.species[p.cur];
+          el.textContent = (sp ? sp.ko + ' Lv.' + pkLevel(p.fed) : '아직 알을 안 골랐어요') + ' · 별 ' + (S.stars[cid] || 0);
+        }
+        wrap.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-pk]');
+          if (!b) return;
+          var act = b.getAttribute('data-pk');
+          var cid = b.getAttribute('data-child');
+          if (act === 'stars') {
+            var n = Number(b.getAttribute('data-n')) || 0;
+            S.stars[cid] = Math.max(0, (S.stars[cid] || 0) + n);
+            saveNow();
+            render({ keepScroll: true });
+            refreshState(cid);
+            UI.toast(childById(cid).name + ' 별 ' + (S.stars[cid]) + '개', { emoji: '⭐', kind: 'good', duration: 1400 });
+          } else if (act === 'choose') {
+            close();
+            setTimeout(function () { pkChooserModal(cid); }, 220);
+          } else if (act === 'reset') {
+            var px = pkOf(cid);
+            var sx = PK.species[px.cur];
+            UI.confirm('포켓몬을 처음부터 다시 키울까요?',
+              childById(cid).name + '의 ' + (sx ? sx.ko + '이(가) 알로 돌아가요. ' : '') +
+              '지금 모은 별 진행(' + pkProg(px.fed) + '/' + pkPerLevel() + ')은 사라지고, 도감 기록은 그대로 남아요.',
+              '처음부터', 'danger')
+              .then(function (ok) {
+                if (!ok) return;
+                var p2 = pkOf(cid);
+                p2.cur = 0; p2.fed = 0;
+                saveNow();
+                render({ keepScroll: true });
+                refreshState(cid);
+                UI.toast(childById(cid).name + '의 포켓몬을 처음부터 시작해요 🥚', { emoji: '⚡', kind: 'good' });
+              });
+          }
+        });
+      }
+    });
+  }
+
   /* ================= 이벤트 ================= */
   function onViewClick(e) {
     var el = e.target.closest('[data-act]');
@@ -3051,6 +4327,28 @@
       case 'read-letter': readLetter(el.getAttribute('data-id')); break;
       case 'quick-reply': sendReply(el.getAttribute('data-id'), el.getAttribute('data-text'), el.getAttribute('data-emoji')); break;
       case 'send-reply': sendReply(el.getAttribute('data-id')); break;
+
+      /* ✍️ 손글씨 편지 */
+      case 'hw-color': HW.color = el.getAttribute('data-color') || '#4A3F35'; HW.eraser = false; hwPaintTools(); break;
+      case 'hw-size': HW.size = Number(el.getAttribute('data-size')) || 7; HW.eraser = false; hwPaintTools(); break;
+      case 'hw-eraser': HW.eraser = !HW.eraser; hwPaintTools(); break;
+      case 'hw-clear': hwReset(); UI.toast('종이를 새로 폈어요', { emoji: '📄', duration: 1500 }); break;
+      case 'send-hand': sendHandLetter(); break;
+      case 'view-hw': viewHandwriting(el.getAttribute('data-id')); break;
+
+      /* 🌅 등교 시작 · 🧹 정리시간 */
+      case 'school-open': openSchoolMode(); break;
+      case 'tidy-start': startTidy(el.getAttribute('data-min'), el.getAttribute('data-id')); break;
+      case 'school-settings': schoolSettingsModal(); break;
+      case 'tidy-settings': tidySettingsModal(); break;
+      case 'pk-settings': pkSettingsModal(); break;
+      case 'edit-routines': setView('routine'); UI.toast(S.mode === 'parent' ? '할 일 탭에서 ＋ 할 일 추가 · 🗑️ 로 고쳐요' : '아침·저녁 할 일은 부모님 모드에서 고칠 수 있어요', { emoji: '✅', duration: 2800 }); break;
+
+      /* ⚡ 포켓몬 */
+      case 'pk-pick': pkPick(el.getAttribute('data-child'), Number(el.getAttribute('data-id'))); break;
+      case 'pk-feed': pkFeed(el.getAttribute('data-child'), Number(el.getAttribute('data-n'))); break;
+      case 'pk-chooser': pkChooserModal(el.getAttribute('data-child')); break;
+      case 'pk-test': pkTestStars(el.getAttribute('data-child')); break;
 
       case 'pick-dish': pickDishModal(el.getAttribute('data-slot')); break;
       case 'set-level': setMealLevel(el.getAttribute('data-child'), el.getAttribute('data-slot'), el.getAttribute('data-level')); break;
@@ -3275,6 +4573,7 @@
   var VIEWS = {
     home: renderHome,
     routine: renderRoutine,
+    pokemon: renderPokemon,
     praise: renderPraise,
     calendar: renderCalendar,
     mailbox: renderMailbox,
