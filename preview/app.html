@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/styles.css?v=72">
-<link rel="stylesheet" href="../css/fun.css?v=72">
+<link rel="stylesheet" href="../css/styles.css?v=73">
+<link rel="stylesheet" href="../css/fun.css?v=73">
 </head>
 <body>
 
@@ -45,64 +45,76 @@
 
 <div class="app" id="appShell">
 
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true">🏡</span>
-      <div class="brand-text">
-        <h1 id="appName">우리집 다모아</h1>
-        <p id="brandSub">오늘도 다 같이!</p>
+  <header class="topstack" id="topStack">
+
+    <!-- ① 맨 위 한 줄: 탭 + 모드 + 그만! 알림 (패드에서는 로고를 작게) -->
+    <div class="tabrow">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">🏡</span>
+        <div class="brand-text">
+          <h1 id="appName">우리집 다모아</h1>
+          <p id="brandSub">오늘도 다 같이!</p>
+        </div>
       </div>
-    </div>
 
-    <div class="clock" id="clock">
-      <div class="clock-in">
-        <span class="clock-date" id="clockDate">—</span>
-        <strong class="clock-time" id="clockTime">—</strong>
+      <nav class="tabs" id="tabs" aria-label="메뉴">
+        <button type="button" class="tab" data-view="home"><span>🏠</span><b>홈</b></button>
+        <button type="button" class="tab" data-view="routine"><span>✅</span><b>할 일</b></button>
+        <button type="button" class="tab" data-view="pokemon"><span>⚡</span><b>포켓몬</b></button>
+        <button type="button" class="tab" data-view="praise"><span>🌟</span><b>칭찬하기</b></button>
+        <button type="button" class="tab" data-view="calendar"><span>📅</span><b>우리 가족 일정</b></button>
+        <button type="button" class="tab" data-view="mailbox"><span>📮</span><b>우체통</b></button>
+        <button type="button" class="tab" data-view="health"><span>🍱</span><b>식판·건강</b></button>
+        <button type="button" class="tab" data-view="settings"><span>⚙️</span><b>설정</b></button>
+      </nav>
+
+      <div class="clock mini" id="miniClock" aria-hidden="true">
+        <span class="clock-time" id="miniClockTime">—</span>
       </div>
-    </div>
 
-    <div class="quick-bar" role="group" aria-label="바로가기">
-      <button type="button" class="qb-btn" id="quickMail" aria-label="우체통으로 가기">
-        <span class="qb-ico" aria-hidden="true">📮</span><span class="qb-label">우체통</span>
-      </button>
-      <button type="button" class="qb-btn tidy" id="quickTidy" aria-label="정리시간 시작">
-        <span class="qb-ico" aria-hidden="true">🧹</span><span class="qb-label">정리</span>
-      </button>
-    </div>
-
-    <div class="mode-bar">
-      <div class="mode-switch" role="group" aria-label="모드 선택">
-        <button type="button" class="mode-btn" data-mode="child" id="modeChild">
-          <span aria-hidden="true">🧒</span> 아이 모드
+      <div class="mode-bar">
+        <div class="mode-switch" role="group" aria-label="모드 선택">
+          <button type="button" class="mode-btn" data-mode="child" id="modeChild">
+            <span aria-hidden="true">🧒</span> 아이 모드
+          </button>
+          <button type="button" class="mode-btn" data-mode="parent" id="modeParent">
+            <span aria-hidden="true">🔒</span> 부모님
+          </button>
+        </div>
+        <button type="button" class="banner-btn" id="bannerBtn" aria-label="태블릿에 한마디 띄우기" hidden>
+          <span aria-hidden="true">📢</span><span>한마디</span>
         </button>
-        <button type="button" class="mode-btn" data-mode="parent" id="modeParent">
-          <span aria-hidden="true">🔒</span> 부모님
+        <button type="button" class="stop-timer" id="stopTimerBtn" aria-label="그만! 알림">
+          <span class="st-ico" aria-hidden="true">⏰</span><span class="st-label" id="stopTimerLabel">그만! 알림</span>
         </button>
       </div>
-      <button type="button" class="banner-btn" id="bannerBtn" aria-label="태블릿에 한마디 띄우기" hidden>
-        <span aria-hidden="true">📢</span><span>한마디</span>
-      </button>
-      <button type="button" class="stop-timer" id="stopTimerBtn" aria-label="그만! 알림">
-        <span class="st-ico" aria-hidden="true">⏰</span><span class="st-label" id="stopTimerLabel">그만! 알림</span>
-      </button>
     </div>
+
+    <!-- ② 홈 전용: 큰 시계 + 우체통·정리 + 2줄 날씨 (다른 탭에서는 숨김) -->
+    <div class="hero" id="hero">
+      <div class="hero-clock">
+        <div class="clock big" id="clock">
+          <span class="clock-date" id="clockDate">—</span>
+          <strong class="clock-time" id="clockTime">—</strong>
+        </div>
+        <div class="hero-quick" role="group" aria-label="바로가기">
+          <button type="button" class="qb-btn" id="quickMail" aria-label="우체통으로 가기">
+            <span class="qb-ico" aria-hidden="true">📮</span><span class="qb-label">우체통</span>
+          </button>
+          <button type="button" class="qb-btn tidy" id="quickTidy" aria-label="정리시간 시작">
+            <span class="qb-ico" aria-hidden="true">🧹</span><span class="qb-label">정리</span>
+          </button>
+        </div>
+      </div>
+      <div class="wx-head" id="wxHead" role="group" aria-label="오늘 날씨"></div>
+    </div>
+
   </header>
 
   <div class="sync-banner" id="syncBanner" hidden>
     <span id="syncBannerText"></span>
     <button type="button" class="link-btn" id="syncBannerRetry">다시 연결</button>
   </div>
-
-  <nav class="tabs" id="tabs" aria-label="메뉴">
-    <button type="button" class="tab" data-view="home"><span>🏠</span><b>홈</b></button>
-    <button type="button" class="tab" data-view="routine"><span>✅</span><b>할 일</b></button>
-    <button type="button" class="tab" data-view="pokemon"><span>⚡</span><b>포켓몬</b></button>
-    <button type="button" class="tab" data-view="praise"><span>🌟</span><b>칭찬하기</b></button>
-    <button type="button" class="tab" data-view="calendar"><span>📅</span><b>우리 가족 일정</b></button>
-    <button type="button" class="tab" data-view="mailbox"><span>📮</span><b>우체통</b></button>
-    <button type="button" class="tab" data-view="health"><span>🍱</span><b>식판·건강</b></button>
-    <button type="button" class="tab" data-view="settings"><span>⚙️</span><b>설정</b></button>
-  </nav>
 
   <!-- 🌅 등교 시작 중에만 보이는 남은 시간 바 (모든 탭 공통) -->
   <div class="school-bar" id="schoolBar" hidden>
@@ -140,13 +152,13 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="../js/data.js?v=72"></script>
-<script src="../js/storage.js?v=72"></script>
-<script src="../js/ui.js?v=72"></script>
-<script src="../js/art.js?v=72"></script>
-<script src="../js/weather.js?v=72"></script>
-<script src="../js/ntfy.js?v=72"></script>
-<script src="../js/app.js?v=72"></script>
+<script src="../js/data.js?v=73"></script>
+<script src="../js/storage.js?v=73"></script>
+<script src="../js/ui.js?v=73"></script>
+<script src="../js/art.js?v=73"></script>
+<script src="../js/weather.js?v=73"></script>
+<script src="../js/ntfy.js?v=73"></script>
+<script src="../js/app.js?v=73"></script>
 
 <script>
 /* 미리보기 전용 스텁 — 실제 가족 Firestore 문서는 읽지도 쓰지도 않습니다. */

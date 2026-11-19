@@ -1195,12 +1195,15 @@
       var now = new Date();
       var el = document.getElementById('clockDate');
       var et = document.getElementById('clockTime');
-      if (!el || !et) return;
-      el.textContent = (now.getMonth() + 1) + '월 ' + now.getDate() + '일 ' + UI.weekday(now) + '요일';
+      var mt = document.getElementById('miniClockTime');
+      var dateTxt = (now.getMonth() + 1) + '월 ' + now.getDate() + '일 ' + UI.weekday(now) + '요일';
       var h = now.getHours();
       var ampm = h < 12 ? '오전' : '오후';
       var hh = h % 12; if (hh === 0) hh = 12;
-      et.textContent = ampm + ' ' + hh + ':' + UI.pad(now.getMinutes());
+      var timeTxt = ampm + ' ' + hh + ':' + UI.pad(now.getMinutes());
+      if (el) el.textContent = dateTxt;
+      if (et) et.textContent = timeTxt;
+      if (mt) mt.textContent = timeTxt;
     }
     tick();
     setInterval(tick, 20000);
@@ -1359,7 +1362,7 @@
 
   /* ---- 상단 바 높이 → 탭 바가 딱 그 아래에 붙게 (헤더·탭이 본문을 가리는 문제 방지) ---- */
   function syncStickyTop() {
-    var bar = document.querySelector('.topbar');
+    var bar = document.getElementById('topStack') || document.querySelector('.topstack');
     if (!bar) return;
     var h = Math.round(bar.getBoundingClientRect().height);
     if (h > 0) document.documentElement.style.setProperty('--sticky-top', h + 'px');
@@ -1372,6 +1375,9 @@
     if (mp) mp.classList.toggle('active', S.mode === 'parent');
     var sub = document.getElementById('brandSub');
     if (sub) sub.textContent = S.mode === 'parent' ? ((S.actor || '부모님') + ' 모드 · 관리 중') : '아이 모드 · 오늘도 다 같이!';
+    /* 패드: 홈에서만 큰 시계·날씨 줄(#hero)을 보입니다 */
+    document.body.classList.toggle('on-home', view === 'home');
+    paintWeather();
     var mailTabBtn = document.querySelector('.tab[data-view="mailbox"]');
     if (mailTabBtn) mailTabBtn.classList.toggle('has-dot', unreadTotal() > 0);
     /* ⚙️ 설정 탭은 부모님 모드에서만 보입니다 (아이 모드에서는 숨김) */
@@ -1471,36 +1477,27 @@
 
   function renderHome() {
     var today = todayKey();
-    var doneTotal = 0, allTotal = 0;
-    D.children.forEach(function (c) {
-      var st = routineStats(c.id, today);
-      doneTotal += st.done; allTotal += st.total;
-    });
-    var left = allTotal - doneTotal;
-
     ensureWeather();
 
-    /* 2026-11-19 홈 개편
-       · 날씨는 얇은 한 줄 띠로 (중요 정보 자리를 비워 둠)
-       · 바로 아래 세 칸: ① 오늘·내일 일정 + 미니 달력 ② 민국·이준 현황 ③ 민국 알림장
-       · 「태블릿에 한마디」는 상단 📢 한마디 버튼(모달)으로만, 「다가오는 일정」 카드는
-         오늘·내일 일정과 겹쳐서 홈에서 뺐습니다 (전체 일정은 일정 탭에서). */
+    /* 2026-11-19 확정 개편 (참고 대시보드 IMG_7873 배치)
+       · 위: 탭 1줄 → 홈에서만 큰 시계 + 📮우체통/🧹정리 + 2줄 날씨 (헤더 안)
+       · 아래 두 열 — 왼쪽: 이번 달 미니 달력 → 오늘·내일 일정 → 민국·이준 현황
+                     오른쪽: 🏫 민국이 알림장(크게) → 엄마는 지금 · 아빠는 지금 네모 카드
+       · 홈 아래 타일·약·장보기는 걷어냈습니다 (각 탭/상단 바로가기/식판·건강에 있음). */
     return '' +
-      weatherStripHTML() +
+      '<div class="wx-strip-slot">' + weatherStripHTML() + '</div>' +
 
-      '<div class="status-rail home-status">' + D.parents.map(statusChipHTML).join('') + '</div>' +
-
-      '<div class="home-main">' +
-        '<div class="hm-col hm-cal">' + homeTodayCardHTML() + '</div>' +
-        '<div class="hm-col hm-kids"><div class="kids-row">' + D.children.map(kidCardHTML).join('') + '</div></div>' +
-        '<div class="hm-col hm-notice">' + noticeCardHTML() + '</div>' +
-      '</div>' +
-
-      '<div class="tile-grid">' + homeTilesHTML(left) + '</div>' +
-
-      modeStripHTML() +
-
-      '<div class="home-side">' + medHomeCardHTML() + shoppingCardHTML() + '</div>';
+      '<div class="home-main2">' +
+        '<div class="hm-col hm-left">' +
+          '<div class="hm-cal">' + homeMonthCardHTML() + '</div>' +
+          '<div class="hm-day">' + homeDayCardHTML() + '</div>' +
+          '<div class="kids-compact" role="group" aria-label="민국·이준 현황">' + D.children.map(kidCompactHTML).join('') + '</div>' +
+        '</div>' +
+        '<div class="hm-col hm-right">' +
+          noticeCardHTML() +
+          '<div class="parents-grid" role="group" aria-label="엄마·아빠 지금">' + D.parents.map(parentSquareHTML).join('') + '</div>' +
+        '</div>' +
+      '</div>';
   }
 
   /* ---- 홈: 오늘 날씨 · 옷차림 · 시간대별 ---- */
@@ -1526,9 +1523,52 @@
         '</div>';
       }).join('') + '</div>';
   }
-  /* ---- 홈: 날씨 한 줄 띠 (컴팩트) ----
+  /* ---- 홈: 날씨 한 줄 띠 (폰 전용) ----
      예전의 큰 날씨 카드(지역·습도·강수·시간대 6칸·옷차림)를
-     현재 기온 + 최저/최고 + 미세먼지 + 시간대 4칸 + 옷차림 한 줄로 줄였습니다. */
+     현재 기온 + 최저/최고 + 미세먼지 + 시간대 4칸 + 옷차림 한 줄로 줄였습니다.
+     패드(≥1000px)에서는 헤더의 2줄 날씨(#wxHead)로 옮겨 가고 이 띠는 숨김니다. */
+  function heroWeatherHTML() {
+    var w = homeWeather;
+    if (!w) {
+      return '<div class="wx-hero loading"><span class="wx-load">🌤 오늘 날씨 불러오는 중…</span></div>';
+    }
+    var g10 = w.pm10Grade;
+    var val = function (v, unit) { return v == null ? '—' : v + (unit || ''); };
+    var hours = (w.hours || []).slice(0, 4);
+    return '<div class="wx-hero ' + (w.kind || 'cloud') + '">' +
+        '<div class="wx-hero-line1">' +
+          (g10 ? '<span class="wx-h-dust dust ' + g10.cls + '"><i aria-hidden="true">🌫</i>미세 <b>' + g10.ico + ' ' + esc(g10.label) + '</b></span>' : '') +
+          '<span class="wx-h-now">' +
+            '<span class="wx-h-art" aria-hidden="true">' + wxEmoji(w.kind, true, new Date().getHours()) + '</span>' +
+            '<b class="wx-h-temp">' + val(w.temp) + '<small>°</small></b>' +
+            '<span class="wx-h-txt">' + esc(w.label || '') + '</span>' +
+          '</span>' +
+          '<span class="wx-h-range">최저 <b>' + val(w.tmin, '°') + '</b> · 최고 <b>' + val(w.tmax, '°') + '</b></span>' +
+        '</div>' +
+        '<div class="wx-hero-line2">' +
+          (hours.length
+            ? '<div class="wx-h-hours">' + hours.map(function (h) {
+                return '<span class="wx-h-hr' + (h.now ? ' now' : '') + '">' +
+                    '<i>' + (h.now ? '지금' : h.hour + '시') + '</i>' +
+                    '<em aria-hidden="true">' + wxEmoji(h.kind, h.day, h.hour) + '</em>' +
+                    '<b>' + (h.temp == null ? '—' : h.temp + '°') + '</b>' +
+                  '</span>';
+              }).join('') + '</div>'
+            : '') +
+          (w.tip ? '<span class="wx-h-tip">👕 ' + esc(w.tip) + '</span>' : '') +
+        '</div>' +
+      '</div>';
+  }
+  /* 헤더 날씨 칸(#wxHead)을 채웁니다 — 패드 전용, 다른 탭에서도 계속 보여요 */
+  function paintWeather() {
+    var el = document.getElementById('wxHead');
+    if (!el) return;
+    var html = heroWeatherHTML();
+    if (el.__html === html) return;
+    el.__html = html;
+    el.innerHTML = html;
+  }
+
   function weatherStripHTML() {
     var w = homeWeather;
     if (!w) {
@@ -1604,6 +1644,7 @@
       Weather.load(function (d) {
         if (!d) return;
         homeWeather = d;
+        paintWeather();
         if (view === 'home') render({ keepScroll: true });
       });
     }, 0);
@@ -1676,11 +1717,82 @@
     return '<div class="day-block">' +
       '<div class="day-head"><b>' + label + '</b><span>' + esc(UI.dateKo(key)) + '</span></div>' +
       (evs.length
-        ? evs.slice(0, 2).map(function (e) { return dayEvRowHTML(label, e); }).join('') +
-          (evs.length > 2 ? '<p class="day-more">+' + (evs.length - 2) + '개 더 있어요</p>' : '')
+        ? evs.slice(0, 3).map(function (e) { return dayEvRowHTML(label, e); }).join('') +
+          (evs.length > 3 ? '<p class="day-more">+' + (evs.length - 3) + '개 더 있어요</p>' : '')
         : '<p class="day-none">일정이 없어요' + (label === '오늘' ? ' 🍃' : '') + '</p>') +
     '</div>';
   }
+  /* ---- 홈: 이번 달 미니 달력 카드 (누르면 우리 가족 일정 탭) ---- */
+  function homeMonthCardHTML() {
+    var now = new Date();
+    var monthLabel = now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월';
+    return '<div class="card soft-sun month-card">' +
+      cardHead('📅', '이번 달 달력', monthLabel,
+        '<button type="button" class="link-btn" data-act="goto" data-view="calendar">달력 크게 ›</button>') +
+      '<div class="month-cal" aria-label="이번 달 미니 달력">' + miniCalendarHTML() + '</div>' +
+    '</div>';
+  }
+
+  /* ---- 홈: 오늘 · 내일 일정 ---- */
+  function homeDayCardHTML() {
+    var tKey = todayKey();
+    var tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+    var mKey = todayKey(tmr);
+    var tEvs = eventsOn(tKey), mEvs = eventsOn(mKey);
+    return '<div class="card soft-mint day-card">' +
+      cardHead('🗓️', '오늘 · 내일 일정', '',
+        '<button type="button" class="link-btn" data-act="goto" data-view="calendar">전체 보기 ›</button>') +
+      '<div class="day-cols">' +
+        '<div class="day-list">' +
+          dayBlockHTML('오늘', tKey, tEvs) +
+          dayBlockHTML('내일', mKey, mEvs) +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /* ---- 홈: 민국·이준 현황 (아담한 콤팩트 카드) ---- */
+  function kidCompactHTML(c) {
+    var today = todayKey();
+    var st = routineStats(c.id, today);
+    var pct = st.total ? Math.round(st.done / st.total * 100) : 0;
+    var p = pkOf(c.id);
+    var sp = p.line ? pkSpecies(p) : null;
+    var lvl = pkLevel(p.fed);
+    var per = pkPerLevel() || 100;
+    var prog = Math.max(0, Math.min(per, pkProg(p.fed)));
+    var pkPct = Math.round(prog / per * 100);
+    return '<button type="button" class="kid-mini ' + c.color + '" data-act="pick-kid" data-id="' + c.id + '" aria-pressed="false"' +
+        ' aria-label="' + esc(c.name) + ' 오늘 ' + st.done + '/' + st.total + ' · ' + esc(c.name) + ' 할 일 보기">' +
+        '<span class="km-ava">' + Art.kid(c.id) + '</span>' +
+        '<span class="km-body">' +
+          '<span class="km-top">' +
+            '<b class="km-name">' + esc(c.name) + '</b>' +
+            '<span class="km-star">⭐ ' + (S.stars[c.id] || 0) + '</span>' +
+            '<span class="km-do">✅ ' + st.done + '/' + st.total + '</span>' +
+          '</span>' +
+          '<span class="km-pk">' +
+            '<em>⚡ ' + (p.line ? (sp ? esc(sp.ko) : '🥚 알') + ' <b>Lv.' + lvl + '</b>' : '알 고르기') + '</em>' +
+            '<i class="km-pk-bar" aria-hidden="true"><b style="width:' + pkPct + '%"></b></i>' +
+          '</span>' +
+          '<i class="km-bar" aria-hidden="true"><b style="width:' + pct + '%"></b></i>' +
+        '</span>' +
+      '</button>';
+  }
+
+  /* ---- 홈: 엄마는 지금 · 아빠는 지금 네모 카드 ---- */
+  function parentSquareHTML(p) {
+    var st = statusOf(p.id);
+    var label = statusLabel(st);
+    return '<button type="button" class="parent-sq ' + p.id + (label ? ' set' : '') + '" data-act="pick-status" data-id="' + p.id + '"' +
+        ' aria-label="' + esc(p.name) + '는 지금 ' + esc(label || '상태를 알려 주세요') + '">' +
+        '<span class="ps-ava "' + '>' + p.emoji + '</span>' +
+        '<b class="ps-name">' + esc(p.name) + '는 지금</b>' +
+        '<small class="ps-txt">' + (label ? esc(label) : '상태를 말해 주세요') + '</small>' +
+        (st && st.at ? '<span class="ps-ago">' + UI.ago(st.at) + '</span>' : '<span class="ps-ago">✎ 누르기</span>') +
+      '</button>';
+  }
+
   function homeTodayCardHTML() {
     var tKey = todayKey();
     var tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
@@ -2196,22 +2308,21 @@
       var st = routineStats(k.id, today);
       doneTotal += st.done; allTotal += st.total;
     });
-    return timeBannerHTML() +
-      modeStripHTML() +
-      '<div class="card soft-mint routine-card">' +
-        '<div class="routine-head">' +
-          '<strong>✅ 오늘 할 일</strong>' +
-          '<div class="growth-toggle">' + slots.map(function (s) {
-            return '<button type="button" class="chip' + (routineSlot === s.key ? ' active' : '') + '" data-act="pick-routine-slot" data-slot="' + s.key + '">' + s.label + '</button>';
-          }).join('') + '</div>' +
-          '<span style="flex:1"></span>' +
-          '<span class="badge sun">오늘 ' + doneTotal + '/' + allTotal + '</span>' +
-        '</div>' +
-        '<p class="help">두 아이를 한 화면에서 바로 체크해요. 오른쪽 동그라미를 누르면 바로 완료되고 별 ⭐ 1개가 쌓여요.</p>' +
-        (S.mode !== 'parent' && schoolDeadlinePassed()
-          ? '<p class="help" style="margin-top:6px;color:#8C8378">🔒 ' + esc(deadlineText()) + '이 지나서 아침 체크는 잠겼어요. 부모님 모드에서는 언제든 체크할 수 있어요.</p>'
-          : '') +
+    /* 2026-11-19 개편: 시간대 배너와 🧹 정리시간을 한 줄에 나란히 두고,
+       큰「✅ 오늘 할 일」설명 상자를 없애 아이들 할 일 목록이 바로 위로 올라오게 했습니다. */
+    return '<div class="routine-top">' +
+        '<div class="rt-banner">' + timeBannerHTML() + '</div>' +
+        '<div class="rt-tidy">' + modeStripHTML('inline') + '</div>' +
       '</div>' +
+      '<div class="routine-slots">' +
+        '<div class="growth-toggle">' + slots.map(function (s) {
+          return '<button type="button" class="chip' + (routineSlot === s.key ? ' active' : '') + '" data-act="pick-routine-slot" data-slot="' + s.key + '">' + s.label + '</button>';
+        }).join('') + '</div>' +
+        '<span class="rs-total">✅ 오늘 ' + doneTotal + '/' + allTotal + '</span>' +
+      '</div>' +
+      (S.mode !== 'parent' && schoolDeadlinePassed()
+        ? '<p class="routine-lockline">🔒 ' + esc(deadlineText()) + '이 지나서 아침 체크는 잠겼어요 · 부모님 모드는 언제든 체크할 수 있어요</p>'
+        : '') +
       '<div class="duo-grid">' + D.children.map(routineKidCardHTML).join('') + '</div>' +
       '<div class="lock-note">🔒 완료한 일은 부모님 모드에서 되돌릴 수 있어요. 완료할 때마다 별 ⭐ 1개가 쌓여요.</div>';
   }
@@ -3130,21 +3241,24 @@
         '</div>' +
       '</div>' +
 
-      '<div class="card soft-lav">' +
-        '<div class="routine-head">' +
-          '<strong style="font-size:15px">📏 키 · 몸무게</strong>' +
-          D.children.map(function (k) {
-            return '<button type="button" class="chip ' + k.color + (k.id === growthChild ? ' active' : '') + '" data-act="pick-growth-child" data-id="' + k.id + '">' +
-              k.emoji + ' ' + esc(k.name) + '</button>';
-          }).join('') +
-          '<span style="flex:1"></span>' +
-          '<div class="growth-toggle">' +
-            '<button type="button" class="chip' + (growthMetric === 'height' ? ' active' : '') + '" data-act="growth-metric" data-metric="height">키</button>' +
-            '<button type="button" class="chip' + (growthMetric === 'weight' ? ' active' : '') + '" data-act="growth-metric" data-metric="weight">몸무게</button>' +
+      '<div class="health-bottom">' +
+        '<div class="card soft-lav growth-card">' +
+          '<div class="routine-head">' +
+            '<strong style="font-size:15px">📏 키 · 몸무게</strong>' +
+            D.children.map(function (k) {
+              return '<button type="button" class="chip ' + k.color + (k.id === growthChild ? ' active' : '') + '" data-act="pick-growth-child" data-id="' + k.id + '">' +
+                k.emoji + ' ' + esc(k.name) + '</button>';
+            }).join('') +
+            '<span style="flex:1"></span>' +
+            '<div class="growth-toggle">' +
+              '<button type="button" class="chip' + (growthMetric === 'height' ? ' active' : '') + '" data-act="growth-metric" data-metric="height">키</button>' +
+              '<button type="button" class="chip' + (growthMetric === 'weight' ? ' active' : '') + '" data-act="growth-metric" data-metric="weight">몸무게</button>' +
+            '</div>' +
+            (S.mode === 'parent' ? '<button type="button" class="btn btn-soft btn-sm" data-act="add-growth">＋ 기록</button>' : '') +
           '</div>' +
-          (S.mode === 'parent' ? '<button type="button" class="btn btn-soft btn-sm" data-act="add-growth">＋ 기록</button>' : '') +
+          growthBlock(c, growthMetric) +
         '</div>' +
-        growthBlock(c, growthMetric) +
+        shoppingCardHTML() +
       '</div>';
   }
 
@@ -3742,7 +3856,7 @@
         '<p class="help">등교 시각과 등교 준비 항목, 정리시간 버튼·노래, 포켓몬 레벨업 별을 여기서 바로 고쳐요.<br>' +
         '저장하면 <b>아이 태블릿에도 새로고침 없이</b> 바로 보여요.</p>' +
         '<div class="admin-grid">' +
-          '<button type="button" class="admin-btn" data-act="school-settings"><span>🌅</span><b>등교 시작 설정</b><small>' + esc(S.schoolTime) + ' · 준비 ' + schoolItems(D.children[0].id).length + '개</small></button>' +
+          '<button type="button" class="admin-btn" data-act="school-settings"><span>🌅</span><b>등교 시작 설정</b><small>' + esc(S.schoolTime) + ' · 준비 ' + schoolPrepItems(D.children[0].id).length + '개</small></button>' +
           '<button type="button" class="admin-btn" data-act="tidy-settings"><span>🧹</span><b>정리시간 설정</b><small>' + ((S.tidyCfg && S.tidyCfg.mins) || [5, 10, 15]).join('·') + '분 · 보상 없이 축하만</small></button>' +
           '<button type="button" class="admin-btn" data-act="pk-settings"><span>⚡</span><b>포켓몬 관리</b><small>별 ' + pkPerLevel() + '개 = 진화 1단계</small></button>' +
           '<button type="button" class="admin-btn" data-act="edit-routines"><span>✅</span><b>아침·저녁 할 일</b><small>할 일 탭에서 바로 고치기</small></button>' +
@@ -3969,10 +4083,22 @@
   function schoolItems(childId) {
     return routineItems(childId).morning.slice();
   }
+  /* 등교 화면에 보이는 준비 = 아침 할 일에서 '스스로 일어나기'를 뺄 나머지(보통 4개).
+     일어나기는 일반 할 일 목록에서 그대로 체크해요. */
+  function isWakeItem(i) {
+    var id = String((i && i.id) || '');
+    var label = String((i && i.label) || '');
+    return /-wake/.test(id) || /일어나|기상/.test(label);
+  }
+  function schoolPrepItems(childId) {
+    var all = schoolItems(childId);
+    var prep = all.filter(function (i) { return !isWakeItem(i); });
+    return prep.length ? prep : all;
+  }
   function schoolAllDone(childId) {
     var today = todayKey();
-    var morning = schoolItems(childId);
-    return morning.length > 0 && morning.every(function (i) { return isDone(i.id, today); });
+    var prep = schoolPrepItems(childId);
+    return prep.length > 0 && prep.every(function (i) { return isDone(i.id, today); });
   }
   function schoolBonusGiven(childId) {
     var t = todayKey();
@@ -4011,7 +4137,7 @@
     var ms = msLeftToSchool();
     var today = todayKey();
     var counts = D.children.map(function (c) {
-      var list = schoolItems(c.id);
+      var list = schoolPrepItems(c.id);
       var d = list.filter(function (i) { return isDone(i.id, today); }).length;
       return c.name + ' ' + d + '/' + list.length + (list.length && d >= list.length ? ' ✓' : '');
     });
@@ -4089,7 +4215,7 @@
   }
   function schoolRowHTML(c, locked) {
     var today = todayKey();
-    var items = schoolItems(c.id);
+    var items = schoolPrepItems(c.id);
     var done = items.filter(function (i) { return isDone(i.id, today); }).length;
     var pct = items.length ? Math.round(done / items.length * 100) : 0;
     var all = items.length > 0 && done >= items.length;
@@ -4125,7 +4251,7 @@
       '<div class="sv-foot">' +
         '<p class="sv-note">' + (locked
           ? '🔒 ' + esc(deadlineText()) + '이 지나서 아침 체크는 잠겼어요. 부모님 모드에서는 언제든 체크할 수 있어요.'
-          : '하나 누를 때마다 별 ⭐ 1개! 다섯 개를 다 챙기면 보너스 별 ' + schoolRewardStars() + '개가 더 쌓여요.') + '</p>' +
+          : '하나 누를 때마다 별 ⭐ 1개! ' + schoolPrepItems(D.children[0].id).length + '개를 다 챙기면 보너스 별 ' + schoolRewardStars() + '개가 더 쌓여요.') + '</p>' +
         (bothDone ? '<button type="button" class="btn btn-primary" data-act="school-go">학교 가자! 🎒</button>' : '') +
       '</div>' +
     '</div>';
@@ -5566,15 +5692,15 @@
   /* 홈 · 할 일 위쪽의 🧹 정리시간 버튼
      · 🌅 등교 시작은 08:00~08:30 자동 실행이라 평소 화면에는 두지 않습니다
        (부모님은 설정 → 🎛️ 새 기능 관리 → 등교 시작 설정에서 미리 볼 수 있어요). */
-  function modeStripHTML() {
-    return '<div class="mode-strip">' +
-      '<div class="ms-tidy">' +
+  function modeStripHTML(variant) {
+    var tidy = '<div class="ms-tidy">' +
         '<span class="ms-tidy-label">🧹 정리시간</span>' +
         ((S.tidyCfg && S.tidyCfg.mins && S.tidyCfg.mins.length) ? S.tidyCfg.mins : [5, 10, 15]).map(function (m) {
           return '<button type="button" class="ms-min" data-act="tidy-start" data-min="' + m + '">' + m + '분</button>';
         }).join('') +
-      '</div>' +
-    '</div>';
+      '</div>';
+    if (variant === 'inline') return tidy;
+    return '<div class="mode-strip">' + tidy + '</div>';
   }
 
   /* =========================================================
@@ -5638,6 +5764,7 @@
           '<div class="field"><label>남은 시간 막대 시작</label><input class="input" id="edSchoolStart" type="time" value="' + esc(S.schoolStart) + '"></div>' +
         '</div>' +
         '<div class="field"><label>등교 준비를 다 했을 때 보너스 별</label><input class="input" id="edSchoolReward" type="number" min="0" max="20" value="' + S.schoolReward + '"></div>' +
+        '<p class="help" style="margin:2px 0 10px">🌅 등교 화면에는 <b>스스로 일어나기</b>를 빼고 나머지 아침 준비만 보여요(보통 4개). 스스로 일어나기는 ✅ 할 일 목록에서 체크해요.</p>' +
         D.children.map(function (c) {
           var items = schoolItems(c.id);
           return '<div class="ed-block">' +
@@ -6291,7 +6418,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 72;             /* index.html 의 ?v=72 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 73;             /* index.html 의 ?v=73 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
