@@ -1220,7 +1220,7 @@
   .sb-btn { padding: 9px 11px 11px; border-radius: 18px; gap: 8px 8px; }
   .sb-top { flex-wrap: nowrap; }
   .sb-kids { font-size: 10.5px; color: #6E5F4C; }
-  .sb-runner { top: 50%; font-size: 20px; }
+  .sb-runner { display: none; }
   .sb-left { font-size: 30px; }
   .sb-say { font-size: 12px; }
   .sb-kids { font-size: 11px; }
