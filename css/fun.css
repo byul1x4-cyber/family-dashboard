@@ -3048,3 +3048,19 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   body.on-home .hero-brand { justify-self: start; width: auto; max-width: 46%; }
   body.on-home .hero-clock { margin-left: auto; }
 }
+
+/* ---- 브랜드가 잘리지 않게: 글자·포켓볼·시계 여백 미세 조정 ---- */
+@media (min-width: 1000px) {
+  body.on-home .hero-brand { gap: 5px; max-width: none; }
+  body.on-home .hero-brand b { font-size: 18px; }
+  body.on-home .pb-ico { width: 24px; height: 24px; }
+  body.on-home .hero-clock { gap: 6px; }
+  .clock.big .clock-time { font-size: 46px; }
+  .clock.big { padding: 3px 12px 4px; }
+  body.on-home .hero-quick { width: 84px; }
+  body.on-home .hero-quick .qb-btn,
+  body.on-home .hero-quick .stop-timer { font-size: 11.5px; padding: 4px 6px; gap: 3px; }
+  body.on-home .hero-quick .qb-ico,
+  body.on-home .hero-quick .st-ico { font-size: 13px; }
+  body.on-home .hero-quick .stop-timer .st-label { font-size: 11px; }
+}
