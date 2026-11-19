@@ -1002,13 +1002,13 @@
    ========================================================= */
 
 /* ---- 모든 탭 위 남은 시간 바 ---- */
-.school-bar { margin: 2px 0 10px; }
+.school-bar { margin: 0 0 8px; }
 .school-bar[hidden] { display: none; }
 .sb-btn {
   width: 100%;
   display: grid;
-  gap: 7px;
-  padding: 10px 14px 12px;
+  gap: 6px;
+  padding: 8px 14px 10px;
   border-radius: 22px;
   border: 3px solid #fff;
   background: linear-gradient(160deg, #FFFDF2, #FFF4DC 62%, #FFEFF3);
@@ -1080,17 +1080,17 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  padding: 10px 14px;
-  margin-bottom: 10px;
+  padding: 7px 13px;
+  margin-bottom: 8px;
   border-radius: 22px;
   border: 3px solid #fff;
   background: linear-gradient(160deg, #FFFDF4, #FFF3DC);
   box-shadow: 0 6px 18px rgba(200, 165, 110, .16);
 }
 .sv-h1 { display: flex; align-items: center; gap: 9px; min-width: 0; }
-.sv-ico { font-size: 30px; line-height: 1; }
+.sv-ico { font-size: 26px; line-height: 1; }
 .sv-h1t { display: flex; flex-direction: column; min-width: 0; }
-.sv-h1t b { font-family: var(--font-round); font-weight: 400; font-size: 22px; color: #6B4A08; letter-spacing: 0; }
+.sv-h1t b { font-family: var(--font-round); font-weight: 400; font-size: 20px; color: #6B4A08; letter-spacing: 0; }
 .sv-h1t small { font-size: 12px; font-weight: 700; color: #A0763A; }
 .sv-actions { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
 .sv-all {
@@ -1102,13 +1102,13 @@
   font-weight: 800;
   color: #8A5A10;
 }
-.sv-foot { margin-top: 4px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sv-foot { margin-top: 2px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sv-note { flex: 1; min-width: 200px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
 
 /* ---- 아이 한 줄 (민국 / 이준) ---- */
 .sc-row {
-  margin-bottom: 13px;
-  padding: 9px 12px 12px;
+  margin-bottom: 9px;
+  padding: 7px 10px 8px;
   border-radius: 26px;
   border: 3px solid #fff;
   background: linear-gradient(165deg, #F2FCF7, #FFFFFF 68%);
@@ -1116,7 +1116,7 @@
 }
 .sc-row.coral { background: linear-gradient(165deg, #FFF5F1, #FFFFFF 68%); }
 .sc-row.all { border-color: #FFE9A8; background: linear-gradient(165deg, #FFFBEA, #FFFFFF 68%); }
-.sc-rowhead { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.sc-rowhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .sc-rowhead b { font-size: 17px; }
 .sc-row-badge { font-size: 11.5px; font-weight: 800; color: #8A6412; background: #FFF1C9; border-radius: 999px; padding: 3px 8px; }
 .sc-rowpct { margin-left: auto; font-size: 12.5px; font-weight: 800; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
@@ -1130,7 +1130,7 @@
   display: grid;
   grid-template-rows: auto auto auto;
   gap: 0;
-  padding: 7px 7px 9px;
+  padding: 5px 5px 6px;
   border-radius: 22px;
   border: 3px solid #fff;
   background: linear-gradient(#FFFFFF, #FFFCF4);
@@ -1158,11 +1158,11 @@
   font-weight: 900;
   box-shadow: 0 3px 8px rgba(180, 140, 80, .2);
 }
-.scard-body { display: grid; justify-items: center; gap: 5px; padding: 7px 2px 0; }
-.scard-title { font-size: 14px; font-weight: 800; color: var(--ink); line-height: 1.22; word-break: keep-all; }
+.scard-body { display: grid; justify-items: center; gap: 3px; padding: 5px 2px 0; }
+.scard-title { font-size: 13.5px; font-weight: 800; color: var(--ink); line-height: 1.2; word-break: keep-all; }
 .scard-cta {
   display: inline-block;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border-radius: 999px;
   background: #FFF3D6;
   color: #A87A20;
