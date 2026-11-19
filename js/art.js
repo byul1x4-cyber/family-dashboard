@@ -292,7 +292,7 @@ window.Art = (function () {
     var shorts = o.shorts || '#7E9AD8';
     var shoe = '#5B6C93';
     var s = '';
-    var head = '<g transform="scale(.72) translate(-50,-50)">' + schFace(c) + '</g>';
+    var head = '<g transform="translate(0,-87) scale(.72) translate(-50,-50)">' + schFace(c) + '</g>';
     var armL = function (up) {
       return up
         ? '<g transform="rotate(24 -18 -62)"><rect x="-25" y="-94" width="10" height="34" rx="5" fill="' + c.shirt + '"/><circle cx="-20" cy="-94" r="5.6" fill="' + c.skin + '"/></g>'
