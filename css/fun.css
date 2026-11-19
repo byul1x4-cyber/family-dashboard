@@ -3240,3 +3240,39 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   body.on-home .hero-quick .st-ico { font-size: 16px; }
   body.on-home .hero-quick .stop-timer .st-label { font-size: 12px; }
 }
+
+/* ---- 시계 최종: 배경·테두리·그림자 없이, 날짜 가운데, 오전/오후 작게 + 숫자 크게 ---- */
+@media (min-width: 1000px) {
+  .clock.big {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 0;
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .clock.big .clock-date { text-align: center; font-size: 14.5px; color: #A08152; }
+  .clock.big .clock-time {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+    font-size: inherit;
+  }
+  .clock.big .ct-ampm { font-size: 18px; font-weight: 800; color: #8A6A3C; letter-spacing: 0; }
+  .clock.big .ct-num {
+    font-family: var(--font-round);
+    font-weight: 400;
+    font-size: 58px;
+    line-height: 1;
+    color: #4B3410;
+    letter-spacing: -1px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+@media (min-width: 1000px) and (max-height: 740px) {
+  .clock.big .ct-num { font-size: 50px; }
+  .clock.big .ct-ampm { font-size: 16px; }
+}

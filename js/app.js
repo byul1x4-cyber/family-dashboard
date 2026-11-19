@@ -1202,7 +1202,10 @@
       var hh = h % 12; if (hh === 0) hh = 12;
       var timeTxt = ampm + ' ' + hh + ':' + UI.pad(now.getMinutes());
       if (el) el.textContent = dateTxt;
-      if (et) et.textContent = timeTxt;
+      if (et) {
+        /* 오전/오후는 작게, 시간 숫자만 크게 */
+        et.innerHTML = '<span class="ct-ampm">' + ampm + '</span><span class="ct-num">' + hh + ':' + UI.pad(now.getMinutes()) + '</span>';
+      }
       if (mt) mt.textContent = timeTxt;
     }
     tick();
