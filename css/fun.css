@@ -3098,3 +3098,12 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
 .notice-card .notice-list::-webkit-scrollbar { width: 5px; }
 .notice-card .notice-list::-webkit-scrollbar-thumb { background: #EBDDC4; border-radius: 999px; }
 .notice-card .notice-list::-webkit-scrollbar-track { background: transparent; }
+
+/* ---- 진행 막대 얇게 · 타이머가 돌 때만 탭 줄에 표시 ---- */
+@media (min-width: 1000px) {
+  .routine-kid .progress { height: 6px; }
+  .tabrow .stop-timer.running { display: inline-flex !important; }
+}
+@media (max-width: 999px) {
+  .tabrow .stop-timer.running { display: inline-flex !important; }
+}
