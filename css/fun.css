@@ -2372,3 +2372,13 @@
 .sb-runner { line-height: 0; animation: tbarHop .58s ease-in-out infinite; }
 .sb-runner img { width: 26px; height: 26px; display: block; }
 .sb-flag { position: absolute; right: -4px; top: 50%; transform: translateY(-50%); font-size: 15px; line-height: 1; }
+
+/* ---- 홈 왼쪽: 오늘·내일 일정을 나란히 (패드) → 한 화면에 넉넉히 ---- */
+@media (min-width: 1000px) {
+  .hm-day .day-list { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: start; }
+  .hm-day .day-block { padding: 6px 9px 7px; }
+  .hm-day .day-ev .de-title { font-size: 13.5px; }
+  .hm-day .day-ev { gap: 6px; }
+  .hm-day .day-ev .de-time { font-size: 11px; padding: 1px 6px; }
+  .hm-day .day-none { font-size: 12.5px; }
+}
