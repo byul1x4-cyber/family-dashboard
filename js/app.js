@@ -3985,8 +3985,8 @@
      · 캔버스 하나에 모든 별을 그려 빠르게 연타해도 렉이 없어요.
      · 동시에 살아 있는 별은 MAX 개까지만 (넘치면 오래된 별부터 정리). */
   var pkFx = (function () {
-    var cv = null, ctx = null, parts = [], raf = 0, W = 0, H = 0, last = 0;
-    var MAX = 420;
+    var cv = null, ctx = null, parts = [], raf = 0, W = 0, H = 0, lastT = 0;
+    var MAX = 460;
     var COLORS = ['#FFD84D', '#FFC13B', '#FFF3B0', '#FF9AD5', '#9BE7FF', '#FFFFFF', '#FFB84D'];
     function ensure() {
       if (cv && cv.isConnected) { if (!ctx) ctx = cv.getContext('2d'); return; }
@@ -4025,25 +4025,26 @@
     }
     function kick() {
       if (raf) return;
-      last = 0;
+      lastT = 0;
       raf = requestAnimationFrame(tick);
     }
+    /* 1초 기준으로 움직여요 — 화면 주사율이 달라도 별이 너무 빨리 사라지지 않습니다 */
     function tick(t) {
       raf = 0;
       if (!ctx) return;
-      var dt = last ? Math.min(2.6, (t - last) / 16.67) : 1;
-      last = t;
+      var dt = lastT ? Math.min(0.06, (t - lastT) / 1000) : 0.016;
+      lastT = t;
       ctx.clearRect(0, 0, W, H);
       for (var i = parts.length - 1; i >= 0; i--) {
         var p = parts[i];
         p.life += dt;
         p.vy += p.g * dt;
-        p.vx *= 0.995;
+        p.vx *= (1 - 0.8 * dt);
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.rot += p.vr * dt;
         var k = 1 - p.life / p.ttl;
-        if (k <= 0 || p.y > H + 50 || p.x < -60 || p.x > W + 60) { parts.splice(i, 1); continue; }
+        if (k <= 0 || p.y > H + 60 || p.x < -80 || p.x > W + 80) { parts.splice(i, 1); continue; }
         ctx.globalAlpha = k > 0.7 ? 1 : Math.max(0, k / 0.7);
         ctx.fillStyle = p.color;
         if (p.kind === 'dot') {
@@ -4051,12 +4052,12 @@
           ctx.arc(p.x, p.y, p.r * 0.42, 0, 6.283);
           ctx.fill();
         } else {
-          drawStar(p.x, p.y, p.r * (0.55 + 0.45 * k), p.rot);
+          drawStar(p.x, p.y, p.r * (0.6 + 0.4 * k), p.rot);
         }
       }
       ctx.globalAlpha = 1;
       if (parts.length) raf = requestAnimationFrame(tick);
-      else { ctx.clearRect(0, 0, W, H); last = 0; }
+      else { ctx.clearRect(0, 0, W, H); lastT = 0; }
     }
     /* 한 점에서 사방으로 터지는 별 */
     function burst(cx, cy, n, opts) {
@@ -4066,19 +4067,19 @@
       var power = opts.power || 1;
       for (var i = 0; i < n; i++) {
         var ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 2;
-        var sp = (2.0 + Math.random() * 7.0) * power;
+        var sp = (110 + Math.random() * 430) * power;
         var big = Math.random() < 0.22;
         add({
-          x: cx + (Math.random() - 0.5) * 26,
-          y: cy + (Math.random() - 0.5) * 26,
+          x: cx + (Math.random() - 0.5) * 30,
+          y: cy + (Math.random() - 0.5) * 30,
           vx: Math.cos(ang) * sp,
-          vy: Math.sin(ang) * sp * (opts.up ? 1.25 : 1) - (opts.up ? 3.2 : 1.2),
-          g: 0.14 + Math.random() * 0.14,
-          r: big ? 9 + Math.random() * 7 : 3.5 + Math.random() * 6,
+          vy: Math.sin(ang) * sp * (opts.up ? 1.15 : 1) - (opts.up ? 110 : 40),
+          g: 620 + Math.random() * 520,
+          r: big ? 10 + Math.random() * 7 : 4 + Math.random() * 6,
           rot: Math.random() * Math.PI,
-          vr: (Math.random() - 0.5) * 0.36,
+          vr: (Math.random() - 0.5) * 7,
           life: 0,
-          ttl: 60 + Math.random() * 60,
+          ttl: 1.5 + Math.random() * 1.1,
           color: COLORS[(Math.random() * COLORS.length) | 0],
           kind: Math.random() < 0.3 ? 'dot' : 'star'
         });
@@ -4090,19 +4091,19 @@
       ensure();
       if (document.hidden) return;
       for (var i = 0; i < n; i++) {
-        var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.1;
-        var sp = 7 + Math.random() * 9;
+        var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.0;
+        var sp = 520 + Math.random() * 560;
         add({
-          x: cx + (Math.random() - 0.5) * 120,
-          y: cy + Math.random() * 10,
-          vx: Math.cos(ang) * sp * 0.55,
+          x: cx + (Math.random() - 0.5) * 150,
+          y: cy + Math.random() * 12,
+          vx: Math.cos(ang) * sp * 0.6,
           vy: Math.sin(ang) * sp,
-          g: 0.34 + Math.random() * 0.16,
-          r: 3.5 + Math.random() * 7,
+          g: 900 + Math.random() * 420,
+          r: 4 + Math.random() * 8,
           rot: Math.random() * Math.PI,
-          vr: (Math.random() - 0.5) * 0.4,
+          vr: (Math.random() - 0.5) * 8,
           life: 0,
-          ttl: 70 + Math.random() * 60,
+          ttl: 1.7 + Math.random() * 1.2,
           color: COLORS[(Math.random() * COLORS.length) | 0],
           kind: Math.random() < 0.35 ? 'dot' : 'star'
         });
