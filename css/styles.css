@@ -1547,6 +1547,89 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 }
 .ing-chip.warn { background: #FFF8EC; border-color: #F8E2C4; color: #A9711B; }
 
+/* =========================================================
+   ⭐ 식판 퀵메뉴 (부모님이 등록·추가·삭제)
+   ========================================================= */
+.qm-wrap {
+  margin-top: 12px;
+  padding: 11px 12px 12px;
+  border-radius: 18px;
+  background: #fff;
+  border: 2px dashed #F1DFC2;
+}
+.qm-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.qm-head strong { font-size: 13px; }
+.qm-hint { font-size: 11px; color: var(--ink-faint); font-weight: 700; }
+.qm-spacer { flex: 1; }
+.qm-empty { margin: 8px 0 0; }
+.qm-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.qm-item {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 999px;
+  background: #FFFCF4;
+  border: 2px solid #F3E3C6;
+  overflow: hidden;
+}
+.qm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #7A5A1E;
+  background: none;
+  border: 0;
+  font-family: inherit;
+}
+.qm-chip:active { background: #FFF4DC; }
+.qm-emoji { font-size: 15px; line-height: 1; }
+.qm-x {
+  border: 0;
+  border-left: 2px solid #F3E3C6;
+  background: #FFF7E8;
+  color: #B79A6C;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 0 9px;
+  font-family: inherit;
+}
+.qm-x:active { background: #FFE9E2; color: #C4533C; }
+.qm-slot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.qm-slot {
+  border: 2px solid #F3E6D3;
+  border-radius: 16px;
+  background: #FFFDF8;
+  padding: 12px 6px;
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  font-family: inherit;
+}
+.qm-slot span { font-size: 22px; }
+.qm-slot.usual { border-color: #F2C85B; background: #FFF9E8; color: #8A6414; }
+.qm-slot:active { transform: scale(.97); }
+.qm-pick {
+  margin-top: 10px;
+  padding: 11px 12px 12px;
+  border-radius: 18px;
+  background: #FFFDF6;
+  border: 2px dashed #F1DFC2;
+}
+.qm-pick-head { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.qm-pick-head strong { font-size: 13px; }
+.qm-add-inline { margin-top: 9px; }
+.qm-emoji-wrap { margin: 2px 0 10px; }
+.qm-emoji-wrap .rt-emoji { font-size: 17px; }
+
+@media (min-width: 760px) {
+  .qm-slot-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
 .med-list { display: grid; gap: 8px; }
 .med-item {
   display: flex; align-items: center; gap: 9px;
