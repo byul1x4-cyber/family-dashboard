@@ -224,7 +224,9 @@ img { max-width: 100%; }
    ========================================================= */
 .tabs {
   position: sticky;
-  top: 66px;
+  /* 상단 바의 실제 높이에 맞춰 JS(resize)가 --sticky-top 을 채웁니다.
+     → 스크롤해도 탭 바가 헤더를 가리거나 본문을 가리지 않습니다. */
+  top: var(--sticky-top, 66px);
   z-index: 30;
   display: flex;
   gap: 6px;
@@ -232,6 +234,12 @@ img { max-width: 100%; }
   padding: 5px 2px 9px;
   margin-bottom: 6px;
   scrollbar-width: none;
+  /* 스크롤해서 본문이 탭 바 아래로 지나갈 때 글자가 비쳐 보이지 않게 불투명 띠 */
+  background: rgba(255, 250, 243, .97);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 8px 12px -10px rgba(170, 140, 100, .45);
 }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
@@ -2174,7 +2182,7 @@ select {
   .mode-switch { flex: 1; }
   .mode-btn { flex: 1; justify-content: center; padding: 8px; }
   .stop-timer, .banner-btn { padding: 8px 10px; font-size: 12px; }
-  .tabs { top: 104px; }
+  .tabs { top: var(--sticky-top, 104px); }
   .home-top { gap: 10px; }
   .status-rail { grid-template-columns: 1fr 1fr; }
   .kids-row { grid-template-columns: 1fr; }

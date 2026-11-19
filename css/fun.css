@@ -1701,3 +1701,175 @@
   .brand { gap: 7px; }
   .clock::before { content: none; }
 }
+
+/* =========================================================
+   🏠 홈 개편 (2026-11-19)
+   ---------------------------------------------------------
+   · 날씨는 얇은 한 줄 띠 (중요한 정보 자리를 크게 비워 둡니다)
+   · ① 오늘·내일 일정 + 미니 달력 ② 민국·이준 현황 ③ 민국 알림장
+     세 가지가 홈 위쪽에서 바로 보이게 놓습니다.
+   ========================================================= */
+
+/* ---- 날씨 한 줄 띠 ---- */
+.wx-strip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 18px;
+  background: linear-gradient(150deg, #EFF8FF, #FFFFFF 72%);
+  border: 2px solid #DDECFB;
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+.wx-strip.rain { background: linear-gradient(150deg, #EAF3FD, #FFFFFF 74%); border-color: #D8E6F6; }
+.wx-strip.sun { background: linear-gradient(150deg, #FFF9E8, #FFFFFF 74%); border-color: #FBEBC6; }
+.wx-strip.snow { background: linear-gradient(150deg, #F2FAFF, #FFFFFF 74%); border-color: #DEEDF8; }
+.wx-strip.loading { justify-content: center; padding: 10px 12px; color: var(--ink-faint); }
+
+.wx-s-now { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.wx-s-art { width: 28px; height: 28px; flex: none; }
+.wx-s-art .wx-svg { width: 100%; height: 100%; display: block; }
+.wx-s-temp {
+  font-family: var(--font-round);
+  font-size: 25px;
+  line-height: 1;
+  color: #3E6E93;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.wx-s-temp small { font-size: 13px; margin-left: 1px; }
+.wx-s-txt { display: grid; line-height: 1.18; min-width: 0; }
+.wx-s-txt b { font-size: 12.5px; color: #4B3A2B; font-weight: 800; white-space: nowrap; }
+.wx-s-txt small { font-size: 10.5px; font-weight: 800; color: var(--ink-faint); white-space: nowrap; }
+.wx-s-place { font-size: 10.5px; font-weight: 800; color: var(--ink-faint); white-space: nowrap; }
+
+.wx-s-dust {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  background: #F4FAFF;
+  border: 1.5px solid #E2EFFA;
+  color: #4D7FA6;
+  white-space: nowrap;
+}
+.wx-s-dust i { font-style: normal; font-size: 10px; }
+.wx-s-dust b { font-weight: 800; }
+.wx-s-dust.good { background: #E7F8EF; border-color: #CFEDDF; color: var(--mint-deep); }
+.wx-s-dust.normal { background: #EAF3FE; border-color: #D3E6FA; color: var(--sky-deep); }
+.wx-s-dust.bad { background: #FFF0E2; border-color: #F8DFC4; color: #B4711B; }
+.wx-s-dust.worst { background: #FFE9E5; border-color: #F7D2CA; color: #C04A34; }
+
+.wx-s-hours { display: flex; gap: 4px; margin-left: auto; }
+.wx-s-hr {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .9);
+  border: 1.5px solid #E3EFFA;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+.wx-s-hr i { font-style: normal; }
+.wx-s-hr em { font-style: normal; font-size: 12px; line-height: 1; }
+.wx-s-hr b { font-size: 11.5px; color: #3E6E93; }
+.wx-s-hr.now { background: linear-gradient(160deg, #FFF7DE, #FFFFFF); border-color: #FBE3A8; color: #A5730E; }
+.wx-s-hr.now b { color: #A5730E; }
+
+.wx-s-tip {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #8A6A3C;
+  background: #FFF8E7;
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ---- 엄마·아빠 지금 상태 (얇게) ---- */
+.home-status { margin-bottom: 10px; }
+.home-status .status-chip { padding: 6px 10px; border-radius: 16px; }
+.home-status .sc-ava { width: 28px; height: 28px; font-size: 14px; }
+.home-status .sc-txt b { font-size: 10.5px; }
+.home-status .sc-txt small { font-size: 11.5px; }
+
+/* ---- 홈 위쪽 세 칸: 일정 | 아이들 | 알림장 ---- */
+.home-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.24fr) minmax(0, 1fr) minmax(0, .92fr);
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+.hm-col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.hm-col > .card { margin: 0; }
+.home-main .kids-row { grid-template-columns: 1fr; gap: 10px; margin-bottom: 0; }
+/* 좁은 칸에서는 미니 달력 아래로 오늘·내일 목록을 놓습니다 */
+.hm-cal .day-cols { grid-template-columns: 1fr; gap: 10px; }
+.hm-cal .day-card { margin-bottom: 0; }
+
+/* 아이 카드: ⚡ 포켓몬 진행 한 줄 */
+.kc-pk {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #6A5A8C;
+  min-width: 0;
+}
+.kc-pk em { font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kc-pk b { color: #5B4780; }
+.kc-pk-bar {
+  flex: 1;
+  min-width: 26px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: inset 0 0 0 1px rgba(120, 100, 170, .14);
+  overflow: hidden;
+}
+.kc-pk-bar b { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #B79CFF, #8F6BEA); }
+.kc-pk small { font-size: 10px; font-weight: 800; color: #8B7BAA; white-space: nowrap; }
+
+/* 홈 아래: 약 · 장보기 */
+.home-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 1099px) {
+  .home-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .hm-notice { grid-column: span 2; }
+  .hm-notice .notice-card { width: 100%; }
+}
+
+@media (max-width: 900px) {
+  .home-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+
+@media (max-width: 719px) {
+  .home-main { grid-template-columns: 1fr; }
+  .hm-notice { grid-column: auto; }
+  .home-side { grid-template-columns: 1fr; }
+  .wx-strip { gap: 7px; padding: 7px 10px; }
+  .wx-s-hours { margin-left: 0; width: 100%; justify-content: space-between; }
+  .wx-s-hr { flex: 1; justify-content: center; padding: 3px 4px; }
+  .home-main .kid-card { padding: 12px 12px 0; }
+}

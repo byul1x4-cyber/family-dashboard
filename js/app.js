@@ -1357,6 +1357,14 @@
     });
   }
 
+  /* ---- 상단 바 높이 → 탭 바가 딱 그 아래에 붙게 (헤더·탭이 본문을 가리는 문제 방지) ---- */
+  function syncStickyTop() {
+    var bar = document.querySelector('.topbar');
+    if (!bar) return;
+    var h = Math.round(bar.getBoundingClientRect().height);
+    if (h > 0) document.documentElement.style.setProperty('--sticky-top', h + 'px');
+  }
+
   function updateChrome() {
     var mc = document.getElementById('modeChild');
     var mp = document.getElementById('modeParent');
@@ -1387,6 +1395,7 @@
     var tb = tidyBarEl();
     if (tb) { tb.hidden = !tidyActive; if (tidyActive) paintTidyBar(); }
     document.body.classList.toggle('tidy-on', !!tidyActive);
+    syncStickyTop();
   }
 
   /* ================= 홈 ================= */
@@ -1468,33 +1477,30 @@
       doneTotal += st.done; allTotal += st.total;
     });
     var left = allTotal - doneTotal;
-    var upcoming = upcomingEvents(4, 60);
-    var now = new Date();
-    var monthLabel = now.getFullYear() + '년 ' + (now.getMonth() + 1) + '월';
 
     ensureWeather();
 
+    /* 2026-11-19 홈 개편
+       · 날씨는 얇은 한 줄 띠로 (중요 정보 자리를 비워 둠)
+       · 바로 아래 세 칸: ① 오늘·내일 일정 + 미니 달력 ② 민국·이준 현황 ③ 민국 알림장
+       · 「태블릿에 한마디」는 상단 📢 한마디 버튼(모달)으로만, 「다가오는 일정」 카드는
+         오늘·내일 일정과 겹쳐서 홈에서 뺐습니다 (전체 일정은 일정 탭에서). */
     return '' +
-      '<div class="home-top">' +
-        weatherCardHTML() +
-        '<div class="status-rail">' + D.parents.map(statusChipHTML).join('') + '</div>' +
+      weatherStripHTML() +
+
+      '<div class="status-rail home-status">' + D.parents.map(statusChipHTML).join('') + '</div>' +
+
+      '<div class="home-main">' +
+        '<div class="hm-col hm-cal">' + homeTodayCardHTML() + '</div>' +
+        '<div class="hm-col hm-kids"><div class="kids-row">' + D.children.map(kidCardHTML).join('') + '</div></div>' +
+        '<div class="hm-col hm-notice">' + noticeCardHTML() + '</div>' +
       '</div>' +
 
-      homeTodayCardHTML() +
-
-      '<div class="kids-row">' + D.children.map(kidCardHTML).join('') + '</div>' +
+      '<div class="tile-grid">' + homeTilesHTML(left) + '</div>' +
 
       modeStripHTML() +
 
-      '<div class="tile-grid">' + homeTilesHTML(left, upcoming) + '</div>' +
-
-      (S.mode === 'parent' ? bannerComposeHTML() : '') +
-
-      '<div class="home-grid">' +
-        '<div class="home-col">' + homeCalendarCardHTML(monthLabel, upcoming) + '</div>' +
-        '<div class="home-col">' + noticeCardHTML() + '</div>' +
-        '<div class="home-col home-side">' + medHomeCardHTML() + shoppingCardHTML() + '</div>' +
-      '</div>';
+      '<div class="home-side">' + medHomeCardHTML() + shoppingCardHTML() + '</div>';
   }
 
   /* ---- 홈: 오늘 날씨 · 옷차림 · 시간대별 ---- */
@@ -1520,6 +1526,41 @@
         '</div>';
       }).join('') + '</div>';
   }
+  /* ---- 홈: 날씨 한 줄 띠 (컴팩트) ----
+     예전의 큰 날씨 카드(지역·습도·강수·시간대 6칸·옷차림)를
+     현재 기온 + 최저/최고 + 미세먼지 + 시간대 4칸 + 옷차림 한 줄로 줄였습니다. */
+  function weatherStripHTML() {
+    var w = homeWeather;
+    if (!w) {
+      return '<div class="wx-strip loading"><span class="wx-load">🌤 오늘 날씨 불러오는 중…</span></div>';
+    }
+    var g10 = w.pm10Grade;
+    var val = function (v, unit) { return v == null ? '—' : v + (unit || ''); };
+    var hours = (w.hours || []).slice(0, 4);
+    return '<section class="wx-strip ' + (w.kind || 'cloud') + '" aria-label="오늘 날씨">' +
+        '<div class="wx-s-now">' +
+          '<span class="wx-s-art" aria-hidden="true">' + Art.weatherArt(w.kind) + '</span>' +
+          '<span class="wx-s-temp">' + val(w.temp) + '<small>°</small></span>' +
+          '<span class="wx-s-txt">' +
+            '<b>' + esc(w.label) + '</b>' +
+            '<small>최저 ' + val(w.tmin, '°') + ' · 최고 ' + val(w.tmax, '°') + '</small>' +
+          '</span>' +
+          '<span class="wx-s-place">📍 ' + esc(w.place || '도곡동') + '</span>' +
+        '</div>' +
+        (g10 ? '<span class="wx-s-dust dust ' + g10.cls + '"><i aria-hidden="true">🌫</i>미세먼지 <b>' + g10.ico + ' ' + esc(g10.label) + '</b></span>' : '') +
+        (hours.length
+          ? '<div class="wx-s-hours">' + hours.map(function (h) {
+              return '<span class="wx-s-hr' + (h.now ? ' now' : '') + '">' +
+                  '<i>' + (h.now ? '지금' : h.hour + '시') + '</i>' +
+                  '<em aria-hidden="true">' + wxEmoji(h.kind, h.day, h.hour) + '</em>' +
+                  '<b>' + (h.temp == null ? '—' : h.temp + '°') + '</b>' +
+                '</span>';
+            }).join('') + '</div>'
+          : '') +
+        (w.tip ? '<span class="wx-s-tip">👕 ' + esc(w.tip) + '</span>' : '') +
+      '</section>';
+  }
+
   function weatherCardHTML() {
     var w = homeWeather;
     if (!w) {
@@ -1978,6 +2019,24 @@
     if (it.done) UI.toast('챙겼어요! 👍', { emoji: '✅', kind: 'good', duration: 1600 });
   }
 
+  /* ---- 홈 아이 카드: ⚡ 포켓몬 진행 한 줄 ---- */
+  function pokemonLineHTML(childId) {
+    var p = pkOf(childId);
+    if (!p.line) {
+      return '<span class="kc-pk"><em>⚡ 알을 골라 주세요</em></span>';
+    }
+    var sp = pkSpecies(p);
+    var lvl = pkLevel(p.fed);
+    var per = pkPerLevel() || 100;
+    var prog = Math.max(0, Math.min(per, pkProg(p.fed)));
+    var pct = Math.round(prog / per * 100);
+    return '<span class="kc-pk">' +
+        '<em>⚡ ' + (sp ? esc(sp.ko) : '🥚 알') + ' <b>Lv.' + lvl + '</b></em>' +
+        '<i class="kc-pk-bar" aria-hidden="true"><b style="width:' + pct + '%"></b></i>' +
+        '<small>' + (per - prog) + '개</small>' +
+      '</span>';
+  }
+
   function kidCardHTML(c) {
     var today = todayKey();
     var st = routineStats(c.id, today);
@@ -2000,11 +2059,13 @@
           '<span class="kc-name"><strong>' + esc(c.name) + '</strong><small>' + esc(c.tag) + '</small></span>' +
           '<span class="kc-star">⭐ <span class="kc-star-num">' + (S.stars[c.id] || 0) + '</span></span>' +
           '<span class="kc-body">📏 ' + (body ? esc(body) : '키·몸무게 기록 없음') + '</span>' +
+          pokemonLineHTML(c.id) +
         '</span>' +
         ring +
       '</span>' +
       '<span class="kc-foot">' +
-        '<span>🏅 받은 칭찬 <b>' + (S.praiseCount[c.id] || 0) + '</b></span>' +
+        '<span>✅ 오늘 <b>' + st.done + '/' + st.total + '</b></span>' +
+        '<span>🏅 칭찬 <b>' + (S.praiseCount[c.id] || 0) + '</b></span>' +
         '<span class="kc-go">' + esc(c.name) + ' 할 일 보기 ›</span>' +
       '</span>' +
     '</button>';
@@ -6052,6 +6113,13 @@
 
   /* ================= 시작 ================= */
   function bindChrome() {
+    syncStickyTop();
+    window.addEventListener('resize', syncStickyTop);
+    window.addEventListener('orientationchange', function () { setTimeout(syncStickyTop, 120); });
+    if (window.ResizeObserver) {
+      try { new ResizeObserver(syncStickyTop).observe(document.querySelector('.topbar')); } catch (e) {}
+    }
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncStickyTop);
     document.getElementById('tabs').addEventListener('click', function (e) {
       var b = e.target.closest('.tab');
       if (b) setView(b.getAttribute('data-view'));
@@ -6223,7 +6291,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 71;             /* index.html 의 ?v=71 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 72;             /* index.html 의 ?v=72 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
