@@ -2538,3 +2538,19 @@
   .health-bottom > .card { height: 100%; display: flex; flex-direction: column; }
   .health-bottom > .card > .shop-list { flex: 1; }
 }
+
+/* ---- 5차: 일정 제목 잘림·아이 카드 빈 공간·알림장 여백 다듬기 ---- */
+@media (min-width: 1000px) {
+  .hm-day .day-ev .de-title { font-size: 13px; }
+  .hm-day .day-ev .de-type { font-size: 12px; }
+  body.on-home .km-body { align-content: space-evenly; }
+  body.on-home .kid-mini { padding: 8px 12px; }
+  .km-name { font-size: 20px; }
+  .km-ava { width: 54px; height: 54px; }
+
+  /* 알림장: 남는 높이를 체크리스트가 고르게 채움 */
+  body.on-home .notice-card { display: flex; flex-direction: column; }
+  body.on-home .notice-card .notice-list { flex: 1; align-content: space-between; }
+  body.on-home .notice-card .notice-item { padding: 9px 11px; font-size: 14.5px; }
+  body.on-home .notice-card .notice-check { width: 22px; height: 22px; }
+}
