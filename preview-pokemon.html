@@ -111,15 +111,23 @@
 <script src="js/weather.js?v=6"></script>
 <script src="js/ntfy.js?v=6"></script>
 <script>
-/* ===== 임시 미리보기용 저장소 스텁 (테스트 후 삭제) =====
-   실제 Firestore·localStorage 상태는 건드리지 않고, 아래 샘플 상태로만 화면을 그립니다. */
+/* ===== 임시 미리보기용 저장소 스텁 (확인 후 삭제) =====
+   실제 Firestore·localStorage 가족 상태는 건드리지 않고, 주소의 ?fed=·?per=·?mode= 값으로만 화면을 그립니다. */
 (function () {
+  var q = new URLSearchParams(location.search);
+  var num = function (k, d) { var v = Number(q.get(k)); return isFinite(v) && q.get(k) !== null && q.get(k) !== '' ? v : d; };
+  var per = num('per', 100);
+  var fed = num('fed', 0);
+  var dex = (q.get('dex') || '').split(',').filter(Boolean).map(Number);
   var sample = {
-    version: 1, introSeen: true, mode: 'child',
-    stars: { minguk: 130, ijun: 0 },
-    pkCfg: { perLevel: 100 },
-    pokemon: { minguk: { line: 'pichu', cur: 0, fed: 0, dex: [] } }
+    version: 1, introSeen: true, mode: q.get('mode') === 'parent' ? 'parent' : 'child',
+    stars: { minguk: num('stars', 130), ijun: 0 },
+    pkCfg: { perLevel: per },
+    pokemon: {
+      minguk: { line: q.get('line') || 'pichu', cur: 0, fed: fed, dex: dex }
+    }
   };
+  if (q.get('ijun')) sample.pokemon.ijun = { line: q.get('ijun'), cur: 0, fed: num('ijunfed', 0), dex: [] };
   var noop = function () {};
   Storage.hasGate = function () { return true; };
   Storage.init = function () { return Promise.resolve({ mode: 'local', state: sample }); };
@@ -135,6 +143,7 @@
   Object.defineProperty(Storage, 'mode', { get: function () { return 'local'; }, configurable: true });
   Storage.status = { mode: 'local', secure: true, hasGate: true, familyId: 'fam_preview', projectId: 'preview', error: null, lastSyncAt: null };
   document.title = '우리집 다모아 · 미리보기(테스트)';
+  if (q.get('view')) sessionStorage.setItem('preview-view', q.get('view'));
 })();
 </script>
 <script src="js/app.js?v=6"></script>
