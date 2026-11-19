@@ -134,7 +134,7 @@
   try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
   var sample = saved || {
     version: 1, introSeen: true, mode: q.get('mode') === 'parent' ? 'parent' : 'child',
-    stars: { minguk: 150, ijun: 40 },
+    stars: { minguk: 300, ijun: 40 },
     parentStatus: { mom: { key: 'home', at: Date.now() - 600000, by: '엄마' } },
     pokemon: {
       minguk: { line: 'pichu', cur: 0, fed: 150, dex: [26, 6, 9] },
@@ -168,12 +168,5 @@
   }
 })();
 </script>
-  /* 미리보기 전용: ?auto=1 이면 별 먹이기를 반복해 폭죽 연출을 계속 보여 줍니다 */
-  if (q.get('auto') === '1') {
-    setInterval(function () {
-      var btns = document.querySelectorAll('.pk-duo .pk-feed .btn');
-      if (btns && btns[0] && !btns[0].disabled) btns[0].click();
-    }, 2500);
-  }
 </body>
 </html>
