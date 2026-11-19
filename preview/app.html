@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="theme-color" content="#FFF7EC">
+<title>우리집 다모아 · 가족 대시보드</title>
+<meta name="description" content="아이 루틴 체크, 칭찬하기, 가족 일정, 우체통, 식판·약·성장 기록을 한 곳에 모은 우리집 가족 대시보드.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%A1%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css?v=72">
+<link rel="stylesheet" href="../css/fun.css?v=72">
+</head>
+<body>
+
+<!-- 가족 입장 코드(잠금) 화면 -->
+<section class="gate" id="gate" hidden>
+  <div class="gate-card">
+    <div class="gate-mark" aria-hidden="true">🏡</div>
+    <h1 class="gate-title">우리집 다모아</h1>
+    <p class="gate-sub">우리 가족만 들어오는 집이에요.<br>가족 입장 코드를 넣어 주세요.</p>
+    <form id="gateForm" class="gate-form" autocomplete="off" novalidate>
+      <div class="gate-input-wrap">
+        <input class="input gate-input" id="gateInput" type="password"
+               autocomplete="new-password" autocapitalize="off" spellcheck="false"
+               placeholder="가족 입장 코드" aria-label="가족 입장 코드" enterkeyhint="go">
+        <button type="button" class="gate-eye" id="gateEye" aria-label="입장 코드 보기">👁</button>
+      </div>
+      <button class="btn btn-primary btn-block gate-btn" id="gateSubmit" type="submit">들어가기</button>
+    </form>
+    <p class="gate-err" id="gateErr" hidden></p>
+    <p class="gate-help" id="gateHelp">
+      처음이면 지금 정하는 코드가 우리 가족의 열쇠가 돼요 (4자 이상, 숫자·단어 무엇이든).<br>
+      이미 코드가 있다면 <b>다른 기기와 똑같은 코드</b>를 넣어 주세요. 띄어쓰기와 영문 대소문자는 구분하지 않아요.
+    </p>
+    <p class="gate-warn" id="gateWarn" hidden></p>
+  </div>
+</section>
+
+<div class="app" id="appShell">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">🏡</span>
+      <div class="brand-text">
+        <h1 id="appName">우리집 다모아</h1>
+        <p id="brandSub">오늘도 다 같이!</p>
+      </div>
+    </div>
+
+    <div class="clock" id="clock">
+      <div class="clock-in">
+        <span class="clock-date" id="clockDate">—</span>
+        <strong class="clock-time" id="clockTime">—</strong>
+      </div>
+    </div>
+
+    <div class="quick-bar" role="group" aria-label="바로가기">
+      <button type="button" class="qb-btn" id="quickMail" aria-label="우체통으로 가기">
+        <span class="qb-ico" aria-hidden="true">📮</span><span class="qb-label">우체통</span>
+      </button>
+      <button type="button" class="qb-btn tidy" id="quickTidy" aria-label="정리시간 시작">
+        <span class="qb-ico" aria-hidden="true">🧹</span><span class="qb-label">정리</span>
+      </button>
+    </div>
+
+    <div class="mode-bar">
+      <div class="mode-switch" role="group" aria-label="모드 선택">
+        <button type="button" class="mode-btn" data-mode="child" id="modeChild">
+          <span aria-hidden="true">🧒</span> 아이 모드
+        </button>
+        <button type="button" class="mode-btn" data-mode="parent" id="modeParent">
+          <span aria-hidden="true">🔒</span> 부모님
+        </button>
+      </div>
+      <button type="button" class="banner-btn" id="bannerBtn" aria-label="태블릿에 한마디 띄우기" hidden>
+        <span aria-hidden="true">📢</span><span>한마디</span>
+      </button>
+      <button type="button" class="stop-timer" id="stopTimerBtn" aria-label="그만! 알림">
+        <span class="st-ico" aria-hidden="true">⏰</span><span class="st-label" id="stopTimerLabel">그만! 알림</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="sync-banner" id="syncBanner" hidden>
+    <span id="syncBannerText"></span>
+    <button type="button" class="link-btn" id="syncBannerRetry">다시 연결</button>
+  </div>
+
+  <nav class="tabs" id="tabs" aria-label="메뉴">
+    <button type="button" class="tab" data-view="home"><span>🏠</span><b>홈</b></button>
+    <button type="button" class="tab" data-view="routine"><span>✅</span><b>할 일</b></button>
+    <button type="button" class="tab" data-view="pokemon"><span>⚡</span><b>포켓몬</b></button>
+    <button type="button" class="tab" data-view="praise"><span>🌟</span><b>칭찬하기</b></button>
+    <button type="button" class="tab" data-view="calendar"><span>📅</span><b>우리 가족 일정</b></button>
+    <button type="button" class="tab" data-view="mailbox"><span>📮</span><b>우체통</b></button>
+    <button type="button" class="tab" data-view="health"><span>🍱</span><b>식판·건강</b></button>
+    <button type="button" class="tab" data-view="settings"><span>⚙️</span><b>설정</b></button>
+  </nav>
+
+  <!-- 🌅 등교 시작 중에만 보이는 남은 시간 바 (모든 탭 공통) -->
+  <div class="school-bar" id="schoolBar" hidden>
+    <button type="button" class="sb-btn" id="schoolBarBtn" aria-label="등교 준비 화면 열기">
+      <span class="sb-top">
+        <span class="sb-ico" aria-hidden="true">🌅</span>
+        <span class="sb-time"><b class="sb-left" id="sbLeft">14:52</b><span class="sb-say">남았어요</span></span>
+      </span>
+      <span class="sb-kids" id="sbKids"></span>
+      <span class="sb-track"><i class="sb-fill" id="sbFill"></i><b class="sb-runner" id="sbRunner" aria-hidden="true">🎒</b></span>
+    </button>
+  </div>
+
+  <!-- 🧹 정리시간 중에만 보이는 남은 시간 바 (모든 탭 공통) -->
+  <div class="tidy-bar" id="tidyBar" hidden>
+    <button type="button" class="tbar-btn" id="tidyBarBtn" aria-label="정리시간 화면 열기">
+      <span class="tbar-top">
+        <span class="tbar-ico" aria-hidden="true">🧹</span>
+        <span class="tbar-time"><b class="tbar-left" id="tdBarLeft">10:00</b><span class="tbar-say">남았어요</span></span>
+      </span>
+      <span class="tbar-hint" id="tdBarHint">정리 화면으로</span>
+      <span class="tbar-track"><i class="tbar-fill" id="tdBarFill"></i><b class="tbar-runner" id="tdBarRunner" aria-hidden="true"><img id="tdBarPkm" alt=""></b><span class="tbar-flag" aria-hidden="true">🏁</span></span>
+    </button>
+  </div>
+
+  <main id="view" class="view" tabindex="-1"></main>
+
+  <div class="mode-banner" id="modeBanner" hidden>
+    <span id="modeBannerText"></span>
+    <button type="button" class="link-btn" id="modeBannerSwitch">부모님 모드로 바꾸기</button>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+<div id="popupRoot"></div>
+
+<script src="../js/data.js?v=72"></script>
+<script src="../js/storage.js?v=72"></script>
+<script src="../js/ui.js?v=72"></script>
+<script src="../js/art.js?v=72"></script>
+<script src="../js/weather.js?v=72"></script>
+<script src="../js/ntfy.js?v=72"></script>
+<script src="../js/app.js?v=72"></script>
+
+<script>
+/* 미리보기 전용 스텁 — 실제 가족 Firestore 문서는 읽지도 쓰지도 않습니다. */
+(function () {
+  var qs = new URLSearchParams(location.search);
+  var mode = qs.get('mode') === 'parent' ? 'parent' : 'child';
+  var at = qs.get('at');
+  if (at) {
+    var p = at.split(':');
+    var RealDate = Date;
+    var base = new RealDate();
+    var fixed = new RealDate(base.getFullYear(), base.getMonth(), base.getDate(),
+      Number(p[0] || 0), Number(p[1] || 0), Number(p[2] || 0), 0);
+    var skew = fixed.getTime() - RealDate.now();
+    function FakeDate(a, b, c, d, e, f, g) {
+      var t = RealDate.now() + skew;
+      if (!(this instanceof FakeDate)) return new RealDate(t).toString();
+      if (arguments.length === 0) return new RealDate(t);
+      if (arguments.length === 1) return new RealDate(a);
+      return new RealDate(a, b, c || 0, d || 0, e || 0, f || 0, g || 0);
+    }
+    FakeDate.prototype = RealDate.prototype;
+    FakeDate.now = function () { return RealDate.now() + skew; };
+    FakeDate.parse = RealDate.parse;
+    FakeDate.UTC = RealDate.UTC;
+    window.Date = FakeDate;
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function key(dt) { return dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate()); }
+  var now = Date.now();
+  var d = new Date();
+  var t1 = key(d);
+  var t2 = key(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1));
+  var t3 = key(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 3));
+  var seed = {
+    introSeen: true, mode: mode, actor: mode === 'parent' ? '엄마' : null,
+    stars: { minguk: 6, ijun: 3 }, praiseCount: { minguk: 2, ijun: 1 },
+    praiseLog: [], growth: { minguk: [{ date: t1, height: 128, weight: 27 }], ijun: [] },
+    meals: {}, ntfyPush: false, schoolTime: '08:30', schoolStart: '07:00',
+    pokemon: { minguk: { line: 'pichu', cur: 25, fed: 250, dex: [] }, ijun: { line: 'ggobugi', cur: 12, fed: 130, dex: [] } },
+    parentStatus: { mom: { label: '회사 가는 중 🚇', at: now - 3600000 }, dad: { label: '하키 연습 ⛸', at: now - 7200000 } },
+    shopping: [{ id: 'sh1', text: '우유', ts: now, done: 0 }, { id: 'sh2', text: '계란', ts: now, done: 0 }],
+    routine: { minguk: {}, ijun: {} },
+    events: [
+      { id: 'ev1', date: t1, title: '민국 태권도', member: 'minguk', type: 'academy', time: '17:00', note: '', items: [] },
+      { id: 'ev2', date: t1, title: '이준 유치원 현장학습', member: 'ijun', type: 'school', time: '09:30', note: '', items: [] },
+      { id: 'ev3', date: t2, title: 'KMA 자격시험', member: 'mom', type: 'etc', time: '10:00', note: '', items: [] },
+      { id: 'ev4', date: t2, title: '가족 저녁 외식', member: 'family', type: 'family', time: '18:30', note: '', items: [] },
+      { id: 'ev5', date: t3, title: '디에이치 신반포 청약', member: 'mom', type: 'etc', time: '09:00', note: '', items: [] }
+    ],
+    schoolNotice: { title: '11월 19일 (목) 알림장', date: t1,
+      message: '내일(금) 무용실 놀이 아니라 편한 옷 입고, 받아쓰기 10급 시험지에 엄마·아빠 사인 꼭 받아 가요!',
+      items: [
+        { id: 'nt1', text: '받아쓰기 10급 시험지 부모님 사인 받기 (틀린 문제는 뒷면에 2번씩)', done: 0 },
+        { id: 'nt2', text: '금요일 무용실 놀이: 편한 옷(간편복) 입기', done: 0 },
+        { id: 'nt3', text: '금요일 내 일정 알아오기', done: 0 },
+        { id: 'nt4', text: '책가방 챙기기: 우체통·필통(연필 3자루 깎기, 다 쓴 학습 준비물 바꾸기)·물통·책 1권', done: 0 }
+      ], updatedAt: now }
+  };
+  try {
+    localStorage.setItem('family-dashboard-v1', JSON.stringify(seed));
+    localStorage.setItem('family-dashboard-gate', JSON.stringify({ id: 'fam_preview_only', at: now, v: 1 }));
+    localStorage.removeItem('damoa-school-auto');
+  } catch (e) {}
+  window.__PREVIEW_ONLY = true;
+  if (window.Storage) {
+    Storage.init = function () { return Promise.resolve({ mode: 'local', state: Storage.load() }); };
+    Storage.hasGate = function () { return true; };
+    Storage.save = function (st) { try { localStorage.setItem('family-dashboard-v1', JSON.stringify(st)); } catch (e) {} };
+    Storage.watchLocal = function () {};
+  }
+})();
+</script>
+
+<!-- ?view=home/routine, ?school=1 이면 등교 화면, ?tidy=10 이면 정리시간 -->
+<script>
+(function () {
+  var qs = new URLSearchParams(location.search);
+  var wantTidy = qs.get('tidy');
+  var wantSchool = qs.get('school');
+  var wantView = qs.get('view');
+  function fix() {
+    var tab = null;
+    if (wantTidy && !document.querySelector('.tidy-view')) {
+      var b = document.querySelector('[data-act="tidy-start"][data-min="' + wantTidy + '"]');
+      if (b) { b.click(); return true; }
+      return false;
+    }
+    if (wantSchool && wantView) {
+      tab = document.querySelector('.tab[data-view="' + wantView + '"]');
+      if (!tab || !tab.classList.contains('active')) {
+        if (tab) { tab.click(); return false; }
+      }
+      if (!document.querySelector('.school-view')) {
+        var sb = document.getElementById('schoolBarBtn');
+        if (sb) { sb.click(); return false; }
+        return false;
+      }
+      return true;
+    }
+    if (wantView) {
+      tab = document.querySelector('.tab[data-view="' + wantView + '"]');
+      if (!tab) return false;
+      if (!tab.classList.contains('active')) { tab.click(); return false; }
+      return true;
+    }
+    return true;
+  }
+  var tries = 0;
+  var t = setInterval(function () {
+    if (!document.querySelector('.tab')) return;
+    if (++tries > 160) { clearInterval(t); return; }
+    if (fix()) clearInterval(t);
+  }, 250);
+})();
+</script>
+
+<script>
+/* 화면 높이·스크롤 측정용 (스크린샷 검증) */
+window.__metrics = function () {
+  var de = document.documentElement;
+  var bar = document.querySelector('.topbar');
+  var tabs = document.getElementById('tabs');
+  return {
+    vw: window.innerWidth, vh: window.innerHeight,
+    scrollH: de.scrollHeight, clientH: de.clientHeight,
+    over: de.scrollHeight - de.clientHeight,
+    topbarH: bar ? Math.round(bar.getBoundingClientRect().height) : 0,
+    tabsH: tabs ? Math.round(tabs.getBoundingClientRect().height) : 0,
+    headH: Math.round((bar ? bar.getBoundingClientRect().height : 0) + (tabs ? tabs.getBoundingClientRect().height : 0)),
+    viewH: Math.round(document.getElementById('view').getBoundingClientRect().height)
+  };
+};
+</script>
+
+</body>
+</html>
