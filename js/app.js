@@ -2033,7 +2033,7 @@
     return '<span class="kc-pk">' +
         '<em>⚡ ' + (sp ? esc(sp.ko) : '🥚 알') + ' <b>Lv.' + lvl + '</b></em>' +
         '<i class="kc-pk-bar" aria-hidden="true"><b style="width:' + pct + '%"></b></i>' +
-        '<small>' + (per - prog) + '개</small>' +
+        '<small>별 ' + (per - prog) + '</small>' +
       '</span>';
   }
 

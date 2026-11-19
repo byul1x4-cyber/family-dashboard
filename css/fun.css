@@ -1854,14 +1854,11 @@
   align-items: start;
 }
 
-@media (max-width: 1099px) {
+/* 패드 1024·데스크톱: 세 칸 / 그보다 좁으면 두 칸(알림장은 아래 전체 폭) */
+@media (max-width: 999px) {
   .home-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .hm-notice { grid-column: span 2; }
   .hm-notice .notice-card { width: 100%; }
-}
-
-@media (max-width: 900px) {
-  .home-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
 
 @media (max-width: 719px) {
@@ -1872,4 +1869,18 @@
   .wx-s-hours { margin-left: 0; width: 100%; justify-content: space-between; }
   .wx-s-hr { flex: 1; justify-content: center; padding: 3px 4px; }
   .home-main .kid-card { padding: 12px 12px 0; }
+}
+
+/* 패드 1024×768: 세 칸이 한 화면에 들어오게 달력·목록을 살짝 조입니다 */
+@media (min-width: 1000px) {
+  .hm-cal .day-card { padding: 14px 15px; }
+  .hm-cal .mini-cal { gap: 2px; margin-bottom: 8px; }
+  .hm-cal .mini-day { min-height: 27px; font-size: 12px; border-radius: 9px; }
+  .hm-cal .mini-dow { font-size: 10px; padding: 1px 0 3px; }
+  .hm-cal .day-block { padding: 6px 8px 8px; }
+  .hm-cal .day-head { margin-bottom: 4px; }
+  .hm-cal .day-head b { font-size: 15px; }
+  .hm-cal .day-ev { padding: 5px 7px; margin-bottom: 4px; }
+  .hm-cal .day-ev .de-title { font-size: 12.5px; }
+  .hm-cal .day-go { padding: 7px; font-size: 11.5px; }
 }
