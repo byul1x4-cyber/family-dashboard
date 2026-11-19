@@ -1623,3 +1623,27 @@
   .tv-mon img { width: 250px; height: 250px; }
   .tv-bubble { font-size: 25px; }
 }
+
+/* 폰(≤719): 상단 헤더가 줄바꿈으로 지저분해지지 않게 한 줄에 모읍니다 */
+@media (max-width: 719px) {
+  .brand { flex: 0 1 auto; min-width: 0; }
+  .brand-text h1 { font-size: 18px; }
+  .brand-mark { width: 34px; height: 34px; font-size: 18px; }
+  .clock { padding: 5px 9px 5px 7px; }
+}
+@media (max-width: 400px) {
+  .brand-text p { display: none; }
+  .brand-mark { width: 30px; height: 30px; font-size: 16px; }
+  .brand-text h1 { font-size: 17px; }
+}
+
+/* 폰: 정리 화면이 한 화면에 가깝게 — 고르는 칩은 한 줄로 옆으로 밀어 봅니다 */
+@media (max-width: 619px) {
+  .tv-head { gap: 6px; }
+  .tv-who { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+  .tv-who .chip { flex: none; }
+  .tv-stage { min-height: 168px; }
+  .tv-mon img { width: 136px; height: 136px; }
+  .tv-bubble { font-size: 16px; }
+  .tv-actions { margin-top: 8px; }
+}
