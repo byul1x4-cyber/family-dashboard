@@ -1091,7 +1091,7 @@
 .sv-ico { font-size: 26px; line-height: 1; }
 .sv-h1t { display: flex; flex-direction: column; min-width: 0; }
 .sv-h1t b { font-family: var(--font-round); font-weight: 400; font-size: 20px; color: #6B4A08; letter-spacing: 0; }
-.sv-h1t small { font-size: 12px; font-weight: 700; color: #A0763A; }
+.sv-h1t small { font-size: 11.5px; font-weight: 700; color: #A0763A; }
 .sv-actions { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
 .sv-all {
   margin-bottom: 10px;
@@ -1107,8 +1107,8 @@
 
 /* ---- 아이 한 줄 (민국 / 이준) ---- */
 .sc-row {
-  margin-bottom: 7px;
-  padding: 6px 10px 7px;
+  margin-bottom: 6px;
+  padding: 5px 10px 5px;
   border-radius: 26px;
   border: 3px solid #fff;
   background: linear-gradient(165deg, #F2FCF7, #FFFFFF 68%);
@@ -1116,8 +1116,9 @@
 }
 .sc-row.coral { background: linear-gradient(165deg, #FFF5F1, #FFFFFF 68%); }
 .sc-row.all { border-color: #FFE9A8; background: linear-gradient(165deg, #FFFBEA, #FFFFFF 68%); }
-.sc-rowhead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.sc-rowhead b { font-size: 17px; }
+.sc-rowhead { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+.sc-rowhead .avatar.sm { width: 22px; height: 22px; }
+.sc-rowhead b { font-size: 15px; }
 .sc-row-badge { font-size: 11.5px; font-weight: 800; color: #8A6412; background: #FFF1C9; border-radius: 999px; padding: 3px 8px; }
 .sc-rowpct { margin-left: auto; font-size: 12.5px; font-weight: 800; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .sc-rowbar { flex: 0 1 240px; height: 9px; border-radius: 999px; background: #EFE6D8; overflow: hidden; }
@@ -1158,11 +1159,11 @@
   font-weight: 900;
   box-shadow: 0 3px 8px rgba(180, 140, 80, .2);
 }
-.scard-body { display: grid; justify-items: center; gap: 3px; padding: 5px 2px 0; }
+.scard-body { display: grid; justify-items: center; gap: 2px; padding: 4px 2px 0; }
 .scard-title { font-size: 13px; font-weight: 800; color: var(--ink); line-height: 1.18; word-break: keep-all; }
 .scard-cta {
   display: inline-block;
-  padding: 3px 9px;
+  padding: 2px 8px;
   border-radius: 999px;
   background: #FFF3D6;
   color: #A87A20;
