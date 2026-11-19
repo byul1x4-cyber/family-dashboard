@@ -3152,3 +3152,15 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
 @media (min-width: 1000px) and (max-height: 740px) {
   .clock.big .clock-time { font-size: 40px; }
 }
+
+/* ---- 3칸 그리드 확정 (특이성 맞춰 실제 적용) ---- */
+@media (min-width: 1000px) {
+  body.on-home .hero {
+    grid-template-columns: auto minmax(0, 1fr) calc((100% - 10px) * 0.5146);
+    grid-template-areas: "brand clock wx";
+    column-gap: 10px;
+  }
+  body.on-home .hero > .hero-brand { grid-area: brand; grid-column: brand; align-self: center; justify-self: start; margin: 0; }
+  body.on-home .hero > .hero-clock { grid-area: clock; grid-column: clock; margin: 0; min-width: 0; }
+  body.on-home .hero > .wx-head { grid-area: wx; grid-column: wx; width: auto; margin: 0; }
+}
