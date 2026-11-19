@@ -1926,3 +1926,14 @@
   .qb-btn { padding: 6px 7px; }
   .qb-btn .qb-ico { font-size: 15px; }
 }
+
+/* 폰(≤480): 브랜드·바로가기·시계가 한 줄에 넉넉히 */
+@media (max-width: 480px) {
+  .brand-mark { width: 30px; height: 30px; font-size: 16px; }
+  .brand-text h1 { font-size: 16px; }
+  .qb-btn { padding: 5px 6px; }
+  .qb-btn .qb-ico { font-size: 14px; }
+  .clock { padding: 4px 7px 4px 6px; }
+  .clock-date { font-size: 9px; }
+  .clock-time { font-size: 13.5px; }
+}
