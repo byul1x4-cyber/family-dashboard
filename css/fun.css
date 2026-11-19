@@ -1873,11 +1873,10 @@
 
 /* 패드 1024×768: 세 칸이 한 화면에 들어오게 달력·목록을 살짝 조입니다 */
 @media (min-width: 1000px) {
-  .hm-cal .day-card { padding: 12px 13px; }
-  .hm-cal .mini-cal { gap: 2px; margin-bottom: 7px; }
-  .hm-cal .mini-day { min-height: 24px; font-size: 11.5px; border-radius: 8px; }
-  /* 좁은 칸에서는 카드 위 「달력 크게」가 같은 역할이라 아래 버튼은 접습니다 */
-  .hm-cal .day-go { display: none; }
+  .hm-cal .day-card { padding: 11px 12px; }
+  .hm-cal .mini-cal { gap: 2px; margin-bottom: 6px; }
+  .hm-cal .mini-day { min-height: 22px; font-size: 11px; border-radius: 7px; }
+  .hm-cal .day-go { padding: 5px; font-size: 11px; border-radius: 10px; }
   .hm-cal .mini-dow { font-size: 10px; padding: 1px 0 3px; }
   .hm-cal .day-block { padding: 6px 8px 8px; }
   .hm-cal .day-head { margin-bottom: 4px; }
