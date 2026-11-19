@@ -1598,3 +1598,28 @@
   .day-ev .de-title { font-size: 13px; }
   .qt-min b { font-size: 26px; }
 }
+
+/* 패드·데스크톱: 한 화면(1024×768)에 다 들어오게
+   왼쪽 = 남은 시간·게이지·버튼 / 오른쪽 = 큰 포켓몬 카드 */
+@media (min-width: 780px) {
+  .tidy-view {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+    grid-template-areas:
+      "head head"
+      "timer stage"
+      "actions stage"
+      "note stage";
+    gap: 10px 14px;
+    align-content: start;
+    align-items: start;
+  }
+  .tv-head { grid-area: head; margin-bottom: 0; }
+  .tv-timer { grid-area: timer; margin-bottom: 0; }
+  .tv-stage { grid-area: stage; align-self: stretch; min-height: 300px; }
+  .tv-actions { grid-area: actions; margin-top: 0; }
+  .tv-note { grid-area: note; margin-top: 0; align-self: end; }
+  .tv-left b { font-size: 54px; }
+  .tv-mon img { width: 250px; height: 250px; }
+  .tv-bubble { font-size: 25px; }
+}

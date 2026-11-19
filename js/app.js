@@ -4366,6 +4366,14 @@
     if (!tidy) return '가족';
     return tidy.childId === 'family' ? '가족 모두' : childById(tidy.childId).name;
   }
+  /* '민국' + '이랑', '엄마' + '랑' — 받침에 따라 조사를 붙입니다 */
+  function tidyRang(name) {
+    var s = String(name || '');
+    if (!s) return s + '랑';
+    var c = s.charCodeAt(s.length - 1);
+    if (c >= 0xAC00 && c <= 0xD7A3) return s + ((c - 0xAC00) % 28 ? '이랑' : '랑');
+    return s + '랑';
+  }
 
   /* ---------------- 모든 탭 위 남은 시간 바 ---------------- */
   function tidyBarEl() { return document.getElementById('tidyBar'); }
@@ -4429,7 +4437,7 @@
         '<div class="tv-bubble" id="tvCheer" aria-live="polite">' + esc(cheer) + '</div>' +
         '<div class="tv-mon"><img src="' + pkArt(pid) + '" alt="' + esc(tidyPokeName(pid)) + '가 정리를 응원해요"></div>' +
         '<div class="tv-floor" aria-hidden="true"></div>' +
-        '<p class="tv-say">' + esc(tidyPokeName(pid)) + '가 ' + esc(tidyWhoName()) + '랑 같이 정리해요!</p>' +
+        '<p class="tv-say">' + esc(tidyPokeName(pid)) + '가 ' + esc(tidyRang(tidyWhoName())) + ' 같이 정리해요!</p>' +
       '</div>' +
       '<div class="tv-actions">' +
         '<button type="button" class="btn btn-primary tv-finish" data-act="tidy-finish">정리 끝! ✓</button>' +
