@@ -3910,7 +3910,7 @@
       o.stop(start + dur + 0.02);
     } catch (e) {}
   }
-  function pkSound(kind) {
+  function pkSound(kind, n) {
     try {
       var AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
@@ -3919,6 +3919,15 @@
       if (kind === 'feed') {
         pkTone(1046.5, t0, 0.12, 'sine', 0.1);
         pkTone(1568, t0 + 0.07, 0.16, 'sine', 0.08);
+        /* 별이 쏟아지는 소리 — 반짝이는 고음이 연달아 (연타할 땐 조금 쉬어요) */
+        var now = Date.now();
+        if (!pkSound.showerAt || now - pkSound.showerAt > 110) {
+          pkSound.showerAt = now;
+          var many = Math.max(4, Math.min(14, 4 + Math.round((n || 1) * 0.9)));
+          for (var i = 0; i < many; i++) {
+            pkTone(1400 + Math.random() * 1400, t0 + 0.03 + i * (0.028 + Math.random() * 0.02), 0.09 + Math.random() * 0.12, 'sine', 0.032);
+          }
+        }
       } else if (kind === 'level') {
         [784, 988, 1175].forEach(function (f, i) { pkTone(f, t0 + i * 0.09, 0.2, 'triangle', 0.11); });
       } else {
@@ -3930,6 +3939,152 @@
         pkTone(1568, t0 + 0.62, 0.6, 'sine', 0.12);
       }
     } catch (e) {}
+  }
+  /* ---------- 별 폭죽 (캔버스 파티클) ----------
+     별을 먹일 때마다 수십~수백 개의 ⭐이 분수처럼 솟아 사방으로 쏟아집니다.
+     · 캔버스 하나에 모든 별을 그려 빠르게 연타해도 렉이 없어요.
+     · 동시에 살아 있는 별은 MAX 개까지만 (넘치면 오래된 별부터 정리). */
+  var pkFx = (function () {
+    var cv = null, ctx = null, parts = [], raf = 0, W = 0, H = 0, last = 0;
+    var MAX = 420;
+    var COLORS = ['#FFD84D', '#FFC13B', '#FFF3B0', '#FF9AD5', '#9BE7FF', '#FFFFFF', '#FFB84D'];
+    function ensure() {
+      if (cv && cv.isConnected) { if (!ctx) ctx = cv.getContext('2d'); return; }
+      cv = document.createElement('canvas');
+      cv.className = 'pk-fx';
+      cv.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(cv);
+      ctx = cv.getContext('2d');
+      window.addEventListener('resize', resize);
+      resize();
+    }
+    function resize() {
+      if (!cv || !ctx) return;
+      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = window.innerWidth; H = window.innerHeight;
+      cv.width = Math.max(1, Math.round(W * dpr));
+      cv.height = Math.max(1, Math.round(H * dpr));
+      cv.style.width = W + 'px';
+      cv.style.height = H + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function drawStar(x, y, r, rot) {
+      ctx.beginPath();
+      for (var i = 0; i < 10; i++) {
+        var rr = i % 2 ? r * 0.44 : r;
+        var a = rot + i * Math.PI / 5 - Math.PI / 2;
+        var px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+        if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+    function add(p) {
+      if (parts.length >= MAX) parts.shift();
+      parts.push(p);
+    }
+    function kick() {
+      if (raf) return;
+      last = 0;
+      raf = requestAnimationFrame(tick);
+    }
+    function tick(t) {
+      raf = 0;
+      if (!ctx) return;
+      var dt = last ? Math.min(2.6, (t - last) / 16.67) : 1;
+      last = t;
+      ctx.clearRect(0, 0, W, H);
+      for (var i = parts.length - 1; i >= 0; i--) {
+        var p = parts[i];
+        p.life += dt;
+        p.vy += p.g * dt;
+        p.vx *= 0.995;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.rot += p.vr * dt;
+        var k = 1 - p.life / p.ttl;
+        if (k <= 0 || p.y > H + 50 || p.x < -60 || p.x > W + 60) { parts.splice(i, 1); continue; }
+        ctx.globalAlpha = k > 0.7 ? 1 : Math.max(0, k / 0.7);
+        ctx.fillStyle = p.color;
+        if (p.kind === 'dot') {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 0.42, 0, 6.283);
+          ctx.fill();
+        } else {
+          drawStar(p.x, p.y, p.r * (0.55 + 0.45 * k), p.rot);
+        }
+      }
+      ctx.globalAlpha = 1;
+      if (parts.length) raf = requestAnimationFrame(tick);
+      else { ctx.clearRect(0, 0, W, H); last = 0; }
+    }
+    /* 한 점에서 사방으로 터지는 별 */
+    function burst(cx, cy, n, opts) {
+      opts = opts || {};
+      ensure();
+      if (document.hidden) return;
+      var power = opts.power || 1;
+      for (var i = 0; i < n; i++) {
+        var ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 2;
+        var sp = (2.0 + Math.random() * 7.0) * power;
+        var big = Math.random() < 0.22;
+        add({
+          x: cx + (Math.random() - 0.5) * 26,
+          y: cy + (Math.random() - 0.5) * 26,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp * (opts.up ? 1.25 : 1) - (opts.up ? 3.2 : 1.2),
+          g: 0.14 + Math.random() * 0.14,
+          r: big ? 9 + Math.random() * 7 : 3.5 + Math.random() * 6,
+          rot: Math.random() * Math.PI,
+          vr: (Math.random() - 0.5) * 0.36,
+          life: 0,
+          ttl: 60 + Math.random() * 60,
+          color: COLORS[(Math.random() * COLORS.length) | 0],
+          kind: Math.random() < 0.3 ? 'dot' : 'star'
+        });
+      }
+      kick();
+    }
+    /* 아래에서 위로 솟구치는 별 분수 */
+    function fountain(cx, cy, n) {
+      ensure();
+      if (document.hidden) return;
+      for (var i = 0; i < n; i++) {
+        var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.1;
+        var sp = 7 + Math.random() * 9;
+        add({
+          x: cx + (Math.random() - 0.5) * 120,
+          y: cy + Math.random() * 10,
+          vx: Math.cos(ang) * sp * 0.55,
+          vy: Math.sin(ang) * sp,
+          g: 0.34 + Math.random() * 0.16,
+          r: 3.5 + Math.random() * 7,
+          rot: Math.random() * Math.PI,
+          vr: (Math.random() - 0.5) * 0.4,
+          life: 0,
+          ttl: 70 + Math.random() * 60,
+          color: COLORS[(Math.random() * COLORS.length) | 0],
+          kind: Math.random() < 0.35 ? 'dot' : 'star'
+        });
+      }
+      kick();
+    }
+    return { burst: burst, fountain: fountain, resize: resize };
+  })();
+  /* 별을 먹인 만큼 화면에 별을 마구 뿌립니다 (1개→약 50개, 10개→약 250개) */
+  function pkStarStorm(artEl, n, big) {
+    var box = artEl ? artEl.getBoundingClientRect() : null;
+    if (!box || !box.width) {
+      var card = document.querySelector('.pk-duo-col.active .pk-card') || document.querySelector('.pk-card');
+      box = card ? card.getBoundingClientRect() : null;
+    }
+    if (!box || !box.width) return;
+    var cx = box.left + box.width / 2;
+    var cy = box.top + box.height / 2;
+    var amount = Math.max(1, Math.min(30, Number(n) || 1));
+    var count = Math.min(210, 46 + Math.round(amount * 16) + (big ? 90 : 0));
+    pkFx.burst(cx, cy, count, { power: 1 + Math.min(0.9, amount / 14), up: true });
+    pkFx.fountain(cx, Math.min(window.innerHeight - 6, box.bottom), Math.round(count * 0.75));
   }
   /* ---------- 반짝이 파티클 ---------- */
   function pkSparkle(host, n) {
@@ -3988,16 +4143,18 @@
     render({ keepScroll: true });
 
     var art = document.querySelector('.pk-art[data-child="' + childId + '"]');
+    /* 누르는 순간 별이 마구 쏟아져요 (진화·부화 순간엔 더 크게) */
+    pkStarStorm(art, n, newIds.length > 0);
     if (newIds.length) {
       pkStageCelebrate(childId, beforeStage, afterStage, newIds);
     } else if (afterLv > beforeLv) {
-      pkSound('level');
+      pkSound('level', n);
       pkFlash();
       pkSparkle(art, 16);
       UI.confetti(24);
       UI.toast('Lv.' + afterLv + '! 별 ' + pkProg(p.fed) + '/' + pkPerLevel() + ' ⭐', { emoji: '⚡', kind: 'good', duration: 2600 });
     } else {
-      pkSound('feed');
+      pkSound('feed', n);
       pkSparkle(art, 7);
       UI.toast('별 ' + n + '개를 먹였어요 · ' + pkProg(p.fed) + '/' + pkPerLevel() + ' ⭐', { emoji: '⭐', kind: 'good', duration: 1500 });
     }
