@@ -3494,3 +3494,332 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   .wx-slot .wx-h-hr { min-width: 40px; }
   .wx-slot .wx-h-hr i { white-space: nowrap; }
 }
+
+/* =========================================================
+   v75 (2026-11-20) — 탭 바깥 틀 제거·탭 키우기 · 그만! 알림은 홈에만
+                         · 🏡 포켓몬 마을 · 📮 우체통 편지쓰기 머리 정렬
+                         · 홈 다듬기 · 폰 헤더 2줄 / 폰 날씨 컴팩트
+   ========================================================= */
+
+/* ---- ① 탭 줄을 감싸던 바깥 네모 틀·배경 캡슐 제거 (탭 알약만 남김) ---- */
+.topstack {
+  background: linear-gradient(180deg, #FFF8EA 0%, #FFF9F1 78%, rgba(255, 249, 241, 0) 100%);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 6px 2px 2px;
+}
+
+/* ---- ② 탭 글씨·패딩을 조금 더 시원하게 ---- */
+.tabrow .tabs { gap: 6px; }
+.tabrow .tab { padding: 8px 14px; font-size: 13.5px; gap: 6px; border-radius: 14px; }
+.tabrow .tab span { font-size: 16px; }
+@media (min-width: 1000px) {
+  .tabrow .tab { padding: 7px 12px; font-size: 13px; gap: 5px; }
+  .tabrow .tab span { font-size: 15.5px; }
+}
+@media (max-width: 779px) {
+  .tabrow .tab { padding: 7px 11px; font-size: 12.5px; }
+  .tabrow .tab span { font-size: 15px; }
+}
+
+/* ---- ③ 패드에서 탭 줄 맨 앞에 혼자 붙어 있던 🏡 제거 (🏠 홈 탭과 중복) ---- */
+@media (min-width: 1000px) {
+  .tabrow .brand { display: none; }
+}
+
+/* ---- ④ ⏰ 그만! 알림은 홈 시계 옆에만 — 탭 줄·모드 줄에서는 어떤 상태에도 숨김 ---- */
+.tabrow .stop-timer, .tabrow .mode-bar .stop-timer { display: none !important; }
+@media (max-width: 999px) {
+  /* 폰·작은 패드: 홈일 때만 1번째 줄(시계·모드 줄)에 컴팩트하게 */
+  body.on-home .tabrow .mode-bar .stop-timer,
+  body.on-home .tabrow .mode-bar .qb-btn { display: inline-flex !important; }
+  .tabrow .mode-bar .qb-btn, .tabrow .mode-bar .stop-timer {
+    padding: 5px 8px; font-size: 11.5px; gap: 3px; border-radius: 11px;
+  }
+  .tabrow .mode-bar .qb-ico, .tabrow .mode-bar .st-ico { font-size: 13px; }
+  .tabrow .mode-bar .stop-timer .st-label { font-size: 11.5px; }
+  /* 버튼이 옮겨 간 빈 히어로 줄은 통째로 숨김 */
+  body.on-home .hero { display: none !important; }
+}
+
+/* ---- ⑤ ✅ 할 일 아침 섹션: 🌅 → ☀️ (JS에서 바꿈) — 여백만 살짝 정리 ---- */
+.routine-group-head .rg-ico, .routine-group .rg-ico { line-height: 1; }
+
+/* ---- ⑥ 포켓몬: 위 설명 띠는 부모님 모드에서만, 패드에서도 설명이 보이게 ---- */
+.pk-rules.is-parent { margin-bottom: 10px; }
+@media (min-width: 761px) {
+  .pk-rules.is-parent p { display: block; }
+  .pk-rules.is-parent { padding: 10px 14px; }
+}
+
+/* ---- ⑦ 🏡 포켓몬 마을 ---- */
+.pk-village { margin-top: 12px; }
+.pk-village .card-head { margin-bottom: 9px; }
+.ville-duo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 761px) {
+  .ville-duo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+.ville-pane {
+  overflow: hidden;
+  border-radius: 22px;
+  border: 2px solid #D9EEF9;
+  background: #EAF7FF;
+  box-shadow: 0 6px 16px rgba(120, 170, 210, .14);
+}
+.ville-pane.coral { border-color: #FFE7C9; background: #FFF9EF; }
+.ville-top {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 11px 6px;
+  background: rgba(255, 255, 255, .8);
+}
+.ville-name { font-size: 12.5px; font-weight: 800; color: var(--ink-soft); }
+.ville-name b { font-family: var(--font-round); font-weight: 400; font-size: 15px; color: #4B3A2B; }
+.ville-count { margin-left: auto; font-size: 11.5px; font-weight: 800; color: var(--ink-faint); letter-spacing: 0; }
+
+/* 초원 + 하늘 (CSS 그림) */
+.ville-scene {
+  position: relative;
+  height: 172px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #BFE6FF 0%, #DDF3FF 34%, #EDFAE4 35%, #CBEEAE 60%, #A6DC86 100%);
+}
+.ville-sun {
+  position: absolute; right: 16px; top: 12px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 36%, #FFF7CC, #FFD34D 62%, #FFB71C);
+  box-shadow: 0 0 0 7px rgba(255, 228, 140, .32);
+}
+.ville-cloud {
+  position: absolute; width: 54px; height: 17px;
+  border-radius: 999px; background: #fff; opacity: .94;
+  animation: villeDrift 22s ease-in-out infinite alternate;
+}
+.ville-cloud::before, .ville-cloud::after {
+  content: ""; position: absolute; background: #fff; border-radius: 50%;
+}
+.ville-cloud::before { width: 23px; height: 23px; left: 7px; top: -9px; }
+.ville-cloud::after { width: 17px; height: 17px; right: 7px; top: -6px; }
+.ville-cloud.c1 { left: 10%; top: 14px; }
+.ville-cloud.c2 { left: 54%; top: 30px; width: 44px; height: 14px; opacity: .82; animation-duration: 30s; animation-direction: alternate-reverse; }
+.ville-cloud.c2::before { width: 19px; height: 19px; top: -7px; }
+.ville-cloud.c2::after { width: 14px; height: 14px; top: -5px; }
+@keyframes villeDrift { from { transform: translateX(-8px); } to { transform: translateX(14px); } }
+.ville-hill { position: absolute; bottom: 38%; border-radius: 50% 50% 0 0; }
+.ville-hill.h1 { left: -8%; width: 62%; height: 46px; background: #B5E497; }
+.ville-hill.h2 { right: -10%; width: 58%; height: 56px; background: #9FD880; }
+.ville-grass {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 42%;
+  background:
+    radial-gradient(circle at 14% 26%, #FFF6B0 0 3px, transparent 3.5px),
+    radial-gradient(circle at 38% 62%, #FFD1E1 0 3px, transparent 3.5px),
+    radial-gradient(circle at 67% 34%, #FFF6B0 0 3px, transparent 3.5px),
+    radial-gradient(circle at 86% 70%, #FFD1E1 0 3px, transparent 3.5px),
+    repeating-linear-gradient(102deg, rgba(255, 255, 255, .16) 0 2px, transparent 2px 13px);
+}
+.ville-fence {
+  position: absolute; left: 0; right: 0; bottom: 40%; height: 12px;
+  background: repeating-linear-gradient(90deg, #F6E3C4 0 4px, transparent 4px 15px);
+  opacity: .75;
+}
+/* 포켓몬 한 마리: 걷기(좌우) → 방향 반전(스프라이트만) → 통통 튀기 */
+.ville-mon {
+  position: absolute; left: 0; width: 100%;
+  display: flex; justify-content: flex-start;
+  animation: villeWalk var(--dur, 9s) ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+  pointer-events: none;
+}
+.ville-hop {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 1px;
+  animation: villeHop var(--hop, .8s) ease-in-out infinite;
+}
+.ville-img {
+  display: block; image-rendering: pixelated;
+  filter: drop-shadow(0 5px 3px rgba(70, 120, 60, .22));
+  animation: villeFace var(--dur, 9s) steps(1, end) infinite alternate;
+  animation-delay: var(--delay, 0s);
+}
+.ville-tag {
+  font-style: normal; font-size: 9.5px; font-weight: 800; color: #4C6A36;
+  background: rgba(255, 255, 255, .85); border-radius: 999px; padding: 0 5px;
+  white-space: nowrap;
+}
+@keyframes villeWalk { from { transform: translateX(2%); } to { transform: translateX(var(--travel, 60%)); } }
+@keyframes villeHop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes villeFace { from { transform: scaleX(var(--face, 1)); } to { transform: scaleX(calc(var(--face, 1) * -1)); } }
+/* 아직 다 키운 포켓몬이 없을 때: 귀여운 빈 초원 */
+.ville-empty {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  padding: 8px 16px; text-align: center;
+}
+.ville-empty .ve-ico { font-size: 26px; filter: drop-shadow(0 3px 4px rgba(90, 140, 60, .2)); }
+.ville-empty b { font-family: var(--font-round); font-weight: 400; font-size: 14.5px; color: #4C7A2C; }
+.ville-empty small { font-size: 10.5px; font-weight: 800; color: #6C8E50; }
+@media (max-width: 779px) {
+  .ville-scene { height: 150px; }
+  .ville-name { font-size: 11.5px; }
+  .ville-name b { font-size: 13.5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ville-mon, .ville-hop, .ville-img, .ville-cloud { animation: none !important; }
+}
+
+/* ---- ⑧ 📮 우체통: 편지 쓰기 제목 오른쪽으로 보내는 사람(앞) → 받는 사람(뒤) ---- */
+.mail-head { align-items: center; gap: 10px; flex-wrap: wrap; }
+.mail-head-title { min-width: 0; }
+.mail-who { margin-left: auto; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.mail-who-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mail-who-label { font-size: 11px; font-weight: 800; color: var(--ink-faint); white-space: nowrap; }
+.mail-who-btns { display: flex; gap: 6px; }
+.mail-who-btn {
+  width: 78px; height: 34px; padding: 0 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  border: 2px solid #F5E7D2; border-radius: 11px; background: #fff;
+  font-size: 12.5px; font-weight: 800; color: var(--ink-soft);
+  transition: transform .12s, background .16s, border-color .16s;
+}
+.mail-who-btn .mw-ico { width: 20px; height: 20px; display: inline-grid; place-items: center; font-size: 14px; flex: none; }
+.mail-who-btn .mw-ico .avatar { width: 20px; height: 20px; font-size: 11px; border-width: 1px; }
+.mail-who-btn:active { transform: scale(.97); }
+.mail-who-btn.sender.active { border-color: var(--mint); background: #F1FBF6; color: var(--mint-deep); }
+.mail-who-btn.recip.active { border-color: var(--rose); background: #FFF4F9; color: var(--rose-deep); }
+@media (max-width: 760px) {
+  .mail-head { gap: 7px; }
+  .mail-who { margin-left: 0; width: 100%; justify-content: space-between; gap: 8px; }
+  .mail-who-btn { width: 68px; height: 32px; font-size: 12px; }
+}
+
+/* ---- ⑨ 홈 다듬기 (패드): 브랜드↔시계 간격 · 아이 카드 채우기 · 엄마·아빠 글씨 간격 ---- */
+@media (min-width: 1000px) {
+  /* ① 🔴⚪ 민국·이준이네 와 시계 사이를 조금 더 띄움 */
+  .hero-clock { margin-left: 18px; }
+  .hero-brand { padding-right: 4px; }
+
+  /* ② 민국·이준 카드: 위아래로 넓찍하게 (줄 간격·글씨·막대 키우기) */
+  .kid-mini { padding: 11px 12px; gap: 10px; }
+  .kid-mini .km-ava { width: 52px; height: 52px; }
+  .kid-mini .km-body { gap: 8px; }
+  .kid-mini .km-name { font-size: 17.5px; }
+  .kid-mini .km-star, .kid-mini .km-do { font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+  .kid-mini .km-pk { font-size: 12.5px; gap: 6px; }
+  .kid-mini .km-pk-bar, .kid-mini .km-bar { height: 9px; }
+  .kid-mini .km-pk-line { gap: 7px; }
+  .kid-mini .km-pk-line small { font-size: 11.5px; }
+
+  /* ③ 엄마·아빠 카드: [얼굴] 엄마는 지금 ↔ 상태 문구 사이를 시원하게 */
+  .parent-sq { gap: 6px; }
+  .parent-sq .ps-top { margin-bottom: 3px; }
+  .parent-sq .ps-foot { margin-top: 5px; }
+}
+
+/* ---- ⑩ 폰(≤779px): 헤더는 딱 2줄 — ① 시계 + 아이/부모 + 🧹정리 + ⏰그만  ② 탭 ---- */
+@media (max-width: 779px) {
+  .tabrow { row-gap: 5px; }
+  .tabrow .clock.mini { order: 1; padding: 0 !important; }
+  .tabrow .clock.mini .clock-time { font-size: 14.5px; }
+  .tabrow .mode-bar { order: 2; margin-left: auto; gap: 4px; }
+  .tabrow .mode-switch { padding: 2px; gap: 1px; }
+  .tabrow .mode-btn { padding: 5px 7px; font-size: 11.5px; gap: 2px; }
+  .tabrow .mode-btn span { font-size: 12.5px; }
+  .tabrow .mode-bar .qb-btn, .tabrow .mode-bar .stop-timer { padding: 5px 7px; font-size: 11.5px; }
+  .tabrow .tabs { order: 3; flex: 0 0 100%; width: 100%; margin-top: 2px; }
+}
+
+/* ---- ⑪ 폰 날씨 카드: 높이를 확 줄여 날씬하게 ---- */
+@media (max-width: 779px) {
+  .wx-slot { margin-bottom: 8px; }
+  .wx-slot .wx-hero { padding: 4px 7px; gap: 4px; border-radius: 18px; }
+  .wx-slot .wx-hero-main { padding: 2px 4px; gap: 3px; }
+  .wx-slot .wx-hero-row { gap: 7px; flex-wrap: nowrap; }
+  .wx-slot .wx-h-now { gap: 5px; }
+  .wx-slot .wx-h-art { font-size: 24px; }
+  .wx-slot .wx-h-temp { font-size: 22px; }
+  .wx-slot .wx-h-txt b { font-size: 12px; }
+  .wx-slot .wx-h-txt small { font-size: 10px; }
+  .wx-slot .wx-h-hours { margin-left: auto; gap: 3px; }
+  .wx-slot .wx-h-hr { padding: 1px 5px; min-width: 0; gap: 0; border-radius: 9px; }
+  .wx-slot .wx-h-hr i { font-size: 8.5px; }
+  .wx-slot .wx-h-hr em { font-size: 10px; }
+  .wx-slot .wx-h-hr b { font-size: 10.5px; }
+  .wx-slot .wx-dust-col { min-width: 0; padding: 2px 6px; gap: 0; align-self: center; border-radius: 10px; border-right: 0; }
+  .wx-slot .wx-dust-col i { font-size: 10px; }
+  .wx-slot .wx-dust-col b { font-size: 8px; }
+  .wx-slot .wx-dust-col em { font-size: 10.5px; }
+  .wx-slot .wx-hero-tip { font-size: 10px; padding: 0 6px; margin-top: 1px; }
+}
+
+/* ---- v75 보정: 폰 헤더 1줄 고정 · 마을 줄 맞춤 · 홈 카드 채우기 ---- */
+@media (max-width: 779px) {
+  .tabrow .mode-bar { order: 2; margin-left: auto; width: auto; flex: 0 1 auto; flex-wrap: nowrap; }
+  .tabrow .mode-bar .qb-btn .qb-label { display: inline; }
+  .tabrow .mode-bar .qb-btn, .tabrow .mode-bar .stop-timer { padding: 4px 6px; font-size: 11px; }
+}
+/* 마을: 담장 줄은 빼고 잔디 결만 남김 */
+.ville-fence { display: none; }
+/* 패드 홈 아이 카드: 위·중간·아래로 넓찍하게 채움 */
+@media (min-width: 1000px) {
+  .kid-mini { padding: 13px 14px; align-items: stretch; height: 100%; }
+  .kid-mini .km-ava { width: 58px; height: 58px; align-self: center; }
+  .kid-mini .km-body { gap: 8px; height: 100%; align-content: space-between; }
+  .kid-mini .km-name { font-size: 19px; }
+  .kid-mini .km-star, .kid-mini .km-do { font-size: 12.5px; padding: 3px 9px; }
+  .kid-mini .km-pk { font-size: 13.5px; }
+  .kid-mini .km-pk-bar, .kid-mini .km-bar { height: 11px; }
+  .kid-mini .km-pk-line small { font-size: 12px; }
+}
+
+/* ---- v75 보정 2: 폰 1줄 헤더용 짧은 모드 이름 + 마을 가로 띠 ---- */
+.mode-btn .mb-short { display: none; }
+@media (max-width: 779px) {
+  .mode-btn .mb-long { display: none; }
+  .mode-btn .mb-short { display: inline; }
+  .tabrow .mode-btn { padding: 5px 8px; }
+}
+
+/* ---- v75 보정 3: 패드 탭 줄이 넘칠 때는 탭 안에서만 가로 스크롤 ---- */
+@media (min-width: 1000px) {
+  .tabrow .tabs { overflow-x: auto; overflow-y: hidden; }
+  .tabrow .tab { padding: 6px 10px; font-size: 12.5px; gap: 5px; }
+  .tabrow .tab span { font-size: 15px; }
+}
+
+/* ---- v75 보정 4: 1024 패드에서도 8개 탭이 다 보이게 (좁은 패드에선 탭 줄 시계만 잠깐 숨김) ---- */
+@media (min-width: 1000px) and (max-width: 1099px) {
+  body:not(.on-home) .tabrow .clock.mini { display: none; }
+  .tabrow .tab { padding: 6px 9px; }
+}
+
+/* ---- v75 보정 5: 빈 마을 안내 글씨가 초원 위에서도 잘 보이게 ---- */
+.ville-empty b, .ville-empty small {
+  background: rgba(255, 255, 255, .78);
+  border-radius: 999px;
+  padding: 2px 11px;
+  line-height: 1.5;
+}
+
+/* ---- v75 보정 6: 홈(on-home) 규칙보다 세게 — 아이 카드를 위·중간·아래로 꽉 채움 ---- */
+@media (min-width: 1000px) {
+  body.on-home .kids-compact .kid-mini { padding: 14px 14px; align-items: stretch; height: 100%; }
+  body.on-home .kids-compact .kid-mini .km-ava { width: 58px; height: 58px; align-self: center; }
+  body.on-home .kids-compact .kid-mini .km-body { gap: 8px; height: 100%; align-content: space-between; }
+  body.on-home .kids-compact .kid-mini .km-name { font-size: 19px; }
+  body.on-home .kids-compact .kid-mini .km-star,
+  body.on-home .kids-compact .kid-mini .km-do { font-size: 12.5px; padding: 3px 9px; }
+  body.on-home .kids-compact .kid-mini .km-pk { font-size: 13.5px; }
+  body.on-home .kids-compact .kid-mini .km-pk-bar,
+  body.on-home .kids-compact .kid-mini .km-bar { height: 12px; }
+  body.on-home .kids-compact .kid-mini .km-pk-line small { font-size: 12px; }
+}
+
+/* ---- v75 보정 7: 폰 미세먼지 배지는 아이콘 + 한 단어만 (칸이 좁아 글자가 쪼개지지 않게) ---- */
+@media (max-width: 779px) {
+  .wx-slot .wx-dust-col b { display: none; }
+  .wx-slot .wx-dust-col em { white-space: nowrap; }
+  .wx-slot .wx-dust-col { gap: 2px; padding: 3px 7px; }
+}
+
+/* ---- v75 보정 8: 폰에서 엄마·아빠 카드 큰 그림이 카드 밖으로 3px 새던 것 ---- */
+.parent-sq { overflow: hidden; }

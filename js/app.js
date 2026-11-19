@@ -1066,7 +1066,9 @@
     if (!btn || !lab) return;
     var running = !!(stopTimer && stopRemainMs() > 0);
     btn.classList.toggle('running', running);
-    lab.textContent = running ? formatRemain(stopRemainMs()) : '그만! 알림';
+    var compact = false;
+    try { compact = window.matchMedia('(max-width: 779px)').matches; } catch (e) {}
+    lab.textContent = running ? formatRemain(stopRemainMs()) : (compact ? '그만' : '그만! 알림');
     btn.setAttribute('aria-label', running ? ('그만! 알림 ' + lab.textContent + ' 남음') : '그만! 알림');
   }
   function startStopTimer(ms) {
@@ -1372,21 +1374,20 @@
   }
 
   /* ---- 🧹 정리 · ⏰ 그만! 알림 버튼 자리 ----
-     · 패드 홈: 큰 시계 옆 2줄 / 패드 다른 탭: 구석(숨김) + 탭 줄
-     · 폰: 탭 줄 오른쪽 (예전처럼) ---- */
+     · 패드: 홈의 시계 옆(.hero-quick)에만 (다른 탭에서는 히어로 줄째 숨김)
+     · 폰·작은 패드: 홈일 때만 1번째 줄(시계·모드 줄)에 컴팩트하게 (CSS가 제어)
+     · 어느 쪽이든 탭 줄 오른쪽에 다시 나타나지 않아요. ---- */
   function placeQuickButtons() {
     var stopBtn = document.getElementById('stopTimerBtn');
     var tidyBtn = document.getElementById('quickTidy');
     var quick = document.querySelector('.hero-quick');
     var bar = document.querySelector('.tabrow .mode-bar');
-    if (!stopBtn || !tidyBtn || !quick || !bar) return;
+    if (!stopBtn || !tidyBtn || !quick) return;
     var wide = false;
     try { wide = window.matchMedia('(min-width: 1000px)').matches; } catch (e) {}
-    /* 폰: 정리·그만 버튼은 헤더에 두지 않고 홈 화면 안(히어로 줄)에만 */
-    var homeHost = wide ? ((view === 'home') ? quick : bar) : quick;
-    var tidyHost = wide ? quick : quick;
-    if (stopBtn.parentNode !== homeHost) homeHost.appendChild(stopBtn);
-    if (tidyBtn.parentNode !== tidyHost) tidyHost.appendChild(tidyBtn);
+    var host = (wide || !bar) ? quick : bar;
+    if (tidyBtn.parentNode !== host) host.appendChild(tidyBtn);
+    if (stopBtn.parentNode !== host) host.appendChild(stopBtn);
   }
   function placeStopTimer() { placeQuickButtons(); }
 
@@ -2413,7 +2414,7 @@
     var st = routineStats(c.id, today);
     var pct = st.total ? Math.round(st.done / st.total * 100) : 0;
     var body = '';
-    if (routineSlot === 'all' || routineSlot === 'morning') body += routineGroupHTML(c, '아침', '🌅', items.morning, 'morning');
+    if (routineSlot === 'all' || routineSlot === 'morning') body += routineGroupHTML(c, '아침', '☀️', items.morning, 'morning');
     if (routineSlot === 'all' || routineSlot === 'evening') body += routineGroupHTML(c, '저녁', '🌙', items.evening, 'evening');
     return '<div class="card routine-kid ' + c.color + '">' +
       '<div class="rk-head">' +
@@ -2835,9 +2836,6 @@
     if (p) return { id: p.id, name: p.name, emoji: p.emoji, color: p.color, kid: false };
     return { id: id || '', name: '가족', emoji: '👪', color: 'sun', kid: false };
   }
-  function mailPickBtnHTML(k) {
-    return isKidId(k.id) ? kidAvaHTML(k) : '<span class="avatar sm ' + k.color + '">' + k.emoji + '</span>';
-  }
   /* 그 아이 방에 들어가는 편지 — 그 아이가 보낸 것과 그 아이에게 온 것 모두 */
   function mailInRoom(m, id) { return !!m && (m.fromId === id || m.toId === id); }
 
@@ -2889,20 +2887,26 @@
     return (S.mode === 'parent' ? bannerComposeHTML() : '') +
       '<div class="mail-layout">' +
       '<div class="card soft-rose mail-compose-card">' +
-        cardHead('✏️', '편지 쓰기', S.mode === 'parent' ? '부모님이 아이에게 마음을 보내요' : '손글씨로도, 그림으로도 보내요') +
-        /* 보내는 사람·받는 사람 — 두 줄 컴팩트 칩 */
-        '<div class="mail-who">' +
-          '<div class="mail-who-row"><span class="mail-who-label">보내는 사람</span>' +
-            '<div class="pick-child mail-pick">' + mailSenderList().map(function (k) {
-              return '<button type="button" class="' + (k.id === senderId ? 'active ' + (k.color === 'coral' ? 'coral' : '') : '') + '" data-act="pick-mail-sender" data-id="' + k.id + '" aria-pressed="' + (k.id === senderId ? 'true' : 'false') + '">' +
-                mailPickBtnHTML(k) + esc(k.name) + '</button>';
-            }).join('') + '</div>' +
-          '</div>' +
-          '<div class="mail-who-row"><span class="mail-who-label">받는 사람</span>' +
-            '<div class="mail-recipients compact">' + mailPickList().map(function (r) {
-              return '<button type="button" class="mail-recipient' + (r.id === pickId ? ' active' : '') + '" data-act="pick-mail-recipient" data-id="' + r.id + '" aria-pressed="' + (r.id === pickId ? 'true' : 'false') + '">' +
-                '<span class="emoji">' + r.emoji + '</span>' + esc(r.name) + '</button>';
-            }).join('') + '</div>' +
+        /* ✏️ 편지 쓰기 제목 오른쪽 빈자리에 보내는 사람(앞) → 받는 사람(뒤) 칩을 나란히 */
+        '<div class="card-head mail-head">' +
+          '<span class="ico">✏️</span>' +
+          '<div class="mail-head-title"><h2>편지 쓰기</h2>' +
+            '<div class="sub">' + (S.mode === 'parent' ? '부모님이 아이에게 마음을 보내요' : '손글씨로도, 그림으로도 보내요') + '</div></div>' +
+          '<div class="mail-who">' +
+            '<div class="mail-who-row"><span class="mail-who-label">보내는 사람</span>' +
+              '<div class="mail-who-btns">' + mailSenderList().map(function (k) {
+                var on = k.id === senderId;
+                return '<button type="button" class="mail-who-btn sender' + (on ? ' active' : '') + '" data-act="pick-mail-sender" data-id="' + k.id + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+                  '<span class="mw-ico">' + (isKidId(k.id) ? kidAvaHTML(k, 'sm') : k.emoji) + '</span>' + esc(k.name) + '</button>';
+              }).join('') + '</div>' +
+            '</div>' +
+            '<div class="mail-who-row"><span class="mail-who-label">받는 사람</span>' +
+              '<div class="mail-who-btns">' + mailPickList().map(function (r) {
+                var on = r.id === pickId;
+                return '<button type="button" class="mail-who-btn recip' + (on ? ' active' : '') + '" data-act="pick-mail-recipient" data-id="' + r.id + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+                  '<span class="mw-ico">' + r.emoji + '</span>' + esc(r.name) + '</button>';
+              }).join('') + '</div>' +
+            '</div>' +
           '</div>' +
         '</div>' +
         /* 넓은 화면: 왼쪽 글쓰기·음성·그림 / 오른쪽 손글씨 캔버스 (모바일은 위에서 아래로) */
@@ -5629,43 +5633,95 @@
       (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
       '</div>';
   }
-  /* 도감 격자 — 그 아이가 모은 것만 보입니다 (아이마다 도감이 따로예요) */
-  function pkDexGridHTML(childId) {
+  /* ---------- 🏡 포켓몬 마을 ----------
+     최종 진화한(도감에 등록한) 포켓몬만 초원에서 아장아장 걸어 다녀요.
+     · 도감 번호에서 뽑은 값(속도·폭·높이·통통 높이·방향)으로 한 마리도 같은 움직임이 없어요.
+     · 걷기(좌우 이동)·방향 반전·통통 튀기를 CSS 애니메이션만으로 굴러가게 합니다. */
+  function pkVillageList(childId) {
     var p = pkOf(childId);
-    var got = {};
-    (p.dex || []).forEach(function (id) { got[id] = 1; });
-    return '<div class="pk-dex-grid">' + PK.finals.map(function (id) {
+    var out = [];
+    (p.dex || []).forEach(function (id) {
       var sp = PK.species[id];
-      var owned = !!got[id];
-      return '<div class="pk-dex-cell' + (owned ? ' owned' : '') + '">' +
-        '<img src="' + pkIcon(id) + '" alt="" loading="lazy"' + (owned ? '' : ' aria-hidden="true"') + '>' +
-        '<span>' + (owned ? esc(sp.ko) : '???') + '</span></div>';
-    }).join('') + '</div>';
+      if (sp && sp.final && out.indexOf(id) < 0) out.push(id);
+    });
+    return out;
+  }
+  function pkVilleMotion(id, i) {
+    var seed = (id * 37 + i * 53) % 97;
+    var lane = i % 3;                                   /* 0·1·2 = 앞·가운데·뒤 줄 */
+    var col = i % 3;                                    /* 0·1·2 = 왼·가운데·오른쪽 띠 */
+    var durNum = 8 + (seed % 4) * 1.3 + lane * 0.7;
+    return {
+      dur: durNum.toFixed(2),
+      left: col * 30 + (seed % 3),                     /* 0 ~ 62% */
+      travel: 26 - col * 2,                            /* 26 ~ 22% (띠 안에서만 걷기) */
+      bottom: 4 + lane * 12 + (seed % 3) * 2,           /* 4 ~ 32% */
+      hop: (0.58 + (seed % 4) * 0.15).toFixed(2),
+      face: (seed % 2) ? -1 : 1,
+      delay: (-(durNum * (0.16 + i * 0.29 + (seed % 5) * 0.03))).toFixed(2),
+      size: 44 + ((seed + lane) % 3) * 7
+    };
+  }
+  function pkVilleMonHTML(id, i) {
+    var sp = PK.species[id];
+    if (!sp) return '';
+    var m = pkVilleMotion(id, i);
+    return '<span class="ville-mon" style="--dur:' + m.dur + 's;--travel:' + m.travel + '%;--delay:' + m.delay + 's;left:' + m.left + '%;bottom:' + m.bottom + '%;">' +
+      '<span class="ville-hop" style="--hop:' + m.hop + 's;">' +
+        '<img class="ville-img" src="' + pkIcon(id) + '" alt="' + esc(sp.ko) + '" loading="lazy" ' +
+          'style="--face:' + m.face + ';width:' + m.size + 'px;height:' + m.size + 'px" ' +
+          'onerror="this.onerror=null;this.src=\'' + pkArt(id) + '\'">' +
+        '<em class="ville-tag">' + esc(sp.ko) + '</em>' +
+      '</span>' +
+    '</span>';
+  }
+  function pkVilleSceneHTML(childId) {
+    var list = pkVillageList(childId);
+    var scene = '<span class="ville-sun" aria-hidden="true"></span>' +
+      '<span class="ville-cloud c1" aria-hidden="true"></span>' +
+      '<span class="ville-cloud c2" aria-hidden="true"></span>' +
+      '<span class="ville-hill h1" aria-hidden="true"></span>' +
+      '<span class="ville-hill h2" aria-hidden="true"></span>' +
+      '<span class="ville-grass" aria-hidden="true"></span>' +
+      '<span class="ville-fence" aria-hidden="true"></span>';
+    return '<div class="ville-scene' + (list.length ? '' : ' is-empty') + '">' + scene +
+      (list.length
+        ? list.map(pkVilleMonHTML).join('')
+        : '<div class="ville-empty"><span class="ve-ico" aria-hidden="true">🌱</span>' +
+            '<b>첫 포켓몬을 다 키우면 마을에 놀러 와요!</b>' +
+            '<small>최종 진화한 포켓몬이 이 초원에서 아장아장 걸어 다녀요</small></div>') +
+    '</div>';
+  }
+  function pkVillePaneHTML(k) {
+    var n = pkVillageList(k.id).length;
+    return '<div class="ville-pane ' + k.color + '">' +
+      '<div class="ville-top"><span class="ville-name">' + k.emoji + ' <b>' + esc(k.name) + '</b> 포켓몬 마을</span>' +
+        '<span class="ville-count">' + n + ' / ' + PK.finals.length + '마리</span></div>' +
+      pkVilleSceneHTML(k.id) +
+    '</div>';
   }
   function renderPokemon() {
     var c = childById(routineChild);
     var total = PK.finals.length;
-    return '<div class="card soft-sun pk-rules">' +
-        '<div class="pk-rules-head"><b>⭐ 별 ' + pkPerLevel() + '개 모으면 진화!</b>' +
-          '<span>' + D.children.map(function (k) { return k.emoji + ' ' + esc(k.name) + ' ⭐' + (S.stars[k.id] || 0); }).join(' · ') + '</span></div>' +
-        '<p>할 일 체크 · 등교 준비로 <b>내 별(⭐)</b>을 모아서 포켓몬에게 먹여요.<br>' +
-        '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 단계마다 먹인 별 ' + pkPerLevel() + '개를 모아야 진화해요.<br>' +
-        '먹인 별은 포켓몬 안에서만 쌓여요(내 별과는 따로 보여요). 알 속 포켓몬은 <b>부화하는 순간까지 비밀</b>!</p>' +
-        (S.mode === 'parent'
-          ? '<div class="btn-row pk-rules-btns">' +
+    return (S.mode === 'parent'
+        ? '<div class="card soft-sun pk-rules is-parent">' +
+            '<p>할 일 체크 · 등교 준비로 <b>내 별(⭐)</b>을 모아서 포켓몬에게 먹여요. ' +
+            '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 단계마다 먹인 별 ' + pkPerLevel() + '개를 모아야 진화해요.<br>' +
+            '먹인 별은 포켓몬 안에서만 쌓여요(내 별과는 따로 보여요). 알 속 포켓몬은 <b>부화하는 순간까지 비밀</b>!</p>' +
+            '<div class="btn-row pk-rules-btns">' +
               D.children.map(function (k) {
                 return '<button type="button" class="btn btn-ghost btn-sm" data-act="pk-test" data-child="' + k.id + '">🧪 ' + esc(k.name) + ' 별 ' + pkPerLevel() + '개</button>';
               }).join('') +
               '<button type="button" class="btn btn-soft btn-sm" data-act="pk-settings">⚙️ 포켓몬 관리</button>' +
-            '</div>'
-          : '') +
-      '</div>' +
+            '</div>' +
+          '</div>'
+        : '') +
       /* 좁은 화면: 한 아이씩 골라 보는 칩 (넓은 화면에서는 두 아이가 나란히 다 보여서 숨겨요) */
       '<div class="chip-row pk-pick" role="group" aria-label="누구 포켓몬을 볼까요">' +
         D.children.map(function (k) {
-          var kc = (pkOf(k.id).dex || []).length;
+          var kc = pkVillageList(k.id).length;
           return '<button type="button" class="chip ' + k.color + (k.id === c.id ? ' active' : '') + '" data-act="pick-pk-child" data-id="' + k.id + '" aria-pressed="' + (k.id === c.id ? 'true' : 'false') + '">' +
-            k.emoji + ' ' + esc(k.name) + '의 포켓몬 <small>📖 ' + kc + '/' + total + '</small></button>';
+            k.emoji + ' ' + esc(k.name) + '의 포켓몬 <small>🏡 ' + kc + '/' + total + '</small></button>';
         }).join('') +
       '</div>' +
       /* 알·키우기 카드: 좁은 화면은 고른 아이 하나, 넓은 화면(패드·데스크톱)은 두 아이 2분할 */
@@ -5676,29 +5732,10 @@
           '</div>';
         }).join('') +
       '</div>' +
-      /* 카드 아래 도감 — 탭 없이 두 아이 도감이 늘 함께 보입니다.
-         넓은 화면(패드·데스크톱)은 민국·이준 도감을 나란히, 좁은 화면은 위아래로 이어서 보여요. */
-      '<div class="card pk-dex">' +
-        '<div class="pk-dex-head">' +
-          '<span class="pk-dex-ico" aria-hidden="true">📖</span>' +
-          '<div class="pk-dex-title"><b>포켓몬 도감</b>' +
-            '<small>최종 진화하면 도감에 등록 · ' + D.children.map(function (k) {
-              return esc(k.name) + ' ' + (pkOf(k.id).dex || []).length + '마리';
-            }).join(' · ') + '</small></div>' +
-        '</div>' +
-        '<div class="pk-dex-duo">' +
-          D.children.map(function (k) {
-            var kc = (pkOf(k.id).dex || []).length;
-            return '<div class="pk-dex-pane" data-child="' + k.id + '">' +
-              '<div class="pk-dex-sub">' +
-                '<span class="pk-dex-sub-name">' + k.emoji + ' <b>' + esc(k.name) + '</b> 도감</span>' +
-                '<span class="pk-dex-sub-count">' + kc + ' / ' + total + '마리</span>' +
-              '</div>' +
-              pkDexGridHTML(k.id) +
-            '</div>';
-          }).join('') +
-        '</div>' +
-        '<p class="pk-dex-help">최종 진화한 포켓몬만 반짝하며 도감에 남아요. 별과 도감은 아이마다 따로 모여요.</p>' +
+      /* 카드 아래 🏡 포켓몬 마을 — 다 키운 포켓몬이 초원에서 놀아요 (아이마다 따로) */
+      '<div class="card pk-village">' +
+        cardHead('🏡', '포켓몬 마을', '다 키운 포켓몬이 초원에서 놀아요') +
+        '<div class="ville-duo">' + D.children.map(pkVillePaneHTML).join('') + '</div>' +
       '</div>';
   }
 
@@ -6447,7 +6484,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 74;             /* index.html 의 ?v=73 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 75;             /* index.html 의 ?v=75 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
