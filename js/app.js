@@ -4116,7 +4116,7 @@
       for (var i = 0; i < n; i++) {
         add(mk(Math.random() * W, -20 - Math.random() * 160,
           (Math.random() - 0.5) * 60, 90 + Math.random() * 180,
-          40 + Math.random() * 60, { ttl: 3.4 + Math.random() * 2 }));
+          40 + Math.random() * 60, { ttl: 3.8 + Math.random() * 2.2 }));
       }
       kick();
     }
@@ -4141,15 +4141,15 @@
     pkFx.burst(cx, cy, Math.round(count * 0.5), { power: power, up: true });
     pkFx.fountain(cx, base, Math.round(count * 0.6));
     /* 0.11초마다 조금씩 계속 — 화면 위에서 아래로 별이 마구 쏟아져요 (약 1.2초) */
-    var waves = 11;
+    var waves = 16;
     for (var w = 1; w <= waves; w++) {
       (function (w) {
         setTimeout(function () {
-          var soft = 1 - w / (waves + 3);
-          pkFx.rain(Math.max(4, Math.round(count * 0.17 * soft)));
-          if (w % 3 === 0) pkFx.fountain(cx, base, Math.round(count * 0.2));
-          if (w % 4 === 0) pkFx.burst(cx, cy, Math.round(count * 0.16), { power: power * 0.9, up: true });
-        }, w * 110);
+          var soft = 1 - w / (waves + 4);
+          pkFx.rain(Math.max(4, Math.round(count * 0.16 * soft)));
+          if (w % 3 === 0) pkFx.fountain(cx, base, Math.round(count * 0.18));
+          if (w % 4 === 0) pkFx.burst(cx, cy, Math.round(count * 0.15), { power: power * 0.9, up: true });
+        }, w * 120);
       })(w);
     }
   }
