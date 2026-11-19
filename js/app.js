@@ -2379,7 +2379,7 @@
               '<textarea class="input mail-text" id="mailText" maxlength="40" rows="2" placeholder="짧은 말도 함께 보낼 수 있어요 (선택)">' + esc(mailDraft) + '</textarea>' +
               '<button type="button" class="mic-btn" id="mailMic" data-act="mail-mic" aria-pressed="false">' +
                 '<span class="mic-ico" aria-hidden="true">🎤</span>' +
-                '<span class="mic-text"><b>눌러서 말하기</b><small id="mailMicHint" aria-live="polite">말하면 이 칸에 그대로 적혀요</small></span>' +
+                '<span class="mic-text"><b>눌러서 말하기</b><small id="mailMicHint" aria-live="polite">말하면 위 칸에 그대로 적혀요</small></span>' +
               '</button>' +
             '</div>' +
             '<div class="mail-ornament"><span>🖼️ 그림 편지</span><small>골라서 보내요</small></div>' +
@@ -2573,7 +2573,7 @@
     micRec.onend = function () {
       micOn = false;
       if (btn) { btn.classList.remove('on'); btn.setAttribute('aria-pressed', 'false'); }
-      if (hint) hint.textContent = '말하면 이 칸에 그대로 적혀요';
+      if (hint) hint.textContent = '말하면 위 칸에 그대로 적혀요';
     };
     try {
       micRec.start();
@@ -5274,7 +5274,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 37;             /* index.html 의 ?v=37 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 38;             /* index.html 의 ?v=38 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
