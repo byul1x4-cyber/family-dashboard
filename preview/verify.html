@@ -5672,6 +5672,20 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   body.on-home .hero-quick { display: flex !important; flex: 1 1 auto; width: 100%; }
 }
 
+/* ---- 폰 확정 순서: 달력 → 오늘·내일 → 알림장 → 민국·이준 → 엄마·아빠 (전부 100% 폭) ---- */
+@media (max-width: 779px) {
+  .home-main2 { width: 100%; align-items: stretch; }
+  .home-main2 > .hm-cal, .home-main2 .hm-cal { order: 1; width: 100%; }
+  .home-main2 > .hm-day, .home-main2 .hm-day { order: 2; width: 100%; }
+  .home-main2 .notice-card { order: 3; width: 100%; }
+  .home-main2 .kids-compact { order: 4; width: 100%; }
+  .home-main2 .parents-grid { order: 5; width: 100%; }
+  .home-main2 .month-card, .home-main2 .day-card,
+  .home-main2 .notice-card, .home-main2 .kid-mini { max-width: none; width: 100%; }
+  .wx-strip { width: 100%; }
+  .wx-strip-slot { display: block; width: 100%; }
+}
+
 </style>
 </head>
 <body>
