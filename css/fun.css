@@ -3276,3 +3276,80 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   .clock.big .ct-num { font-size: 50px; }
   .clock.big .ct-ampm { font-size: 16px; }
 }
+
+/* =========================================================
+   15차 — 브랜드 여백·시계 간격 · 날씨 칸 세로 채움 · 아이 카드 균등 배치
+   ========================================================= */
+@media (min-width: 1000px) {
+  body.on-home .hero-brand { padding-left: 10px; padding-right: 4px; }
+  body.on-home .hero-clock { margin-left: 14px; }
+
+  .wx-hero-main { padding: 4px 12px; gap: 2px; }
+  .wx-hero-tip { font-size: 11px; padding: 1px 9px; line-height: 1.2; }
+  .wx-h-hr { padding: 2px 11px; }
+  .wx-h-hr i { font-size: 11px; }
+  .wx-h-hr em { font-size: 16px; }
+  .wx-h-hr b { font-size: 16px; }
+  .wx-h-art { font-size: 44px; }
+
+  body.on-home .km-body { align-content: space-evenly; gap: 10px; }
+  body.on-home .kid-mini { padding: 12px 12px; }
+}
+
+/* ---- 부모님 카드: 글은 왼쪽, 큰 그림은 남은 공간 가운데 ---- */
+.parent-sq {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "top big" "foot big";
+  column-gap: 8px;
+  padding: 8px 10px;
+}
+.ps-big { justify-self: center; align-self: center; font-size: 72px !important; }
+@media (min-width: 1000px) { .ps-big { font-size: 78px !important; } }
+@media (min-width: 1000px) and (max-height: 740px) { .ps-big { font-size: 64px !important; } }
+
+/* ---- 알림장 체크리스트가 카드 높이에 고르게 퍼지게 ---- */
+@media (min-width: 1000px) {
+  body.on-home .notice-card .notice-list { align-content: space-evenly; }
+  body.on-home .notice-card .notice-msg { margin-bottom: 2px; }
+}
+
+/* ---- 낮은 패드(≤740): 알림장 목록 높이를 묶어 페이지 스크롤 0 ---- */
+@media (min-width: 1000px) and (max-height: 740px) {
+  body.on-home .notice-card .notice-list { max-height: 200px; overflow-y: auto; align-content: start; }
+  body.on-home .ps-big { font-size: 56px !important; }
+  body.on-home .parent-sq { padding: 6px 8px; }
+  body.on-home .month-card .mini-day { min-height: 17px; font-size: 12.5px; }
+}
+
+/* ---- 낮은 패드: 오른쪽 열 높이를 고정 비율로 묶어 페이지 스크롤 0 ---- */
+@media (min-width: 1000px) and (max-height: 740px) {
+  body.on-home .hm-right { grid-template-rows: minmax(0, 1fr) 86px; }
+  body.on-home .notice-card { height: 100%; min-height: 0; }
+  body.on-home .notice-card .notice-list { flex: 1 1 0; min-height: 0; max-height: none; overflow-y: auto; }
+  body.on-home .parents-grid { height: 86px; }
+  body.on-home .parent-sq { height: 100%; }
+}
+
+/* ---- 낮은 패드(≤740) 최종: 달력·알림장 내용을 줄여 두 열 모두 한 화면에 ---- */
+@media (min-width: 1000px) and (max-height: 740px) {
+  body.on-home .month-card .mini-day { min-height: 16px; font-size: 12px; border-radius: 7px; }
+  body.on-home .month-card .mini-dow { font-size: 9.5px; padding-bottom: 2px; }
+  body.on-home .month-card .mini-cal { gap: 2px; }
+  body.on-home .notice-card .card-head { margin-bottom: 3px; }
+  body.on-home .notice-card .card-head h2 { font-size: 16px; }
+  body.on-home .notice-card .notice-title { font-size: 13.5px; margin-bottom: 2px; }
+  body.on-home .notice-card .notice-msg { font-size: 12.5px; line-height: 1.4; padding: 4px 8px; }
+  body.on-home .notice-card .notice-item { font-size: 13px; padding: 5px 9px; }
+  body.on-home .notice-card .notice-check { width: 20px; height: 20px; }
+  body.on-home .notice-card .notice-foot { margin-top: 2px; }
+}
+
+/* ---- 낮은 패드: 아이 카드 최소 높이를 줄여 아래 여유 확보 ---- */
+@media (min-width: 1000px) and (max-height: 740px) {
+  body.on-home .kid-mini { padding: 5px 9px; }
+  body.on-home .km-body { gap: 4px; }
+  body.on-home .km-name { font-size: 17px; }
+  body.on-home .km-pk { font-size: 13px; }
+  body.on-home .km-ava { width: 40px; height: 40px; }
+  body.on-home .km-do, body.on-home .km-star { font-size: 11.5px; }
+}
