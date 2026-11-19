@@ -5519,6 +5519,25 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   .clock.big .ct-ampm { font-size: 16px; }
 }
 
+/* =========================================================
+   15차 — 브랜드 여백·시계 간격 · 날씨 칸 세로 채움 · 아이 카드 균등 배치
+   ========================================================= */
+@media (min-width: 1000px) {
+  body.on-home .hero-brand { padding-left: 10px; padding-right: 4px; }
+  body.on-home .hero-clock { margin-left: 14px; }
+
+  .wx-hero-main { padding: 4px 12px; gap: 2px; }
+  .wx-hero-tip { font-size: 11px; padding: 1px 9px; line-height: 1.2; }
+  .wx-h-hr { padding: 2px 11px; }
+  .wx-h-hr i { font-size: 11px; }
+  .wx-h-hr em { font-size: 16px; }
+  .wx-h-hr b { font-size: 16px; }
+  .wx-h-art { font-size: 44px; }
+
+  body.on-home .km-body { align-content: space-evenly; gap: 10px; }
+  body.on-home .kid-mini { padding: 12px 12px; }
+}
+
 </style>
 </head>
 <body>
