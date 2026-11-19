@@ -1936,3 +1936,12 @@
   .clock-date { font-size: 9px; }
   .clock-time { font-size: 13.5px; }
 }
+
+/* 패드 1024×768: 위쪽 여백을 조금씩 덜어 핵심 세 칸이 잘리지 않게 */
+@media (min-width: 1000px) {
+  .tabs { padding: 4px 2px 7px; }
+  .wx-strip { padding: 6px 12px; }
+  .home-status .status-chip { padding: 5px 10px; }
+  .home-status .sc-ava { width: 26px; height: 26px; font-size: 13px; }
+  .hm-cal .card-head { margin-bottom: 7px; }
+}
