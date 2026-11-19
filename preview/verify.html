@@ -5699,6 +5699,35 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   .tabrow .tabs { order: 3; flex: 0 0 100%; width: 100%; margin-top: 3px; }
 }
 
+/* =========================================================
+   17차 — 폰: 시계 텍스트만 + 태블릿과 같은 날씨 카드(100% 폭)
+   ========================================================= */
+.wx-slot { display: none; }
+@media (max-width: 999px) {
+  .wx-slot { display: block; width: 100%; margin-bottom: 8px; }
+  .wx-slot .wx-head { display: block !important; width: 100%; margin: 0; }
+  .wx-slot .wx-hero { width: 100%; }
+  .wx-slot .wx-hero-main { padding: 6px 10px; gap: 4px; }
+  .wx-slot .wx-hero-row { gap: 8px; flex-wrap: wrap; }
+  .wx-slot .wx-h-temp { font-size: 28px; }
+  .wx-slot .wx-h-art { font-size: 32px; }
+  .wx-slot .wx-h-txt b { font-size: 14px; }
+  .wx-slot .wx-h-txt small { font-size: 11.5px; }
+  .wx-slot .wx-h-hours { margin-left: auto; gap: 4px; }
+  .wx-slot .wx-h-hr { padding: 2px 7px; }
+  .wx-slot .wx-h-hr i { font-size: 10px; }
+  .wx-slot .wx-h-hr em { font-size: 13px; }
+  .wx-slot .wx-h-hr b { font-size: 13px; }
+  .wx-slot .wx-dust-col { min-width: 52px; }
+  .wx-slot .wx-dust-col em { font-size: 11.5px; }
+  .wx-slot .wx-hero-tip { font-size: 11px; }
+
+  /* 모바일 상단 시계: 알약 박스 없이 글씨만 */
+  .tabrow .clock.mini { background: none !important; border: 0 !important; padding: 0 !important; box-shadow: none !important; }
+  .tabrow .clock.mini::before { content: none !important; }
+  .tabrow .clock.mini .clock-time { font-size: 15px; font-weight: 800; color: #6B4B22; font-family: var(--font-round); }
+}
+
 </style>
 </head>
 <body>
@@ -8982,6 +9011,21 @@ window.Ntfy = (function () {
   }
   function placeStopTimer() { placeQuickButtons(); }
 
+  /* ---- 날씨 카드 자리: 패드는 헤더 둘째 줄, 폰은 홈 본문 맨 위 ---- */
+  function placeWeather() {
+    var wx = document.getElementById('wxHead');
+    if (!wx) return;
+    var wide = false;
+    try { wide = window.matchMedia('(min-width: 1000px)').matches; } catch (e) {}
+    var slot = document.getElementById('wxSlot');
+    var hero = document.querySelector('.hero');
+    if (!wide && view === 'home' && slot) {
+      if (wx.parentNode !== slot) slot.appendChild(wx);
+    } else if (hero && wx.parentNode !== hero) {
+      hero.appendChild(wx);
+    }
+  }
+
   function updateChrome() {
     var mc = document.getElementById('modeChild');
     var mp = document.getElementById('modeParent');
@@ -8992,6 +9036,7 @@ window.Ntfy = (function () {
     /* 패드: 홈에서만 큰 시계·날씨 줄(#hero)을 보입니다 */
     document.body.classList.toggle('on-home', view === 'home');
     placeStopTimer();
+    placeWeather();
     paintWeather();
     var mailTabBtn = document.querySelector('.tab[data-view="mailbox"]');
     if (mailTabBtn) mailTabBtn.classList.toggle('has-dot', unreadTotal() > 0);
@@ -9100,7 +9145,7 @@ window.Ntfy = (function () {
                      오른쪽: 🏫 민국이 알림장(크게) → 엄마는 지금 · 아빠는 지금 네모 카드
        · 홈 아래 타일·약·장보기는 걷어냈습니다 (각 탭/상단 바로가기/식판·건강에 있음). */
     return '' +
-      '<div class="wx-strip-slot">' + weatherStripHTML() + '</div>' +
+      '<div class="wx-slot" id="wxSlot"></div>' +
 
       '<div class="home-main2">' +
         '<div class="hm-col hm-left">' +
