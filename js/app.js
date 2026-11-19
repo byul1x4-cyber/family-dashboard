@@ -2243,12 +2243,44 @@
     }
   }
 
+  /* ⭐ 별 돌려받기 — 보유 별에서 먼저 빼고, 모자라면 키우는 포켓몬에게 먹인 별에서 이어서 뺀다.
+     부모님이 잘못 누른 별을 되돌릴 때 '실제로 나간 별'이 같이 사라지도록 하는 장치예요.
+     포켓몬 단계·레벨은 먹인 별(fed)에서 다시 계산되니, 단계를 넘게 빠지면
+     저절로 이전 단계로 내려가고 경험치도 그 만큼 이어집니다. */
+  function spendStars(childId, n) {
+    n = Math.max(0, Math.floor(Number(n) || 0));
+    var out = { held: 0, pokemon: 0 };
+    if (!n) return out;
+    var have = Math.max(0, Math.floor(S.stars[childId] || 0));
+    out.held = Math.min(have, n);
+    S.stars[childId] = have - out.held;
+    var rest = n - out.held;
+    if (rest > 0) {
+      var p = pkOf(childId);
+      var fed = Math.max(0, Math.floor(p.fed));
+      out.pokemon = Math.min(rest, fed);
+      p.fed = fed - out.pokemon;
+    }
+    return out;
+  }
+  function takeStarsNote(childId, n) {
+    var r = spendStars(childId, n);
+    var name = childById(childId).name;
+    if (r.pokemon > 0) {
+      UI.toast(r.held > 0
+          ? name + ' 보유 별 ' + r.held + '개가 모자라 포켓몬에게 먹인 별에서 ' + r.pokemon + '개도 뺐어요'
+          : name + ' 보유 별이 없어 포켓몬에게 먹인 별에서 ' + r.pokemon + '개 뺐어요',
+        { emoji: '⚡', kind: 'warn', duration: 3400 });
+    }
+    return r;
+  }
+
   function undoRoutine(childId, itemId) {
     if (!needParent()) return;
     var today = todayKey();
     if (S.routine[today] && S.routine[today][itemId]) {
       delete S.routine[today][itemId];
-      S.stars[childId] = Math.max(0, (S.stars[childId] || 0) - 1);
+      takeStarsNote(childId, 1);   /* 보유 별이 없으면 포켓몬에게 먹인 별에서 뺌 */
       var key = today + ':' + childId;
       delete S.celebrated[key];
       save();
@@ -5180,7 +5212,11 @@
           var cid = b.getAttribute('data-child');
           if (act === 'stars') {
             var n = Number(b.getAttribute('data-n')) || 0;
-            S.stars[cid] = Math.max(0, (S.stars[cid] || 0) + n);
+            if (n < 0) {
+              takeStarsNote(cid, -n);   /* 빼는 별 — 모자라면 포켓몬에게 먹인 별에서 이어서 */
+            } else {
+              S.stars[cid] = Math.max(0, (S.stars[cid] || 0) + n);
+            }
             saveNow();
             render({ keepScroll: true });
             refreshState(cid);
@@ -5648,7 +5684,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 47;             /* index.html 의 ?v=47 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 48;             /* index.html 의 ?v=48 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 

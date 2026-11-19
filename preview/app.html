@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/styles.css?v=47">
-<link rel="stylesheet" href="../css/fun.css?v=47">
+<link rel="stylesheet" href="../css/styles.css?v=48">
+<link rel="stylesheet" href="../css/fun.css?v=48">
 </head>
 <body>
 
@@ -107,17 +107,20 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="../js/data.js?v=47"></script>
-<script src="../js/storage.js?v=47"></script>
+<script src="../js/data.js?v=48"></script>
+<script src="../js/storage.js?v=48"></script>
 
 <script>
 /* 미리보기 전용 스텁 — 실제 가족 Firestore 문서(fam_e4f076...)는 읽지도 쓰지도 않습니다.
    이 기기(localStorage)에만 임시 상태를 만들어 화면·동작을 확인합니다.
-   ?legacy=1 로 열면 '예전 기본 4개' 아침 목록이 저장된 가족 문서를 흉내 냅니다. */
+   · ?legacy=1 : 예전 기본 4개 아침 목록이 저장된 가족 문서
+   · ?mode=child : 아이 모드
+   · ?pk=1 : 별 0 · 포켓몬에게 먹인 별 5(민국) / 20(이준) · 오늘 아침 2개씩 체크된 상태 */
 (function () {
   var qs = new URLSearchParams(location.search);
   var legacy = qs.get('legacy') === '1';
-  var mode = qs.get('mode') === 'child' ? 'child' : 'parent';
+  var pkTest = qs.get('pk') === '1';
+  var mode = (qs.get('mode') === 'child' || pkTest) ? (pkTest ? 'parent' : 'child') : 'parent';
   var d = new Date();
   var pad = function (n) { return (n < 10 ? '0' : '') + n; };
   var today = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
@@ -132,6 +135,7 @@
       { key: 'side1', dishId: 'laver', dishName: '김', dishEmoji: '🍙', level: 'half' }
     ] }
   };
+  var now = Date.now();
   var seed = {
     introSeen: true,
     mode: mode,
@@ -140,7 +144,8 @@
     growth: { minguk: [{ date: '2026-11-15', height: 128, weight: 27 }], ijun: [] },
     meds: [{ id: 'med-pv', name: '유산균', memberId: 'minguk', memberName: '민국', time: 'morning' }],
     mealQuick: [
-      { id: 'qm-pv1', name: '어묵볶음', emoji: '🍥', slot: 'side2', ingredients: ['어묵', '양파'] }
+      { id: 'qm-pv1', name: '어묵볶음', emoji: '🍥', slot: 'side2', ingredients: ['어묵', '양파'] },
+      { id: 'qm-pv2', name: '계란말이', emoji: '🍳', slot: 'side3', ingredients: ['계란'] }
     ],
     ntfyPush: false
   };
@@ -166,6 +171,17 @@
       }
     };
   }
+  if (pkTest) {
+    seed.stars = { minguk: 0, ijun: 0 };
+    seed.pkCfg = { perLevel: 10 };
+    seed.pokemon = {
+      minguk: { line: 'charmander', cur: 0, fed: 5, dex: [] },
+      ijun: { line: 'pichu', cur: 0, fed: 20, dex: [] }
+    };
+    var r = {};
+    r[today] = { 'mg-m-wash': now - 3600000, 'mg-m-dress': now - 3000000, 'ij-m-wash': now - 3600000, 'ij-m-dress': now - 3000000 };
+    seed.routine = r;
+  }
   try {
     localStorage.setItem('family-dashboard-v1', JSON.stringify(seed));
     localStorage.setItem('family-dashboard-gate', JSON.stringify({ id: 'fam_preview_only', at: Date.now(), v: 1 }));
@@ -178,10 +194,10 @@
   }
 })();
 </script>
-<script src="../js/ui.js?v=47"></script>
-<script src="../js/art.js?v=47"></script>
-<script src="../js/weather.js?v=47"></script>
-<script src="../js/ntfy.js?v=47"></script>
+<script src="../js/ui.js?v=48"></script>
+<script src="../js/art.js?v=48"></script>
+<script src="../js/weather.js?v=48"></script>
+<script src="../js/ntfy.js?v=48"></script>
 
 <script>
 /* 미리보기에서는 잠금화면 알림(ntfy)을 보내지 않습니다 */
@@ -189,6 +205,6 @@
   if (window.Ntfy) window.Ntfy.notify = function () { return Promise.resolve({ ok: false, skipped: 'preview' }); };
 })();
 </script>
-<script src="../js/app.js?v=47"></script>
+<script src="../js/app.js?v=48"></script>
 </body>
 </html>
