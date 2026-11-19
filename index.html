@@ -92,6 +92,7 @@
 
     <!-- ② 홈 전용: 큰 시계 + 우체통·정리 + 2줄 날씨 (다른 탭에서는 숨김) -->
     <div class="hero" id="hero">
+      <div class="hero-brand"><span aria-hidden="true">🏡</span><b>민국·이준이네</b></div>
       <div class="hero-clock">
         <div class="clock big" id="clock">
           <span class="clock-date" id="clockDate">—</span>
@@ -101,6 +102,7 @@
           <button type="button" class="qb-btn tidy" id="quickTidy" aria-label="정리시간 시작">
             <span class="qb-ico" aria-hidden="true">🧹</span><span class="qb-label">정리</span>
           </button>
+          <!-- ⏰ 그만! 알림 버튼은 홈·패드에서 이 자리로 옮겨 옵니다 (updateChrome) -->
         </div>
       </div>
       <div class="wx-head" id="wxHead" role="group" aria-label="오늘 날씨"></div>

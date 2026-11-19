@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/styles.css?v=1795101361">
-<link rel="stylesheet" href="../css/fun.css?v=1795101361">
+<link rel="stylesheet" href="../css/styles.css?v=1795101551">
+<link rel="stylesheet" href="../css/fun.css?v=1795101551">
 </head>
 <body>
 
@@ -92,6 +92,7 @@
 
     <!-- ② 홈 전용: 큰 시계 + 우체통·정리 + 2줄 날씨 (다른 탭에서는 숨김) -->
     <div class="hero" id="hero">
+      <div class="hero-brand"><span aria-hidden="true">🏡</span><b>민국·이준이네</b></div>
       <div class="hero-clock">
         <div class="clock big" id="clock">
           <span class="clock-date" id="clockDate">—</span>
@@ -101,6 +102,7 @@
           <button type="button" class="qb-btn tidy" id="quickTidy" aria-label="정리시간 시작">
             <span class="qb-ico" aria-hidden="true">🧹</span><span class="qb-label">정리</span>
           </button>
+          <!-- ⏰ 그만! 알림 버튼은 홈·패드에서 이 자리로 옮겨 옵니다 (updateChrome) -->
         </div>
       </div>
       <div class="wx-head" id="wxHead" role="group" aria-label="오늘 날씨"></div>
@@ -149,13 +151,13 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="../js/data.js?v=1795101361"></script>
-<script src="../js/storage.js?v=1795101361"></script>
-<script src="../js/ui.js?v=1795101361"></script>
-<script src="../js/art.js?v=1795101361"></script>
-<script src="../js/weather.js?v=1795101361"></script>
-<script src="../js/ntfy.js?v=1795101361"></script>
-<script src="../js/app.js?v=1795101361"></script>
+<script src="../js/data.js?v=1795101551"></script>
+<script src="../js/storage.js?v=1795101551"></script>
+<script src="../js/ui.js?v=1795101551"></script>
+<script src="../js/art.js?v=1795101551"></script>
+<script src="../js/weather.js?v=1795101551"></script>
+<script src="../js/ntfy.js?v=1795101551"></script>
+<script src="../js/app.js?v=1795101551"></script>
 
 <script>
 /* 미리보기 전용 스텁 — 실제 가족 Firestore 문서는 읽지도 쓰지도 않습니다. */

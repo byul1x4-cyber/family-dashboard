@@ -1368,6 +1368,18 @@
     if (h > 0) document.documentElement.style.setProperty('--sticky-top', h + 'px');
   }
 
+  /* ---- ⏰ 그만! 알림 버튼 자리 — 홈+패드에서는 큰 시계 옆 2줄, 다른 탭은 위 탭 줄 ---- */
+  function placeStopTimer() {
+    var btn = document.getElementById('stopTimerBtn');
+    var quick = document.querySelector('.hero-quick');
+    var bar = document.querySelector('.tabrow .mode-bar');
+    if (!btn || !quick || !bar) return;
+    var wide = false;
+    try { wide = window.matchMedia('(min-width: 1000px)').matches; } catch (e) {}
+    var host = (view === 'home' && wide) ? quick : bar;
+    if (btn.parentNode !== host) host.appendChild(btn);
+  }
+
   function updateChrome() {
     var mc = document.getElementById('modeChild');
     var mp = document.getElementById('modeParent');
@@ -1377,6 +1389,7 @@
     if (sub) sub.textContent = S.mode === 'parent' ? ((S.actor || '부모님') + ' 모드 · 관리 중') : '아이 모드 · 오늘도 다 같이!';
     /* 패드: 홈에서만 큰 시계·날씨 줄(#hero)을 보입니다 */
     document.body.classList.toggle('on-home', view === 'home');
+    placeStopTimer();
     paintWeather();
     var mailTabBtn = document.querySelector('.tab[data-view="mailbox"]');
     if (mailTabBtn) mailTabBtn.classList.toggle('has-dot', unreadTotal() > 0);
