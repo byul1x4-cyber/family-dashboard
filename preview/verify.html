@@ -5596,6 +5596,38 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   body.on-home .km-do, body.on-home .km-star { font-size: 11.5px; }
 }
 
+/* =========================================================
+   16차 — 모바일(≤779px) 확실히 1열 전체 폭 · 헤더 겹침 방지
+   ========================================================= */
+@media (max-width: 779px) {
+  .home-main2 {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    height: auto !important;
+    width: 100%;
+  }
+  .home-main2 .hm-col { display: contents; }
+  .home-main2 > .hm-left > .hm-day,
+  .home-main2 .hm-day { order: 1; width: 100%; }
+  .home-main2 .hm-cal { order: 2; width: 100%; }
+  .home-main2 .kids-compact { order: 3; width: 100%; grid-template-columns: 1fr 1fr; }
+  .home-main2 .notice-card { order: 4; width: 100%; }
+  .home-main2 .parents-grid { order: 5; width: 100%; }
+  .home-main2 .month-card,
+  .home-main2 .day-card { width: 100%; margin: 0; }
+  .home-main2 .day-cols { grid-template-columns: 1fr; }
+  .home-main2 .day-list { grid-template-columns: 1fr 1fr; gap: 7px; }
+  .wx-strip-slot { width: 100%; }
+  /* 헤더가 첫 카드를 덮지 않게 */
+  .topstack { position: sticky; }
+  #view { padding-top: 2px; }
+}
+@media (max-width: 480px) {
+  .home-main2 .day-list { grid-template-columns: 1fr; }
+  .home-main2 .kids-compact { grid-template-columns: 1fr; }
+}
+
 </style>
 </head>
 <body>
