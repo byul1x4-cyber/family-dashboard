@@ -3203,8 +3203,13 @@
   function dishEntryModal(slotKey, mode) {
     var once = mode === 'once';
     if (!needParent(once ? '식판은 부모님 모드에서 기록할 수 있어요' : '식판 퀵메뉴는 부모님 모드에서 등록할 수 있어요')) return;
-    var defSlot = D.traySlots.some(function (s) { return s.key === slotKey; })
-      ? slotKey : ((D.traySlots[2] || D.traySlots[0] || {}).key || 'side1');
+    var thereIsSlot = D.traySlots.some(function (s) { return s.key === slotKey; });
+    /* 그릇을 안 골랐으면 오늘 비어 있는 첫 그릇을 미리 골라 둡니다 */
+    var emptySlot = D.traySlots.filter(function (s) {
+      return !slotOf(D.children[0].id, todayKey(), s.key).dishId;
+    })[0];
+    var defSlot = thereIsSlot ? slotKey
+      : ((emptySlot || D.traySlots[2] || D.traySlots[0] || {}).key || 'side1');
     UI.modal({
       title: once ? '🍽️ 오늘 식판에만 넣기' : '⭐ 퀵메뉴 등록',
       bodyHTML:
@@ -5725,7 +5730,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 50;             /* index.html 의 ?v=50 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 51;             /* index.html 의 ?v=51 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
