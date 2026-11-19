@@ -315,7 +315,9 @@ img { max-width: 100%; }
 
 .two-col { display: grid; gap: 14px; }
 .duo-grid { display: grid; gap: 14px; margin-bottom: 14px; }
-.span-2 { grid-column: span 2; }
+/* 설정 카드처럼 두 칸을 다 쓰는 카드 — 좁은 화면(1열)에서도 폭 전체를 쓰도록 1 / -1
+   (span 2 로 두면 1열 그리드에 없는 둘째 열을 만들어 카드가 반 폭으로 갇힙니다) */
+.span-2 { grid-column: 1 / -1; }
 .lock-note {
   display: flex; align-items: center; gap: 8px;
   padding: 11px 14px;
