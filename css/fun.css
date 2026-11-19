@@ -1080,8 +1080,8 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  padding: 7px 13px;
-  margin-bottom: 8px;
+  padding: 6px 12px;
+  margin-bottom: 7px;
   border-radius: 22px;
   border: 3px solid #fff;
   background: linear-gradient(160deg, #FFFDF4, #FFF3DC);
@@ -1107,8 +1107,8 @@
 
 /* ---- 아이 한 줄 (민국 / 이준) ---- */
 .sc-row {
-  margin-bottom: 9px;
-  padding: 7px 10px 8px;
+  margin-bottom: 7px;
+  padding: 6px 10px 7px;
   border-radius: 26px;
   border: 3px solid #fff;
   background: linear-gradient(165deg, #F2FCF7, #FFFFFF 68%);
@@ -1130,7 +1130,7 @@
   display: grid;
   grid-template-rows: auto auto auto;
   gap: 0;
-  padding: 5px 5px 6px;
+  padding: 5px 8px 6px;
   border-radius: 22px;
   border: 3px solid #fff;
   background: linear-gradient(#FFFFFF, #FFFCF4);
@@ -1159,7 +1159,7 @@
   box-shadow: 0 3px 8px rgba(180, 140, 80, .2);
 }
 .scard-body { display: grid; justify-items: center; gap: 3px; padding: 5px 2px 0; }
-.scard-title { font-size: 13.5px; font-weight: 800; color: var(--ink); line-height: 1.2; word-break: keep-all; }
+.scard-title { font-size: 13px; font-weight: 800; color: var(--ink); line-height: 1.18; word-break: keep-all; }
 .scard-cta {
   display: inline-block;
   padding: 3px 9px;
