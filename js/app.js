@@ -5267,10 +5267,61 @@
     }
   }
 
+  /* ---------------- 자동 버전 업데이트(캐시 우회) ----------------
+     index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
+     앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
+     최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
+  var APP_ASSET_VERSION = 36;             /* index.html 의 ?v=36 과 같아야 합니다 */
+  var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
+  var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
+
+  var lastUpdateCheck = 0;
+  var updateChecking = false;
+
+  function checkAppUpdate(force) {
+    var now = Date.now();
+    if (updateChecking) return;
+    if (!force && now - lastUpdateCheck < UPDATE_CHECK_GAP) return;
+    if (navigator.onLine === false) return;      /* 오프라인이면 조용히 넘어갑니다 */
+    if (!window.fetch) return;                   /* fetch 없는 옛 브라우저는 그냥 넘어갑니다 */
+    updateChecking = true;
+    lastUpdateCheck = now;
+
+    var req;
+    try {
+      req = fetch('./index.html?t=' + now, { cache: 'no-store' });
+    } catch (e) {
+      updateChecking = false;
+      return;
+    }
+    req.then(function (res) { return res.ok ? res.text() : ''; })
+      .then(function (html) {
+        var m = html && html.match(/app\.js\?v=(\d+)/);
+        var latest = m ? parseInt(m[1], 10) : 0;
+        if (!latest || latest <= APP_ASSET_VERSION) return;
+        var guard = null;
+        try { guard = sessionStorage.getItem(UPDATE_GUARD_KEY); } catch (e) {}
+        if (guard === String(latest)) return;    /* 이미 이 버전으로 새로고침함 */
+        try { sessionStorage.setItem(UPDATE_GUARD_KEY, String(latest)); } catch (e) {}
+        window.location.replace(window.location.pathname + '?v=' + latest + window.location.hash);
+      })
+      .catch(function () { /* 네트워크·캐시 오류는 조용히 무시 */ })
+      .then(function () { updateChecking = false; });
+  }
+
+  function initAutoUpdate() {
+    checkAppUpdate(true);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') checkAppUpdate(false);
+    });
+    window.addEventListener('online', function () { checkAppUpdate(false); });
+  }
+
   async function init() {
     bindChrome();
     startClock();
     initStopTimer();
+    initAutoUpdate();
     if (Storage.hasGate()) await startApp();
     else showGate();
   }
