@@ -3092,3 +3092,9 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   }
   body.on-home .kids-compact { min-height: 0; }
 }
+
+/* 알림장 안쪽 스크롤 막대는 얇고 부드럽게 */
+.notice-card .notice-list { scrollbar-width: thin; scrollbar-color: #E8DCC6 transparent; }
+.notice-card .notice-list::-webkit-scrollbar { width: 5px; }
+.notice-card .notice-list::-webkit-scrollbar-thumb { background: #EBDDC4; border-radius: 999px; }
+.notice-card .notice-list::-webkit-scrollbar-track { background: transparent; }
