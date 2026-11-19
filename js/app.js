@@ -1309,24 +1309,56 @@
       '</div>';
   }
 
-  /* ---- 홈: 오늘 날씨 · 옷차림 ---- */
+  /* ---- 홈: 오늘 날씨 · 옷차림 · 시간대별 ---- */
+  function wxEmoji(kind) {
+    return kind === 'rain' ? '🌧️' : kind === 'snow' ? '🌨️' : kind === 'sun' ? '☀️' : '⛅';
+  }
+  function wxHourlyHTML(w) {
+    if (!w.hours || !w.hours.length) return '';
+    return '<div class="wx-hours" role="list" aria-label="시간대별 날씨">' +
+      w.hours.map(function (h) {
+        return '<div class="wx-hr' + (h.now ? ' now' : '') + '" role="listitem">' +
+          '<span class="wx-hr-t">' + (h.now ? '지금' : h.hour + '시') +
+            (h.tomorrow ? '<i>내일</i>' : '') + '</span>' +
+          '<span class="wx-hr-i" aria-hidden="true">' + wxEmoji(h.kind) + '</span>' +
+          '<b class="wx-hr-tp">' + (h.temp == null ? '—' : h.temp + '°') + '</b>' +
+          '<span class="wx-hr-pop">' + (h.pop == null ? '&nbsp;' : '☔ ' + h.pop + '%') + '</span>' +
+        '</div>';
+      }).join('') + '</div>';
+  }
   function weatherCardHTML() {
     var w = homeWeather;
     if (!w) {
       return '<div class="wx-card loading"><span class="wx-load">🌤 오늘 날씨 불러오는 중…</span></div>';
     }
-    var g = w.grade;
+    var g10 = w.pm10Grade, g25 = w.pm25Grade;
+    var val = function (v, unit) { return v == null ? '—' : v + (unit || ''); };
     return '<div class="wx-card ' + (w.kind || 'cloud') + '">' +
-        '<span class="wx-art">' + Art.weatherArt(w.kind) + '</span>' +
-        '<div class="wx-main">' +
-          '<span class="wx-temp">' + (w.temp == null ? '—' : w.temp) + '<small>°</small></span>' +
-          '<span class="wx-meta">' + esc(w.label) +
-            (w.tmax != null ? '<br>' + w.tmin + '° / ' + w.tmax + '°' : '') +
-            (w.pop != null && w.pop > 0 ? ' · 비 ' + w.pop + '%' : '') +
-          '</span>' +
+        '<div class="wx-head">' +
+          '<div class="wx-place"><span aria-hidden="true">📍</span><b>' + esc(w.place || '도곡동') + '</b><small>서울 강남구</small></div>' +
+          '<div class="wx-now">' +
+            '<span class="wx-art">' + Art.weatherArt(w.kind) + '</span>' +
+            '<div class="wx-now-txt">' +
+              '<div class="wx-temp-line">' +
+                '<span class="wx-temp">' + val(w.temp) + '<small>°</small></span>' +
+                '<span class="wx-state">' + esc(w.label) + '</span>' +
+              '</div>' +
+              '<div class="wx-range">' +
+                '<span>최저 <b>' + val(w.tmin, '°') + '</b></span>' +
+                '<span>최고 <b>' + val(w.tmax, '°') + '</b></span>' +
+                '<span>체감 <b>' + val(w.feels, '°') + '</b></span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
-        (g ? '<div class="wx-dust ' + g.cls + '"><b>미세먼지</b><span>' + g.ico + ' ' + esc(g.label) + '</span></div>' : '') +
-        '<div class="wx-tip">' + esc(w.tip) + '</div>' +
+        '<div class="wx-badges">' +
+          '<span class="wx-badge"><i aria-hidden="true">💧</i>습도 <b>' + val(w.hum, '%') + '</b></span>' +
+          '<span class="wx-badge"><i aria-hidden="true">☔</i>강수 <b>' + val(w.pop, '%') + '</b></span>' +
+          (g10 ? '<span class="wx-badge dust ' + g10.cls + '"><i aria-hidden="true">🌫</i>미세먼지 <b>' + g10.ico + ' ' + esc(g10.label) + '</b></span>' : '') +
+          (g25 ? '<span class="wx-badge dust ' + g25.cls + '"><i aria-hidden="true">😷</i>초미세먼지 <b>' + g25.ico + ' ' + esc(g25.label) + '</b></span>' : '') +
+        '</div>' +
+        wxHourlyHTML(w) +
+        '<div class="wx-tip"><b>오늘 옷차림</b>' + esc(w.tip) + '</div>' +
       '</div>';
   }
 
@@ -4071,7 +4103,8 @@
     }
     return { burst: burst, fountain: fountain, resize: resize };
   })();
-  /* 별을 먹인 만큼 화면에 별을 마구 뿌립니다 (1개→약 50개, 10개→약 250개) */
+  /* 별을 먹인 만큼 화면에 별을 마구 뿌립니다 (1개→약 50개, 10개→약 250개)
+     한 번에 다 터뜨리지 않고 몇 차례 더 터뜨려 별이 계속 쏟아지는 느낌을 냅니다. */
   function pkStarStorm(artEl, n, big) {
     var box = artEl ? artEl.getBoundingClientRect() : null;
     if (!box || !box.width) {
@@ -4079,12 +4112,22 @@
       box = card ? card.getBoundingClientRect() : null;
     }
     if (!box || !box.width) return;
-    var cx = box.left + box.width / 2;
-    var cy = box.top + box.height / 2;
+    var cx = Math.round(box.left + box.width / 2);
+    var cy = Math.round(box.top + box.height / 2);
+    var base = Math.min(window.innerHeight - 6, box.bottom);
     var amount = Math.max(1, Math.min(30, Number(n) || 1));
-    var count = Math.min(210, 46 + Math.round(amount * 16) + (big ? 90 : 0));
-    pkFx.burst(cx, cy, count, { power: 1 + Math.min(0.9, amount / 14), up: true });
-    pkFx.fountain(cx, Math.min(window.innerHeight - 6, box.bottom), Math.round(count * 0.75));
+    var count = Math.min(170, 44 + Math.round(amount * 15) + (big ? 80 : 0));
+    var power = 1 + Math.min(0.9, amount / 14);
+    pkFx.burst(cx, cy, count, { power: power, up: true });
+    pkFx.fountain(cx, base, Math.round(count * 0.8));
+    /* 0.25초 · 0.5초 뒤 한 번씩 더 — 분수처럼 계속 솟아요 */
+    setTimeout(function () {
+      pkFx.fountain(cx, base, Math.round(count * 0.5));
+      pkFx.burst(cx, cy, Math.round(count * 0.4), { power: power * 0.85, up: true });
+    }, 250);
+    setTimeout(function () {
+      pkFx.fountain(cx, base, Math.round(count * 0.4));
+    }, 520);
   }
   /* ---------- 반짝이 파티클 ---------- */
   function pkSparkle(host, n) {

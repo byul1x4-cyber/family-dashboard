@@ -8,11 +8,14 @@ window.Weather = (function () {
 
   var CACHE_KEY = 'family-dashboard-weather';
   var CACHE_MS = 15 * 60 * 1000;
-  var LAT = 37.4906, LON = 127.0468;
+  var DATA_VERSION = 2;
+  var LAT = 37.4882, LON = 127.0473;
+  var PLACE = '도곡동';
   var URL_NOW = 'https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON +
-    '&current=temperature_2m,apparent_temperature,weather_code' +
+    '&current=temperature_2m,apparent_temperature,weather_code,relative_humidity_2m' +
+    '&hourly=temperature_2m,weather_code,precipitation_probability' +
     '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
-    '&timezone=Asia%2FSeoul&forecast_days=1';
+    '&timezone=Asia%2FSeoul&forecast_days=2';
   var URL_AIR = 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + LAT + '&longitude=' + LON +
     '&current=pm10,pm2_5&timezone=Asia%2FSeoul';
 
@@ -39,7 +42,7 @@ window.Weather = (function () {
   function readCache() {
     try {
       var v = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-      if (v && v.at && v.data) return v;
+      if (v && v.at && v.data && v.data.version === DATA_VERSION) return v;
     } catch (e) {}
     return null;
   }
@@ -92,20 +95,66 @@ window.Weather = (function () {
     var g = pm10 == null && pm25 == null ? null : gradeOf(pm10, pm25);
     var kind = sky.kind;
     if (kind === 'sun' && pop >= 60) kind = 'rain';
+    var hum = typeof cur.relative_humidity_2m === 'number' ? Math.round(cur.relative_humidity_2m) : null;
+    var hours = buildHours(now);
     return {
+      version: DATA_VERSION,
+      place: PLACE,
       temp: typeof cur.temperature_2m === 'number' ? Math.round(cur.temperature_2m) : null,
       feels: typeof cur.apparent_temperature === 'number' ? Math.round(cur.apparent_temperature) : null,
       tmax: typeof tmax === 'number' ? Math.round(tmax) : null,
       tmin: typeof tmin === 'number' ? Math.round(tmin) : null,
       pop: typeof pop === 'number' ? pop : null,
+      hum: hum,
       label: sky.label,
       kind: kind,
+      hours: hours,
       pm10: pm10 == null ? null : Math.round(pm10),
       pm25: pm25 == null ? null : Math.round(pm25),
+      pm10Grade: pm10 == null ? null : GRADES[grade1(pm10, 30, 80, 150)],
+      pm25Grade: pm25 == null ? null : GRADES[grade1(pm25, 15, 35, 75)],
       grade: g == null ? null : GRADES[g],
       tip: g == null ? '오늘도 좋은 하루!' : tipFor(kind, tmax, tmin, g),
       at: Date.now()
     };
+  }
+
+  /* 앞으로의 시간대별 예보 — 지금부터 3시간 간격으로 6칸 */
+  function buildHours(now) {
+    var h = (now && now.hourly) || {};
+    var times = h.time || [];
+    if (!times.length) return [];
+    var temps = h.temperature_2m || [];
+    var codes = h.weather_code || [];
+    var pops = h.precipitation_probability || [];
+    var nowMs = Date.now();
+    var start = 0;
+    for (var i = 0; i < times.length; i++) {
+      var t = new Date(times[i]).getTime();
+      if (t + 30 * 60 * 1000 >= nowMs) { start = i; break; }
+    }
+    var out = [];
+    var dayKey = function (d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+    var todayStr = dayKey(new Date());
+    for (var k = 0; k < 6; k++) {
+      var idx = start + k * 3;
+      if (idx >= times.length) break;
+      var dt = new Date(times[idx]);
+      if (isNaN(dt.getTime())) continue;
+      var c = Number(codes[idx]);
+      var sk = SKY[c] || { label: '날씨', kind: 'cloud' };
+      var pp = typeof pops[idx] === 'number' ? Math.round(pops[idx]) : null;
+      out.push({
+        hour: dt.getHours(),
+        now: k === 0,
+        tomorrow: dayKey(dt) !== todayStr,
+        temp: typeof temps[idx] === 'number' ? Math.round(temps[idx]) : null,
+        pop: pp,
+        kind: sk.kind,
+        label: sk.label
+      });
+    }
+    return out;
   }
 
   function fetchJSON(url) {

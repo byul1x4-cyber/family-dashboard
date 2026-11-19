@@ -458,52 +458,101 @@ img { max-width: 100%; }
   align-items: stretch;
 }
 
-.wx-card {
-  display: flex;
-  align-items: center;
+.home-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
-  padding: 11px 14px;
-  border-radius: 22px;
+  margin-bottom: 12px;
+  align-items: stretch;
+}
+
+/* ---- 오늘 날씨 카드 (지역 · 시간대별 · 미세먼지 · 옷차림) ---- */
+.wx-card {
+  display: grid;
+  gap: 9px;
+  padding: 13px 15px 12px;
+  border-radius: 24px;
   background: linear-gradient(150deg, #EFF8FF, #FFFFFF 70%);
   border: 2px solid #DDECFB;
   box-shadow: var(--shadow-sm);
   min-width: 0;
 }
 .wx-card.rain { background: linear-gradient(150deg, #EAF3FD, #FFFFFF 72%); border-color: #D8E6F6; }
-.wx-card.sun { background: linear-gradient(150deg, #FFF7E1, #FFFFFF 72%); border-color: #FBEBC6; }
+.wx-card.sun { background: linear-gradient(150deg, #FFF9E8, #FFFFFF 72%); border-color: #FBEBC6; }
 .wx-card.snow { background: linear-gradient(150deg, #F2FAFF, #FFFFFF 72%); border-color: #DEEDF8; }
-.wx-card.loading { justify-content: center; color: var(--ink-faint); font-size: 13px; font-weight: 700; }
-.wx-art { width: 46px; height: 46px; flex: none; }
-.wx-svg { width: 100%; height: 100%; display: block; }
-.wx-main { display: flex; align-items: baseline; gap: 7px; flex: none; }
+.wx-card.loading { display: flex; align-items: center; justify-content: center; color: var(--ink-faint); font-size: 13px; font-weight: 700; padding: 18px; }
 .wx-load { font-size: 13px; }
-.wx-temp { font-family: var(--font-round); font-size: 30px; line-height: 1; color: #3E6E93; letter-spacing: 0; }
-.wx-temp small { font-size: 16px; margin-left: 1px; }
-.wx-meta { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); line-height: 1.35; }
-.wx-dust {
-  display: grid; justify-items: center; gap: 1px;
-  padding: 4px 9px; border-radius: 13px;
-  font-size: 10.5px; font-weight: 800;
-  flex: none;
-}
-.wx-dust b { font-size: 9.5px; opacity: .8; font-weight: 700; }
-.wx-dust.good { background: #E7F8EF; color: var(--mint-deep); }
-.wx-dust.normal { background: #EAF3FE; color: var(--sky-deep); }
-.wx-dust.bad { background: #FFF0E2; color: #B4711B; }
-.wx-dust.worst { background: #FFE9E5; color: #C04A34; }
-.wx-tip {
-  margin-left: auto;
-  font-size: 11.5px;
-  font-weight: 800;
-  color: #6B4B22;
-  background: rgba(255, 255, 255, .72);
-  border-radius: 999px;
-  padding: 5px 10px;
+
+.wx-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.wx-place { display: flex; align-items: baseline; gap: 5px; font-size: 12px; font-weight: 800; color: var(--ink-soft); min-width: 0; }
+.wx-place b { font-family: var(--font-round); font-weight: 400; font-size: 18px; color: #3E6E93; letter-spacing: 0; }
+.wx-place small { font-size: 10.5px; font-weight: 700; color: var(--ink-faint); }
+.wx-now { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.wx-art { width: 56px; height: 56px; flex: none; }
+.wx-svg { width: 100%; height: 100%; display: block; }
+.wx-now-txt { min-width: 0; }
+.wx-temp-line { display: flex; align-items: baseline; gap: 8px; }
+.wx-temp { font-family: var(--font-round); font-size: 40px; line-height: 1; color: #3E6E93; letter-spacing: 0; }
+.wx-temp small { font-size: 20px; margin-left: 1px; }
+.wx-state { font-size: 13px; font-weight: 800; color: var(--ink-soft); }
+.wx-range { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; font-size: 11.5px; font-weight: 700; color: var(--ink-faint); }
+.wx-range b { color: #3E6E93; font-weight: 800; }
+
+.wx-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.wx-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 9px; border-radius: 999px;
+  background: rgba(255, 255, 255, .85);
+  border: 1px solid #E6F0FA;
+  font-size: 11px; font-weight: 800; color: var(--ink-soft);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
 }
+.wx-badge i { font-style: normal; font-size: 11px; }
+.wx-badge b { color: #3E6E93; font-weight: 800; }
+.wx-badge.dust.good { background: #E7F8EF; border-color: #CFEDDF; color: var(--mint-deep); }
+.wx-badge.dust.good b { color: var(--mint-deep); }
+.wx-badge.dust.normal { background: #EAF3FE; border-color: #D3E6FA; color: var(--sky-deep); }
+.wx-badge.dust.normal b { color: var(--sky-deep); }
+.wx-badge.dust.bad { background: #FFF0E2; border-color: #F8DFC4; color: #B4711B; }
+.wx-badge.dust.bad b { color: #B4711B; }
+.wx-badge.dust.worst { background: #FFE9E5; border-color: #F7D2CA; color: #C04A34; }
+.wx-badge.dust.worst b { color: #C04A34; }
+
+/* 시간대별 날씨 스트립 */
+.wx-hours {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 1px;
+}
+.wx-hr {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 7px 2px 6px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .78);
+  border: 1.5px solid #E3EFFA;
+}
+.wx-hr.now { background: linear-gradient(160deg, #FFF7DE, #FFFFFF); border-color: #FBE3A8; box-shadow: 0 3px 9px rgba(248, 188, 69, .22); }
+.wx-hr-t { font-size: 10.5px; font-weight: 800; color: var(--ink-faint); white-space: nowrap; }
+.wx-hr-t i { font-style: normal; font-size: 8.5px; font-weight: 800; color: #B4711B; margin-left: 3px; }
+.wx-hr.now .wx-hr-t { color: #A5730E; }
+.wx-hr-i { font-size: 19px; line-height: 1.15; }
+.wx-hr-tp { font-size: 13.5px; font-weight: 800; color: #3E6E93; }
+.wx-hr-pop { font-size: 9.5px; font-weight: 800; color: #5B8FBF; min-height: 12px; white-space: nowrap; }
+
+.wx-tip {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 800; color: #6B4B22;
+  background: rgba(255, 255, 255, .82);
+  border-radius: 14px;
+  padding: 8px 11px;
+  line-height: 1.4;
+}
+.wx-tip b { font-size: 10.5px; font-weight: 800; color: #A0763A; background: #FFF3D6; border-radius: 999px; padding: 3px 8px; flex: none; }
 
 .status-rail { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; min-width: 0; }
 .status-chip {
@@ -1887,8 +1936,15 @@ body.timer-ringing { overflow: hidden; }
 }
 
 @media (max-width: 520px) {
-  .wx-card { flex-wrap: wrap; row-gap: 6px; }
-  .wx-tip { margin-left: 0; order: 5; width: 100%; white-space: normal; }
+  .wx-card { padding: 11px 12px 10px; gap: 8px; border-radius: 20px; }
+  .wx-place { font-size: 11px; }
+  .wx-place b { font-size: 16px; }
+  .wx-now { margin-left: 0; width: 100%; justify-content: flex-start; gap: 8px; }
+  .wx-art { width: 48px; height: 48px; }
+  .wx-temp { font-size: 34px; }
+  .wx-hours { grid-template-columns: repeat(6, minmax(54px, 1fr)); }
+  .wx-hr { padding: 6px 1px 5px; border-radius: 13px; }
+  .wx-tip { font-size: 11.5px; }
   .status-chip { padding: 8px 9px; }
   .sc-time { display: none; }
   .sc-txt small { white-space: normal; overflow: visible; line-height: 1.25; }
