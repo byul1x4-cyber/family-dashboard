@@ -1368,16 +1368,23 @@
     if (h > 0) document.documentElement.style.setProperty('--sticky-top', h + 'px');
   }
 
-  /* ---- ⏰ 그만! 알림 버튼 자리 — 홈+패드에서는 큰 시계 옆 2줄, 다른 탭은 위 탭 줄 ---- */
-  function placeStopTimer() {
-    var btn = document.getElementById('stopTimerBtn');
+  /* ---- 🧹 정리 · ⏰ 그만! 알림 버튼 자리 ----
+     · 패드 홈: 큰 시계 옆 2줄 / 패드 다른 탭: 구석(숨김) + 탭 줄
+     · 폰: 탭 줄 오른쪽 (예전처럼) ---- */
+  function placeQuickButtons() {
+    var stopBtn = document.getElementById('stopTimerBtn');
+    var tidyBtn = document.getElementById('quickTidy');
     var quick = document.querySelector('.hero-quick');
     var bar = document.querySelector('.tabrow .mode-bar');
-    if (!btn || !quick || !bar) return;
-    /* 홈에서만 큰 시계 줄(휴대폰은 컴팩트 줄)에 두고, 다른 탭에서는 탭 줄로 돌려 놓습니다 */
-    var host = (view === 'home') ? quick : bar;
-    if (btn.parentNode !== host) host.appendChild(btn);
+    if (!stopBtn || !tidyBtn || !quick || !bar) return;
+    var wide = false;
+    try { wide = window.matchMedia('(min-width: 1000px)').matches; } catch (e) {}
+    var homeHost = (view === 'home' && wide) ? quick : bar;
+    var tidyHost = wide ? quick : bar;
+    if (stopBtn.parentNode !== homeHost) homeHost.appendChild(stopBtn);
+    if (tidyBtn.parentNode !== tidyHost) tidyHost.appendChild(tidyBtn);
   }
+  function placeStopTimer() { placeQuickButtons(); }
 
   function updateChrome() {
     var mc = document.getElementById('modeChild');
