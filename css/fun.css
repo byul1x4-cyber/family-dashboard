@@ -2531,3 +2531,10 @@
   .ps-txt { font-size: 15px; }
   .parent-sq { padding: 9px 8px 8px; gap: 3px; }
 }
+
+/* ---- 식판·건강 맨 아래: 키·몸무게 ↔ 장보기 높이 똑같이 (하단선 일자) ---- */
+@media (min-width: 780px) {
+  .health-bottom { align-items: stretch; }
+  .health-bottom > .card { height: 100%; display: flex; flex-direction: column; }
+  .health-bottom > .card > .shop-list { flex: 1; }
+}
