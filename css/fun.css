@@ -2404,3 +2404,14 @@
   .km-ava { width: 36px; height: 36px; }
   .hm-day .day-block { padding: 5px 9px 6px; }
 }
+
+/* ---- [hidden] 이 display 규칙에 눌리지 않게 (한마디 버튼은 부모님 모드 전용) ---- */
+.tabrow .banner-btn[hidden], .mode-bar .banner-btn[hidden] { display: none !important; }
+
+/* ---- 여유가 생긴 만큼 아이콘·달력 글씨를 조금 더 키움 ---- */
+@media (min-width: 1000px) {
+  .ps-ava { width: 48px; height: 48px; font-size: 26px; }
+  .parent-sq { padding: 8px 6px 7px; }
+  .km-ava { width: 40px; height: 40px; }
+  .mini-day { min-height: 22px; font-size: 13px; }
+}
