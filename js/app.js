@@ -1536,27 +1536,28 @@
     var val = function (v, unit) { return v == null ? '—' : v + (unit || ''); };
     var hours = (w.hours || []).slice(0, 4);
     return '<div class="wx-hero ' + (w.kind || 'cloud') + '">' +
-        '<div class="wx-hero-line1">' +
-          (g10 ? '<span class="wx-h-dust dust ' + g10.cls + '"><i aria-hidden="true">🌫</i>미세 <b>' + g10.ico + ' ' + esc(g10.label) + '</b></span>' : '') +
+        '<div class="wx-hero-row">' +
+          (g10
+            ? '<span class="wx-h-dust dust ' + g10.cls + '" aria-label="미세먼지 ' + esc(g10.label) + '">' +
+                '<i aria-hidden="true">🌫</i><b>미세</b><em>' + esc(g10.label) + '</em></span>'
+            : '') +
           '<span class="wx-h-now">' +
             '<span class="wx-h-art" aria-hidden="true">' + wxEmoji(w.kind, true, new Date().getHours()) + '</span>' +
             '<b class="wx-h-temp">' + val(w.temp) + '<small>°</small></b>' +
-            '<span class="wx-h-txt">' + esc(w.label || '') + '</span>' +
+            '<span class="wx-h-txt"><b>' + esc(w.label || '') + '</b>' +
+              '<small>최저 ' + val(w.tmin, '°') + ' · 최고 ' + val(w.tmax, '°') + '</small></span>' +
           '</span>' +
-          '<span class="wx-h-range">최저 <b>' + val(w.tmin, '°') + '</b> · 최고 <b>' + val(w.tmax, '°') + '</b></span>' +
-        '</div>' +
-        '<div class="wx-hero-line2">' +
           (hours.length
-            ? '<div class="wx-h-hours">' + hours.map(function (h) {
+            ? '<span class="wx-h-hours">' + hours.map(function (h) {
                 return '<span class="wx-h-hr' + (h.now ? ' now' : '') + '">' +
                     '<i>' + (h.now ? '지금' : h.hour + '시') + '</i>' +
                     '<em aria-hidden="true">' + wxEmoji(h.kind, h.day, h.hour) + '</em>' +
                     '<b>' + (h.temp == null ? '—' : h.temp + '°') + '</b>' +
                   '</span>';
-              }).join('') + '</div>'
+              }).join('') + '</span>'
             : '') +
-          (w.tip ? '<span class="wx-h-tip">👕 ' + esc(w.tip) + '</span>' : '') +
         '</div>' +
+        (w.tip ? '<div class="wx-hero-tip">👕 ' + esc(w.tip) + '</div>' : '') +
       '</div>';
   }
   /* 헤더 날씨 칸(#wxHead)을 채웁니다 — 패드 전용, 다른 탭에서도 계속 보여요 */
