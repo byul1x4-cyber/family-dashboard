@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../css/styles.css?v=1795101028">
-<link rel="stylesheet" href="../css/fun.css?v=1795101028">
+<link rel="stylesheet" href="../css/styles.css?v=1795101095">
+<link rel="stylesheet" href="../css/fun.css?v=1795101095">
 </head>
 <body>
 
@@ -149,13 +149,13 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="../js/data.js?v=1795101028"></script>
-<script src="../js/storage.js?v=1795101028"></script>
-<script src="../js/ui.js?v=1795101028"></script>
-<script src="../js/art.js?v=1795101028"></script>
-<script src="../js/weather.js?v=1795101028"></script>
-<script src="../js/ntfy.js?v=1795101028"></script>
-<script src="../js/app.js?v=1795101028"></script>
+<script src="../js/data.js?v=1795101095"></script>
+<script src="../js/storage.js?v=1795101095"></script>
+<script src="../js/ui.js?v=1795101095"></script>
+<script src="../js/art.js?v=1795101095"></script>
+<script src="../js/weather.js?v=1795101095"></script>
+<script src="../js/ntfy.js?v=1795101095"></script>
+<script src="../js/app.js?v=1795101095"></script>
 
 <script>
 /* 미리보기 전용 스텁 — 실제 가족 Firestore 문서는 읽지도 쓰지도 않습니다. */
@@ -196,7 +196,7 @@
     praiseLog: [], growth: { minguk: [{ date: t1, height: 128, weight: 27 }], ijun: [] },
     meals: {}, ntfyPush: false, schoolTime: '08:30', schoolStart: '07:00',
     pokemon: { minguk: { line: 'pichu', cur: 25, fed: 250, dex: [] }, ijun: { line: 'ggobugi', cur: 12, fed: 130, dex: [] } },
-    parentStatus: { mom: { label: '회사 가는 중 🚇', at: now - 3600000 }, dad: { label: '하키 연습 ⛸', at: now - 7200000 } },
+    parentStatus: { mom: { key: 'home', at: now - 3600000, by: '엄마' }, dad: { key: 'custom', text: '🏒 하키 연습 중', at: now - 7200000, by: '아빠' } },
     shopping: [{ id: 'sh1', text: '우유', ts: now, done: 0 }, { id: 'sh2', text: '계란', ts: now, done: 0 }],
     routine: { minguk: {}, ijun: {} },
     events: [
