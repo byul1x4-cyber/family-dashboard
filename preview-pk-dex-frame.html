@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><title>미리보기 프레임</title>
+<style>html,body{margin:0;padding:0;background:#7d848f;}iframe{display:block;border:0;background:#fff;}</style>
+</head><body>
+<iframe id="f"></iframe>
+<script>
+var q = new URLSearchParams(location.search);
+var w = +(q.get('w') || 1024), h = +(q.get('h') || 768);
+var keep = new URLSearchParams();
+q.forEach(function (v, k) { if (k !== 'w' && k !== 'h') keep.set(k, v); });
+var f = document.getElementById('f');
+f.style.width = w + 'px';
+f.style.height = h + 'px';
+f.src = 'preview-pk-dex.html' + (keep.toString() ? '?' + keep.toString() : '');
+</script>
+</body></html>

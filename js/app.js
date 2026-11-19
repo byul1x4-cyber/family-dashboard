@@ -4472,8 +4472,6 @@
   }
   function renderPokemon() {
     var c = childById(routineChild);
-    var p = pkOf(c.id);
-    var dexCount = (p.dex || []).length;
     var total = PK.finals.length;
     return '<div class="card soft-sun pk-rules">' +
         '<div class="pk-rules-head"><b>⭐ 별 ' + pkPerLevel() + '개 모으면 진화!</b>' +
@@ -4506,25 +4504,28 @@
           '</div>';
         }).join('') +
       '</div>' +
-      /* 카드 아래 전체 폭 도감 — 위쪽 칩으로 민국·이준 도감을 바로 전환 */
-      '<div class="card pk-dex" data-active="' + c.id + '">' +
+      /* 카드 아래 도감 — 탭 없이 두 아이 도감이 늘 함께 보입니다.
+         넓은 화면(패드·데스크톱)은 민국·이준 도감을 나란히, 좁은 화면은 위아래로 이어서 보여요. */
+      '<div class="card pk-dex">' +
         '<div class="pk-dex-head">' +
           '<span class="pk-dex-ico" aria-hidden="true">📖</span>' +
-          '<div class="pk-dex-title"><b>' + esc(c.name) + '의 포켓몬 도감</b>' +
-            '<small>모은 포켓몬 ' + dexCount + ' / ' + total + '마리</small></div>' +
-          '<div class="pk-dex-tabs" role="group" aria-label="누구 도감을 볼까요">' +
-            D.children.map(function (k) {
-              var kc = (pkOf(k.id).dex || []).length;
-              return '<button type="button" class="chip ' + k.color + (k.id === c.id ? ' active' : '') + '" data-act="pick-pk-child" data-id="' + k.id + '" aria-pressed="' + (k.id === c.id ? 'true' : 'false') + '">' +
-                k.emoji + ' ' + esc(k.name) + ' 도감 <small>' + kc + '/' + total + '</small></button>';
-            }).join('') +
-          '</div>' +
+          '<div class="pk-dex-title"><b>포켓몬 도감</b>' +
+            '<small>최종 진화하면 도감에 등록 · ' + D.children.map(function (k) {
+              return esc(k.name) + ' ' + (pkOf(k.id).dex || []).length + '마리';
+            }).join(' · ') + '</small></div>' +
         '</div>' +
-        D.children.map(function (k) {
-          return '<div class="pk-dex-pane' + (k.id === c.id ? ' active' : '') + '" data-child="' + k.id + '">' +
-            pkDexGridHTML(k.id) +
-          '</div>';
-        }).join('') +
+        '<div class="pk-dex-duo">' +
+          D.children.map(function (k) {
+            var kc = (pkOf(k.id).dex || []).length;
+            return '<div class="pk-dex-pane" data-child="' + k.id + '">' +
+              '<div class="pk-dex-sub">' +
+                '<span class="pk-dex-sub-name">' + k.emoji + ' <b>' + esc(k.name) + '</b> 도감</span>' +
+                '<span class="pk-dex-sub-count">' + kc + ' / ' + total + '마리</span>' +
+              '</div>' +
+              pkDexGridHTML(k.id) +
+            '</div>';
+          }).join('') +
+        '</div>' +
         '<p class="pk-dex-help">최종 진화한 포켓몬만 반짝하며 도감에 남아요. 별과 도감은 아이마다 따로 모여요.</p>' +
       '</div>';
   }
