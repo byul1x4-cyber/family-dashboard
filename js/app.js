@@ -4022,6 +4022,7 @@
     function add(p) {
       if (parts.length >= MAX) parts.shift();
       parts.push(p);
+      diag.added += 1;
     }
     function kick() {
       if (raf) return;
@@ -4032,6 +4033,7 @@
     function tick(t) {
       raf = 0;
       if (!ctx) return;
+      diag.frames += 1;
       var dt = lastT ? Math.min(0.06, (t - lastT) / 1000) : 0.016;
       lastT = t;
       ctx.clearRect(0, 0, W, H);
@@ -4044,7 +4046,13 @@
         p.y += p.vy * dt;
         p.rot += p.vr * dt;
         var k = 1 - p.life / p.ttl;
-        if (k <= 0 || p.y > H + 60 || p.x < -80 || p.x > W + 80) { parts.splice(i, 1); continue; }
+        if (p.life > diag.maxLife) diag.maxLife = p.life;
+        if (p.x < diag.minX) diag.minX = p.x;
+        if (p.x > diag.maxX) diag.maxX = p.x;
+        if (p.y < diag.minY) diag.minY = p.y;
+        if (p.y > diag.maxY) diag.maxY = p.y;
+        if (k <= 0) { diag.ttlOut += 1; parts.splice(i, 1); continue; }
+        if (p.y > H + 60 || p.x < -80 || p.x > W + 80) { diag.boundsOut += 1; parts.splice(i, 1); continue; }
         ctx.globalAlpha = k > 0.7 ? 1 : Math.max(0, k / 0.7);
         ctx.fillStyle = p.color;
         if (p.kind === 'dot') {
@@ -4060,6 +4068,7 @@
       else { ctx.clearRect(0, 0, W, H); lastT = 0; }
     }
     var lastCall = null;
+    var diag = { added: 0, ttlOut: 0, boundsOut: 0, frames: 0, maxLife: 0, minX: 9999, maxX: -9999, minY: 9999, maxY: -9999 };
     /* 한 점에서 사방으로 터지는 별 */
     function burst(cx, cy, n, opts) {
       opts = opts || {};
@@ -4114,7 +4123,7 @@
     }
     /* 화면 확인용(파티클 수·루프 상태) */
     window.__pkFxStat = function () {
-      return { parts: parts.length, raf: raf, w: W, h: H, cv: !!(cv && cv.isConnected), ctx: !!ctx, hidden: document.hidden, lastCall: lastCall };
+      return { parts: parts.length, raf: raf, w: W, h: H, cv: !!(cv && cv.isConnected), ctx: !!ctx, hidden: document.hidden, lastCall: lastCall, diag: diag };
     };
     return { burst: burst, fountain: fountain, resize: resize };
   })();
