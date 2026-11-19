@@ -4,7 +4,7 @@
 <style>
   body { margin: 0; background: #2a2a2a; display: flex; gap: 16px; padding: 12px; font-family: sans-serif; }
   .wrap { background: #000; border-radius: 22px; padding: 6px; }
-  iframe { display: block; width: 390px; border: 0; border-radius: 18px; background: #fff; }
+  iframe { display: block; width: var(--w, 390px); border: 0; border-radius: 18px; background: #fff; }
   .cap { color: #ddd; font-size: 12px; margin-bottom: 4px; }
 </style></head>
 <body>
@@ -14,9 +14,12 @@
 <script>
   var p = new URLSearchParams(location.search);
   var h = Number(p.get('h')) || 844;
+  var w = Number(p.get('w')) || 390;
   var f = document.getElementById('a');
   f.style.height = h + 'px';
-  document.getElementById('cap').textContent = '390 × ' + h;
+  f.style.width = w + 'px';
+  p.delete('h'); p.delete('w');
+  document.getElementById('cap').textContent = w + ' × ' + h;
   f.src = 'preview-status.html' + (p.toString() ? '?' + p.toString() : '');
 </script>
 </body></html>
