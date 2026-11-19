@@ -4073,9 +4073,16 @@
       var sp = PK.species[ids[0]];
       var on = st === i + 1;
       var done = st > i + 1;
-      /* 아직 도달하지 않은 단계는 그림도 이름도 보여 주지 않습니다 */
+      /* 아직 도달하지 않은 단계는 이름을 가리고, 모습은 까만 실루엣으로만 보여 줍니다.
+         (알 단계에서는 실루엣도 보이지 않고 물음표만) */
       if (!on && !done) {
-        cells.push('<span class="pk-tr locked"><i>❔</i><em>???</em></span>');
+        if (st === 0) {
+          cells.push('<span class="pk-tr locked"><i>❔</i><em>???</em></span>');
+        } else {
+          cells.push('<span class="pk-tr locked">' +
+            '<img src="' + pkIcon(sp.id) + '" alt="" loading="lazy" aria-hidden="true">' +
+            '<em>???</em></span>');
+        }
         return;
       }
       cells.push('<span class="pk-tr' + (on ? ' on' : '') + (done ? ' done' : '') + '">' +
@@ -4115,8 +4122,10 @@
         'onerror="this.onerror=null;this.src=\'' + pkIcon(sp.id) + '\'">';
     }
     var nextBlock = next
-      ? '<div class="pk-next mystery"><span class="pk-next-label">다음 모습</span>' +
-          '<span class="pk-next-mystery" aria-hidden="true">❔</span>' +
+      ? '<div class="pk-next' + (st === 0 ? ' mystery' : ' lock') + '"><span class="pk-next-label">다음 모습</span>' +
+          (st === 0
+            ? '<span class="pk-next-mystery" aria-hidden="true">❔</span>'
+            : '<img src="' + pkIcon(next.id) + '" alt="" loading="lazy" class="pk-next-img" aria-hidden="true">') +
           '<b>???</b>' +
           '<small>' + (st === 0 ? '별 ' + (per - prog) + '개 더 모으면 부화' : '별 ' + (per - prog) + '개 더 모으면 진화') + '</small></div>'
       : '<div class="pk-next done"><span class="pk-next-label">최종 진화 완료</span><b>🏅 도감 등록</b></div>';
@@ -4156,9 +4165,7 @@
         var sp = PK.species[id];
         var owned = !!got[id];
         return '<div class="pk-dex-cell' + (owned ? ' owned' : '') + '">' +
-          (owned
-            ? '<img src="' + pkIcon(id) + '" alt="" loading="lazy">'
-            : '<span class="pk-dex-mystery" aria-hidden="true">❔</span>') +
+          '<img src="' + pkIcon(id) + '" alt="" loading="lazy"' + (owned ? '' : ' aria-hidden="true"') + '>' +
           '<span>' + (owned ? esc(sp.ko) : '???') + '</span></div>';
       }).join('') + '</div>' +
       '<p class="help" style="margin-top:8px">최종 진화한 포켓몬만 반짝이며 도감에 남아요. 별은 아이마다 따로 모여요.</p>' +

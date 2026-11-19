@@ -590,6 +590,8 @@
 .pk-next.done { background: linear-gradient(150deg, #EDFBF4, #FFFFFF); border-color: #CDEBD9; }
 .pk-next.done .pk-next-label { color: #2C8563; }
 .pk-next.done b { color: #2C8563; }
+.pk-next.lock .pk-next-img { filter: brightness(0); opacity: .88; }
+.pk-next.mystery b { letter-spacing: 1px; }
 
 .pk-feed { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
 .pk-feed .btn { flex: 1; min-width: 96px; }
@@ -646,6 +648,9 @@
 }
 .pk-tr.locked i { font-size: 20px; opacity: .6; }
 .pk-tr.locked em { color: #C9B9A6; letter-spacing: .5px; }
+/* 도달 전 단계는 까만 실루엣만 보여 줍니다 */
+.pk-track .pk-tr.locked { opacity: 1; }
+.pk-track .pk-tr.locked img { filter: brightness(0); opacity: .88; }
 
 /* 반짝이 · 플래시 */
 .pk-sparks { position: fixed; inset: 0; pointer-events: none; z-index: 400; }
@@ -740,7 +745,9 @@
   border: 2px solid #F2E7D7;
   overflow: hidden;
 }
-.pk-dex-cell img { width: 46px; height: 46px; object-fit: contain; image-rendering: pixelated; filter: grayscale(1) brightness(.55) opacity(.4); }
+.pk-dex-cell img { width: 46px; height: 46px; object-fit: contain; image-rendering: pixelated; }
+/* 아직 못 모은 포켓몬은 완전 까만 실루엣만 (정체를 모르게) */
+.pk-dex-cell:not(.owned) img { filter: brightness(0); opacity: .82; }
 .pk-dex-mystery {
   width: 46px;
   height: 46px;
