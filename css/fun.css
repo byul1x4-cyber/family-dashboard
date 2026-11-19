@@ -2506,3 +2506,28 @@
   body.on-home .km-body { align-content: center; gap: 6px; }
   body.on-home .notice-card { min-height: 0; }
 }
+
+/* ---- 4차: 시계 더 크게 · 카드 글씨 크게 · 본문 높이 정확히 ---- */
+@media (min-width: 1000px) {
+  body { padding-bottom: 8px; }
+  body.on-home .home-main2 { height: calc(100vh - var(--sticky-top, 130px) - 30px); }
+  .clock.big .clock-time { font-size: 52px; }
+  .clock.big .clock-date { font-size: 14px; }
+  .clock.big { padding: 3px 20px 4px; }
+
+  /* 민국·이준 카드 — 엄마·아빠 카드와 같은 높이, 속은 큼직하게 */
+  .km-ava { width: 48px; height: 48px; }
+  .km-name { font-size: 19px; }
+  .km-star { font-size: 13px; padding: 2px 8px; }
+  .km-do { font-size: 13px; padding: 2px 9px; }
+  .km-pk { font-size: 13px; gap: 6px; }
+  .km-pk-bar { height: 8px; }
+  .km-bar { height: 8px; }
+  .kid-mini { padding: 10px 12px; border-radius: 20px; gap: 10px; }
+
+  /* 엄마·아빠 네모 카드 */
+  .ps-ava { width: 54px; height: 54px; font-size: 30px; }
+  .ps-name { font-size: 16.5px; }
+  .ps-txt { font-size: 15px; }
+  .parent-sq { padding: 9px 8px 8px; gap: 3px; }
+}
