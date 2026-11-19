@@ -3987,7 +3987,7 @@
   var pkFx = (function () {
     var cv = null, ctx = null, parts = [], raf = 0, W = 0, H = 0, lastT = 0;
     var MAX = 700;
-    var COLORS = ['#FFD84D', '#FFC13B', '#FFF3B0', '#FF9AD5', '#9BE7FF', '#FFFFFF', '#FFB84D'];
+    var COLORS = ['#FFB300', '#FFC61A', '#FF7A00', '#FF5FA2', '#3FA9F5', '#FFD54A', '#FFFFFF'];
     function ensure() {
       if (cv && cv.isConnected) { if (!ctx) ctx = cv.getContext('2d'); return; }
       cv = document.createElement('canvas');
@@ -4022,7 +4022,6 @@
     function add(p) {
       if (parts.length >= MAX) parts.shift();
       parts.push(p);
-      window.__pkStat.added += 1;
     }
     function kick() {
       if (raf) return;
@@ -4033,7 +4032,6 @@
     function tick(t) {
       raf = 0;
       if (!ctx) return;
-      window.__pkStat.frames += 1;
       var dt = lastT ? Math.min(0.06, (t - lastT) / 1000) : 0.016;
       lastT = t;
       ctx.clearRect(0, 0, W, H);
@@ -4122,11 +4120,6 @@
       }
       kick();
     }
-    window.__pkStat = window.__pkStat || { added: 0, frames: 0 };
-    /* 화면 확인용(파티클 수·루프 상태) */
-    window.__pkFxStat = function () {
-      return { parts: parts.length, raf: raf, w: W, h: H, cv: !!(cv && cv.isConnected), ctx: !!ctx, hidden: document.hidden, added: window.__pkStat.added, frames: window.__pkStat.frames };
-    };
     return { burst: burst, fountain: fountain, rain: rain, resize: resize };
   })();
   /* 별을 먹인 만큼 화면에 별을 마구 뿌립니다 (1개→약 50개, 10개→약 250개)
