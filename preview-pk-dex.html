@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=32">
-<link rel="stylesheet" href="css/fun.css?v=32">
+<link rel="stylesheet" href="css/styles.css?v=33">
+<link rel="stylesheet" href="css/fun.css?v=33">
 </head>
 <body>
 
@@ -104,13 +104,13 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="js/data.js?v=32"></script>
-<script src="js/storage.js?v=32"></script>
-<script src="js/ui.js?v=32"></script>
-<script src="js/art.js?v=32"></script>
-<script src="js/weather.js?v=32"></script>
-<script src="js/ntfy.js?v=32"></script>
-<script src="js/app.js?v=32"></script>
+<script src="js/data.js?v=33"></script>
+<script src="js/storage.js?v=33"></script>
+<script src="js/ui.js?v=33"></script>
+<script src="js/art.js?v=33"></script>
+<script src="js/weather.js?v=33"></script>
+<script src="js/ntfy.js?v=33"></script>
+<script src="js/app.js?v=33"></script>
 <script>
 /* ===== 임시 미리보기용 저장소 스텁 (확인 후 삭제) =====
    실제 Firestore·가족 문서는 건드리지 않고, 이 브라우저의 미리보기 저장소만 씁니다. */
@@ -127,7 +127,7 @@
   var ce = console.error;
   console.error = function () { window.__errs.push('console.error ' + Array.prototype.join.call(arguments, ' ')); ce.apply(console, arguments); };
 
-  var KEY = 'preview-pk-dex-state';
+  var KEY = 'preview-mail-state';
   var q = new URLSearchParams(location.search);
   if (q.get('reset') === '1') { try { localStorage.removeItem(KEY); } catch (e) {} }
   var saved = null;
@@ -139,7 +139,12 @@
     pokemon: {
       minguk: { line: 'pichu', cur: 0, fed: 150, dex: [26, 6, 9] },
       ijun: { line: 'squirtle', cur: 0, fed: 40, dex: [3] }
-    }
+    },
+    messages: [
+      { id: 'pm1', fromId: 'ijun', fromName: '이준', toId: 'mom', toName: '엄마', pictos: ['g-love'], text: '엄마 보고 싶어요', ts: Date.now() - 3600000, read: true,
+        replies: [{ id: 'pr1', by: '엄마', text: '나도 보고 싶어', emoji: '❤️', ts: Date.now() - 3500000 }] },
+      { id: 'pm2', fromId: 'mom', fromName: '엄마', toId: 'minguk', toName: '민국', pictos: ['g-praise'], text: '오늘 숙제 잘했어', ts: Date.now() - 1800000, read: true, replies: [] }
+    ]
   };
   var noop = function () {};
   Storage.hasGate = function () { return true; };
@@ -161,6 +166,5 @@
   document.title = '우리집 다모아 · 미리보기(두 아이 도감)';
 })();
 </script>
-</body>
 </body>
 </html>

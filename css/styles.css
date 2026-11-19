@@ -1220,7 +1220,7 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
    우체통
    ========================================================= */
 .mail-layout { display: grid; gap: 14px; }
-.mail-compose-card { padding: 18px; }
+.mail-compose-card { padding: 14px 15px; }
 .pick-child { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .pick-child button {
   display: inline-flex; align-items: center; gap: 8px;
@@ -1250,6 +1250,37 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 .mail-recipient .emoji { font-size: 24px; }
 .mail-recipient:hover { transform: translateY(-1px); }
 .mail-recipient.active { border-color: var(--rose); background: #FFF4F9; color: var(--rose-deep); box-shadow: 0 6px 14px rgba(255, 151, 193, .18); }
+
+/* ✏️ 편지 쓰기 — 모두 한눈에 보이되 세로로 짧게 (넓은 화면은 글쓰기·음성·그림 | 손글씨 2열) */
+.mail-who { display: grid; gap: 5px; margin-bottom: 9px; }
+.mail-who-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mail-who-label { flex: none; width: 56px; font-size: 11px; font-weight: 800; color: var(--ink-faint); }
+.pick-child.mail-pick { margin-bottom: 0; flex: 1; flex-wrap: nowrap; gap: 6px; min-width: 0; }
+.pick-child.mail-pick button { padding: 3px 10px 3px 3px; font-size: 12px; gap: 5px; }
+.pick-child.mail-pick button .avatar { width: 24px; height: 24px; font-size: 13px; }
+.mail-recipients.compact { display: flex; flex: 1; gap: 6px; }
+.mail-recipients.compact .mail-recipient { flex: 1; flex-direction: row; justify-content: center; gap: 5px; padding: 4px 8px; border-radius: 12px; font-size: 12px; }
+.mail-recipients.compact .mail-recipient .emoji { font-size: 15px; }
+.mail-compose-grid { display: grid; gap: 9px; align-items: start; }
+.mail-compose-left { display: grid; gap: 7px; min-width: 0; }
+.mail-compose-left .mail-text { min-height: 50px; padding: 8px 10px; font-size: 13px; line-height: 1.5; resize: none; }
+.mail-ornament { display: flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 800; color: var(--ink-soft); }
+.mail-ornament small { font-size: 10.5px; font-weight: 700; color: var(--ink-faint); }
+.mail-compose-left .picto-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.mail-compose-left .picto { padding: 6px 2px; border-radius: 12px; font-size: 10px; gap: 2px; }
+.mail-compose-left .picto .emoji { font-size: 19px; }
+.mail-compose-left .mic-btn { margin-top: 0; padding: 8px 11px; gap: 9px; border-width: 2px; border-radius: 16px; box-shadow: 0 5px 12px rgba(255, 130, 175, .22); }
+.mail-compose-left .mic-btn .mic-ico { width: 34px; height: 34px; font-size: 17px; }
+.mail-compose-left .mic-btn .mic-text b { font-size: 14px; }
+.mail-compose-left .mic-btn .mic-text small { font-size: 10px; }
+.mail-compose-right .hw-block { margin-top: 0; padding: 9px; border-radius: 18px; }
+.mail-compose-right .hw-head { margin-bottom: 5px; }
+.mail-compose-right .hw-head b { font-size: 15px; }
+.mail-compose-right .hw-head span { font-size: 10.5px; }
+.mail-compose-right .hw-tools { gap: 5px; margin-bottom: 6px; }
+.mail-compose-right .hw-swatch { width: 22px; height: 22px; border-width: 2px; }
+.mail-compose-right .hw-size, .mail-compose-right .hw-eraser, .mail-compose-right .hw-clear { padding: 3px 8px; font-size: 10.5px; }
+.mail-compose-right .hw-hint { font-size: 12px; }
 
 .picto-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .picto {
@@ -1923,7 +1954,8 @@ body.timer-ringing { overflow: hidden; }
   .home-children { grid-template-columns: 1fr 1fr; }
   .two-col { grid-template-columns: 1fr 1fr; }
   .duo-grid { grid-template-columns: 1fr 1fr; }
-  .mail-layout { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: start; }
+  /* 우체통: 편지 쓰기를 위에 전체 폭으로 — 안에서 글쓰기·음성·그림 | 손글씨 두 칸 */
+  .mail-compose-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .settings-grid { grid-template-columns: 1fr 1fr; }
   .home-children .kid-card { min-height: 100%; }
 }

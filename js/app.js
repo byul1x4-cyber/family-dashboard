@@ -19,8 +19,11 @@
   var routineSlot = 'all';
   var growthChild = D.children[0].id;
   var growthMetric = 'height';
-  var mailSender = D.children[0].id;
-  var mailRecipient = D.mailRecipients[0].id;
+  var mailSender = D.children[0].id;          /* 아이 모드: 편지를 쓰는 아이 */
+  var mailRecipient = D.mailRecipients[0].id; /* 아이 모드: 받는 부모님(엄마/아빠) */
+  var mailKidRecipient = D.children[0].id;    /* 부모님 모드: 받는 아이(민국/이준) */
+  var mailParentPick = null;                  /* 부모님이 직접 고른 발신자(엄마/아빠) */
+  var mailDraft = '';                         /* 편지 글 초안 — 사람·받는 사람 바꾸어도 살아 있게 */
   var mailFilter = 'all';   // 우체통: 'all'(전체 가족방) | 아이 id
   var STATUS_CUSTOM_KEY = 'custom';   // 엄마·아빠 상태: 프리셋 대신 직접 적은 문구
   var STATUS_TEXT_MAX = 24;           // 직접 적는 상태 문구 최대 글자 수
@@ -649,7 +652,8 @@
   function messageEventTitle(ev) {
     if (!ev) return '새 메시지';
     if (ev.kind === 'reply') return (ev.reply.by || '부모님') + '의 새 답장';
-    return childById(ev.msg.fromId).name + '이 보낸 새 편지';
+    var from = mailPerson(ev.msg.fromId);
+    return from.name + (from.kid ? '이' : '가') + ' 보낸 새 편지';
   }
   function messageEventBody(ev) {
     if (!ev) return '';
@@ -1126,6 +1130,7 @@
           var p = D.parents.filter(function (x) { return x.id === b.getAttribute('data-actor'); })[0];
           S.mode = 'parent';
           S.actor = p ? p.name : '부모님';
+          mailParentPick = null;   /* 편지 발신자도 지금 들어온 분(엄마/아빠)으로 */
           save();
           close();
           render({ keepScroll: true });
@@ -1155,6 +1160,7 @@
           else {
             var p = D.parents.filter(function (x) { return x.id === who; })[0];
             S.mode = 'parent'; S.actor = p ? p.name : '부모님';
+            mailParentPick = null;
           }
           S.introSeen = true;
           save();
@@ -1239,7 +1245,7 @@
   function mailTileSub() {
     var m = newestMessage();
     if (!m) return '아직 편지가 없어요';
-    var from = childById(m.fromId);
+    var from = mailPerson(m.fromId);
     var pv = messagePreview(m);
     return from.name + ' · ' + (pv.length > 14 ? pv.slice(0, 14) + '…' : pv);
   }
@@ -2298,6 +2304,34 @@
   }
 
   /* ================= 우체통 ================= */
+  /* 편지 보내는 사람·받는 사람은 모드에 따라 달라요.
+     · 아이 모드: 그 아이가 부모님께 → 보내는 사람 = 아이, 받는 사람 = 엄마/아빠
+     · 부모님 모드: 엄마(아빠)가 아이에게 → 보내는 사람 = 엄마/아빠, 받는 사람 = 민국/이준 */
+  function parentIdByActor() {
+    var p = D.parents.filter(function (x) { return x.name === S.actor; })[0];
+    return p ? p.id : D.parents[0].id;
+  }
+  function mailSenderId() {
+    if (S.mode === 'parent') return mailParentPick || parentIdByActor();
+    return mailSender;
+  }
+  function mailSenderList() { return S.mode === 'parent' ? D.parents : D.children; }
+  function mailPickList() { return S.mode === 'parent' ? D.children : D.mailRecipients; }
+  function mailPickId() { return S.mode === 'parent' ? mailKidRecipient : mailRecipient; }
+  function isKidId(id) { return D.children.some(function (k) { return k.id === id; }); }
+  /* 편지에 적힌 사람 id(아이·부모님 모두)를 이름·그림으로 풀어 줍니다 */
+  function mailPerson(id) {
+    var c = D.children.filter(function (k) { return k.id === id; })[0];
+    if (c) return { id: c.id, name: c.name, emoji: c.emoji, color: c.color, kid: true };
+    var p = D.parents.filter(function (x) { return x.id === id; })[0];
+    if (p) return { id: p.id, name: p.name, emoji: p.emoji, color: p.color, kid: false };
+    return { id: id || '', name: '가족', emoji: '👪', color: 'sun', kid: false };
+  }
+  function mailPickBtnHTML(k) {
+    return isKidId(k.id) ? kidAvaHTML(k) : '<span class="avatar sm ' + k.color + '">' + k.emoji + '</span>';
+  }
+  /* 그 아이 방에 들어가는 편지 — 그 아이가 보낸 것과 그 아이에게 온 것 모두 */
+  function mailInRoom(m, id) { return !!m && (m.fromId === id || m.toId === id); }
   function renderMailbox() {
     /* 보이는 편지는 읽음 처리 (배지 계산에만 사용) */
     var changed = false;
@@ -2307,41 +2341,57 @@
     if (changed) save();
 
     var events = mailEvents();
+    var senderId = mailSenderId();
+    var pickId = mailPickId();
     var shown = events.filter(function (ev) {
-      return mailFilter === 'all' ? true : (ev.letter && ev.letter.fromId === mailFilter);
+      return mailFilter === 'all' ? true : (ev.letter && mailInRoom(ev.letter, mailFilter));
     });
     var isAll = mailFilter === 'all';
     var roomTitle = isAll ? '전체 가족방' : (childById(mailFilter).name + '와 나눈 편지');
     var roomSub = isAll
       ? '엄마·아빠·민국·이준이 한 방에서 시간순으로 이야기해요'
-      : childById(mailFilter).name + '이 보낸 편지와 답장만 모아 봐요';
+      : childById(mailFilter).name + '이 보내고 받은 편지와 답장을 모아 봐요';
 
     return (S.mode === 'parent' ? bannerComposeHTML() : '') +
       '<div class="mail-layout">' +
       '<div class="card soft-rose mail-compose-card">' +
-        cardHead('✏️', '편지 쓰기', '손글씨로도, 그림으로도 보내요') +
-        '<div class="pick-child">' + D.children.map(function (k) {
-          return '<button type="button" class="' + (k.id === mailSender ? 'active ' + (k.color === 'coral' ? 'coral' : '') : '') + '" data-act="pick-mail-sender" data-id="' + k.id + '">' +
-            kidAvaHTML(k) + esc(k.name) + '</button>';
-        }).join('') + '</div>' +
-        '<div class="mail-recipients">' + D.mailRecipients.map(function (r) {
-          return '<button type="button" class="mail-recipient' + (r.id === mailRecipient ? ' active' : '') + '" data-act="pick-mail-recipient" data-id="' + r.id + '">' +
-            '<span class="emoji">' + r.emoji + '</span>' + esc(r.name) + '</button>';
-        }).join('') + '</div>' +
-        '<div class="field" style="margin-top:10px"><input class="input" id="mailText" maxlength="40" placeholder="짧은 말도 함께 보낼 수 있어요 (선택)"></div>' +
-        handLetterHTML() +
-        '<div class="mail-ornament"><span>🖼️ 그림 편지로 보내기</span></div>' +
-        '<p class="help" style="margin:4px 0 8px">그림을 몇 개든 골라 마음껏 보내요.</p>' +
-        '<div class="picto-grid">' + D.pictograms.map(function (p) {
-          return '<button type="button" class="picto" data-act="pick-picto" data-id="' + p.id + '">' +
-            '<span class="emoji">' + p.emoji + '</span>' + esc(p.label) + '</button>';
-        }).join('') + '</div>' +
-        '<button type="button" class="mic-btn" id="mailMic" data-act="mail-mic" aria-pressed="false">' +
-          '<span class="mic-ico" aria-hidden="true">🎤</span>' +
-          '<span class="mic-text"><b>눌러서 말하기</b><small id="mailMicHint">버튼을 누르고 말해요. 다시 누르면 끝나요.</small></span>' +
-        '</button>' +
+        cardHead('✏️', '편지 쓰기', S.mode === 'parent' ? '부모님이 아이에게 마음을 보내요' : '손글씨로도, 그림으로도 보내요') +
+        /* 보내는 사람·받는 사람 — 두 줄 컴팩트 칩 */
+        '<div class="mail-who">' +
+          '<div class="mail-who-row"><span class="mail-who-label">보내는 사람</span>' +
+            '<div class="pick-child mail-pick">' + mailSenderList().map(function (k) {
+              return '<button type="button" class="' + (k.id === senderId ? 'active ' + (k.color === 'coral' ? 'coral' : '') : '') + '" data-act="pick-mail-sender" data-id="' + k.id + '" aria-pressed="' + (k.id === senderId ? 'true' : 'false') + '">' +
+                mailPickBtnHTML(k) + esc(k.name) + '</button>';
+            }).join('') + '</div>' +
+          '</div>' +
+          '<div class="mail-who-row"><span class="mail-who-label">받는 사람</span>' +
+            '<div class="mail-recipients compact">' + mailPickList().map(function (r) {
+              return '<button type="button" class="mail-recipient' + (r.id === pickId ? ' active' : '') + '" data-act="pick-mail-recipient" data-id="' + r.id + '" aria-pressed="' + (r.id === pickId ? 'true' : 'false') + '">' +
+                '<span class="emoji">' + r.emoji + '</span>' + esc(r.name) + '</button>';
+            }).join('') + '</div>' +
+          '</div>' +
+        '</div>' +
+        /* 넓은 화면: 왼쪽 글쓰기·음성·그림 / 오른쪽 손글씨 캔버스 (모바일은 위에서 아래로) */
+        '<div class="mail-compose-grid">' +
+          '<div class="mail-compose-left">' +
+            '<textarea class="input mail-text" id="mailText" maxlength="40" rows="2" placeholder="짧은 말도 함께 보낼 수 있어요 (선택)">' + esc(mailDraft) + '</textarea>' +
+            '<div class="mail-ornament"><span>🖼️ 그림 편지</span><small>골라서 보내요</small></div>' +
+            '<div class="picto-grid">' + D.pictograms.map(function (p) {
+              return '<button type="button" class="picto" data-act="pick-picto" data-id="' + p.id + '">' +
+                '<span class="emoji">' + p.emoji + '</span>' + esc(p.label) + '</button>';
+            }).join('') + '</div>' +
+            '<button type="button" class="mic-btn" id="mailMic" data-act="mail-mic" aria-pressed="false">' +
+              '<span class="mic-ico" aria-hidden="true">🎤</span>' +
+              '<span class="mic-text"><b>눌러서 말하기</b><small id="mailMicHint">녹음을 글로 바꿔요</small></span>' +
+            '</button>' +
+          '</div>' +
+          '<div class="mail-compose-right">' +
+            handLetterHTML() +
+          '</div>' +
+        '</div>' +
         '<div class="mail-compose-foot">' +
           '<span class="counter" id="mailCounter">' + (window.__pictos || []).length + '개 골랐어요</span>' +
+          '<button type="button" class="btn btn-soft btn-sm" data-act="send-hand">✍️ 손글씨 보내기</button>' +
           '<button type="button" class="btn btn-rose" data-act="send-mail">편지 보내기 💌</button>' +
         '</div>' +
       '</div>' +
@@ -2366,7 +2416,7 @@
       return { id: c.id, label: c.name, emoji: c.emoji };
     }));
     return chips.map(function (c) {
-      var n = c.id === 'all' ? S.messages.length : S.messages.filter(function (m) { return m.fromId === c.id; }).length;
+      var n = c.id === 'all' ? S.messages.length : S.messages.filter(function (m) { return mailInRoom(m, c.id); }).length;
       return '<button type="button" class="room-chip' + (mailFilter === c.id ? ' active' : '') + '" data-act="mail-filter" data-id="' + c.id + '" aria-pressed="' + (mailFilter === c.id ? 'true' : 'false') + '">' +
         '<span>' + c.emoji + '</span>' + esc(c.label) + '<i>' + n + '</i></button>';
     }).join('');
@@ -2398,10 +2448,10 @@
 
   /* 아이가 보낸 그림 편지 (왼쪽 말풍선) + 바로 답장 버튼 */
   function letterBubbleHTML(m) {
-    var from = childById(m.fromId);
+    var from = mailPerson(m.fromId);
     var pictos = pictoChatChips(m);
     return '<div class="chat-row them">' +
-      '<span class="chat-ava ' + from.color + '">' + from.emoji + '</span>' +
+      '<span class="chat-ava ' + (from.kid ? from.color : 'parent') + '">' + from.emoji + '</span>' +
       '<div class="chat-col">' +
         '<div class="chat-meta"><b>' + esc(from.name) + '</b><span class="chat-arrow">→</span><span>' + esc(m.toName) + '</span>' +
           '<span class="chat-time">' + UI.ago(m.ts) + '</span></div>' +
@@ -2421,6 +2471,8 @@
   /* 말풍선 아래 빠른 답장 (부모님 모드) */
   function quickReplyRowHTML(m) {
     if (S.mode !== 'parent') return '';
+    /* 답장은 아이가 보낸 편지에만 (내가 보낸 편지에 답장하지 않도록) */
+    if (!isKidId(m.fromId)) return '';
     return '<div class="chat-quick">' + D.quickReplies.map(function (q) {
       return '<button type="button" class="qreply" data-act="quick-reply" data-id="' + m.id + '" data-text="' + esc(q.label) + '" data-emoji="' + esc(q.emoji) + '">' +
         q.emoji + ' ' + esc(q.label) + '</button>';
@@ -2429,7 +2481,7 @@
 
   /* 부모님 답장 (오른쪽 말풍선) — 엄마 → 민국 처럼 방향을 함께 */
   function replyBubbleHTML(m, r) {
-    var kid = childById(m && m.fromId);
+    var kid = mailPerson(m && m.fromId);
     return '<div class="chat-row me">' +
       '<div class="chat-col right">' +
         '<div class="chat-meta right"><span class="chat-time">' + UI.ago(r.ts) + '</span>' +
@@ -2442,7 +2494,10 @@
   /* 가족방처럼 고정된 답장창 (지금 보고 있는 방의 가장 최근 편지에 답장) */
   function chatReplyBarHTML() {
     var all = S.messages.slice()
-      .filter(function (m) { return mailFilter === 'all' || m.fromId === mailFilter; })
+      .filter(function (m) {
+        if (!isKidId(m.fromId)) return false;   /* 아이가 보낸 편지에만 답장 */
+        return mailFilter === 'all' || mailInRoom(m, mailFilter);
+      })
       .sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
     var target = all[0] || null;
     if (!target) {
@@ -2451,7 +2506,7 @@
     if (S.mode !== 'parent') {
       return '<div class="chat-replybar"><p class="help">🔒 답장은 부모님 모드에서 보낼 수 있어요.</p></div>';
     }
-    var from = childById(target.fromId);
+    var from = mailPerson(target.fromId);
     return '<div class="chat-replybar">' +
       '<div class="crb-to">' + from.emoji + ' <b>' + esc(from.name) + '</b>의 마지막 편지에 답장해요 · <span>→ ' + esc(target.toName) + '</span></div>' +
       '<div class="chip-row crb-quick">' + D.quickReplies.map(function (q) {
@@ -2528,12 +2583,12 @@
   function sendLetter() {
     if (!window.__pictos || !window.__pictos.length) {
       var txt0 = (document.getElementById('mailText') || {}).value || '';
-      if (!txt0.trim()) { UI.toast('그림을 하나 골라 주세요', { emoji: '🖼️', kind: 'warn' }); return; }
+      if (!txt0.trim()) { UI.toast('보낼 글을 적거나 그림·손글씨를 준비해 주세요', { emoji: '💌', kind: 'warn' }); return; }
     }
     var pictos = (window.__pictos || []).slice();
     var text = ((document.getElementById('mailText') || {}).value || '').trim();
-    var rec = D.mailRecipients.filter(function (r) { return r.id === mailRecipient; })[0];
-    var sender = childById(mailSender);
+    var rec = mailPickList().filter(function (r) { return r.id === mailPickId(); })[0] || mailPickList()[0];
+    var sender = mailPerson(mailSenderId());
     S.messages.unshift({
       id: UI.uid('letter'),
       fromId: sender.id, fromName: sender.name,
@@ -2542,6 +2597,7 @@
       ts: Date.now(), read: false, replies: []
     });
     window.__pictos = [];
+    mailDraft = '';
     lastMsgAt = Date.now();
     save();
     render({ keepScroll: true });
@@ -2572,13 +2628,13 @@
   function readLetter(id) {
     var m = S.messages.filter(function (x) { return x.id === id; })[0];
     if (!m) return;
-    var from = childById(m.fromId);
+    var from = mailPerson(m.fromId);
     var words = (m.pictos || []).map(function (pid) {
       var p = D.pictograms.filter(function (x) { return x.id === pid; })[0];
       return p ? p.label : '';
     }).filter(Boolean).join(', ');
     var lead = m.hw ? '손글씨 편지예요. ' : '';
-    UI.speak(from.name + '이 보낸 편지. ' + lead + (words ? words + '. ' : '') + (m.text || ''));
+    UI.speak(from.name + (from.kid ? '이' : '가') + ' 보낸 편지. ' + lead + (words ? words + '. ' : '') + (m.text || ''));
     UI.toast(m.hw ? '손글씨 편지를 읽어줄게요' : '편지를 읽어줄게요', { emoji: '🔊' });
   }
 
@@ -3781,7 +3837,7 @@
   }
   function handLetterHTML() {
     return '<div class="hw-block">' +
-      '<div class="hw-head"><b>✍️ 손글씨 편지</b><span>손가락이나 펜으로 마음을 적어요</span></div>' +
+      '<div class="hw-head"><b>✍️ 손글씨</b><span>손가락·펜으로 적어요</span></div>' +
       '<div class="hw-tools">' +
         '<div class="hw-colors">' + HW_COLORS.map(function (c) {
           return '<button type="button" class="hw-swatch' + (!HW.eraser && HW.color === c ? ' active' : '') + '" style="background:' + c + '" data-act="hw-color" data-color="' + c + '" aria-label="연필 색"></button>';
@@ -3796,7 +3852,6 @@
         '<canvas id="hwCanvas" class="hw-canvas" aria-label="손글씨 편지 쓰는 종이"></canvas>' +
         '<div class="hw-hint" id="hwHint">여기에 손가락으로 써 보세요 ✍️</div>' +
       '</div>' +
-      '<button type="button" class="btn btn-rose btn-block hw-send" data-act="send-hand">손글씨 편지 보내기 ✍️</button>' +
     '</div>';
   }
   function sendHandLetter() {
@@ -3806,8 +3861,8 @@
     }
     var url = hwExport();
     var text = ((document.getElementById('mailText') || {}).value || '').trim();
-    var rec = D.mailRecipients.filter(function (r) { return r.id === mailRecipient; })[0] || D.mailRecipients[0];
-    var sender = childById(mailSender);
+    var rec = mailPickList().filter(function (r) { return r.id === mailPickId(); })[0] || mailPickList()[0];
+    var sender = mailPerson(mailSenderId());
     S.messages.unshift({
       id: UI.uid('letter'),
       fromId: sender.id, fromName: sender.name,
@@ -3817,6 +3872,7 @@
     });
     var tIn = document.getElementById('mailText');
     if (tIn) tIn.value = '';
+    mailDraft = '';
     lastMsgAt = Date.now();
     HW.ink = false;
     hwEnsure();
@@ -4810,8 +4866,16 @@
       case 'pick-growth-child': selectChild(el.getAttribute('data-id')); render({ keepScroll: true }); break;
       case 'pick-pk-child': selectChild(el.getAttribute('data-id')); render({ keepScroll: true }); break;
       case 'mail-mic': mailMicToggle(); break;
-      case 'pick-mail-sender': selectChild(el.getAttribute('data-id')); render({ keepScroll: true }); break;
-      case 'pick-mail-recipient': mailRecipient = el.getAttribute('data-id'); render({ keepScroll: true }); break;
+      case 'pick-mail-sender':
+        mailDraft = ((document.getElementById('mailText') || {}).value || '');
+        if (S.mode === 'parent') mailParentPick = el.getAttribute('data-id');   /* 엄마/아빠 중에 */
+        else selectChild(el.getAttribute('data-id'));                          /* 아이 모드는 그 아이가 */
+        render({ keepScroll: true }); break;
+      case 'pick-mail-recipient':
+        mailDraft = ((document.getElementById('mailText') || {}).value || '');
+        if (S.mode === 'parent') mailKidRecipient = el.getAttribute('data-id'); /* 부모님 → 아이 */
+        else mailRecipient = el.getAttribute('data-id');                        /* 아이 → 부모님 */
+        render({ keepScroll: true }); break;
       case 'mail-filter': mailFilter = el.getAttribute('data-id') || 'all'; render({ keepScroll: true }); break;
 
       case 'routine-check': {
