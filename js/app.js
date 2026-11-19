@@ -3986,7 +3986,7 @@
      · 동시에 살아 있는 별은 MAX 개까지만 (넘치면 오래된 별부터 정리). */
   var pkFx = (function () {
     var cv = null, ctx = null, parts = [], raf = 0, W = 0, H = 0, lastT = 0;
-    var MAX = 560;
+    var MAX = 700;
     var COLORS = ['#FFD84D', '#FFC13B', '#FFF3B0', '#FF9AD5', '#9BE7FF', '#FFFFFF', '#FFB84D'];
     function ensure() {
       if (cv && cv.isConnected) { if (!ctx) ctx = cv.getContext('2d'); return; }
@@ -4147,13 +4147,18 @@
     pkFx.rain(Math.round(count * 0.9));
     pkFx.burst(cx, cy, Math.round(count * 0.5), { power: power, up: true });
     pkFx.fountain(cx, base, Math.round(count * 0.6));
-    /* 0.3초 간격으로 한 번씩 더 — 별이 마구 쏟아지며 1초 넘게 이어져요 */
-    [[300, 0.75], [650, 0.6], [1000, 0.45]].forEach(function (wv) {
-      setTimeout(function () {
-        pkFx.rain(Math.round(count * wv[1] * 0.55));
-        pkFx.fountain(cx, base, Math.round(count * wv[1] * 0.35));
-      }, wv[0]);
-    });
+    /* 0.11초마다 조금씩 계속 — 화면 위에서 아래로 별이 마구 쏟아져요 (약 1.2초) */
+    var waves = 11;
+    for (var w = 1; w <= waves; w++) {
+      (function (w) {
+        setTimeout(function () {
+          var soft = 1 - w / (waves + 3);
+          pkFx.rain(Math.max(4, Math.round(count * 0.17 * soft)));
+          if (w % 3 === 0) pkFx.fountain(cx, base, Math.round(count * 0.2));
+          if (w % 4 === 0) pkFx.burst(cx, cy, Math.round(count * 0.16), { power: power * 0.9, up: true });
+        }, w * 110);
+      })(w);
+    }
   }
   /* ---------- 반짝이 파티클 ---------- */
   function pkSparkle(host, n) {
