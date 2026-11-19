@@ -1912,3 +1912,17 @@
   .hm-notice .notice-msg { font-size: 12px; line-height: 1.5; }
   .hm-notice .notice-item { font-size: 12px; padding: 7px 9px; }
 }
+
+/* 폰: 브랜드·바로가기·시계가 겹치지 않게 조금 더 조입니다 */
+@media (max-width: 719px) {
+  .topbar { gap: 5px; }
+  .brand { gap: 6px; }
+  .brand-mark { width: 32px; height: 32px; font-size: 17px; border-radius: 11px; }
+  .brand-text h1 { font-size: 17px; overflow: hidden; text-overflow: ellipsis; }
+  .brand-text p { font-size: 10px; }
+  .clock { padding: 4px 9px 4px 8px; }
+  .clock-date { font-size: 9.5px; }
+  .clock-time { font-size: 14px; }
+  .qb-btn { padding: 6px 7px; }
+  .qb-btn .qb-ico { font-size: 15px; }
+}
