@@ -1176,6 +1176,11 @@
   function setView(name) {
     view = name;
     render({ scrollTop: true });
+    /* 우체통은 손글씨 종이·최근 편지 카드가 그려진 뒤 높이가 변해서, 한 번 더 맨 위로 맞춥니다 */
+    if (name === 'mailbox') {
+      window.scrollTo(0, 0);
+      requestAnimationFrame(function () { window.scrollTo(0, 0); });
+    }
   }
 
   function render(opts) {
@@ -2332,6 +2337,89 @@
   }
   /* 그 아이 방에 들어가는 편지 — 그 아이가 보낸 것과 그 아이에게 온 것 모두 */
   function mailInRoom(m, id) { return !!m && (m.fromId === id || m.toId === id); }
+
+  /* 📬 최근 온 편지·답장 — 우체통 맨 위에서 바로 보여 줍니다 */
+  function mailSnippet(m) {
+    var words = (m.pictos || []).map(function (id) {
+      var p = D.pictograms.filter(function (x) { return x.id === id; })[0];
+      return p ? p.emoji + ' ' + p.label : '';
+    }).filter(Boolean).join(' · ');
+    var parts = [];
+    if (m.hw) parts.push('✍️ 손글씨 편지');
+    if (words) parts.push(words);
+    if (m.text) parts.push(m.text);
+    return parts.join(' · ') || '편지';
+  }
+  function mailLatestEvents(n) {
+    var items = [];
+    S.messages.forEach(function (m) {
+      var from = mailPerson(m.fromId);
+      items.push({
+        letterId: m.id, replyId: null, ts: m.ts || 0,
+        emoji: from.emoji, color: from.kid ? from.color : 'parent',
+        who: from.name, to: m.toName,
+        kind: from.kid ? '받은 편지' : '보낸 편지',
+        snippet: mailSnippet(m)
+      });
+      (m.replies || []).forEach(function (r) {
+        items.push({
+          letterId: m.id, replyId: r.id, ts: r.ts || 0,
+          emoji: parentFace(r.by), color: 'parent',
+          who: r.by, to: from.name, kind: '답장',
+          snippet: ((r.emoji && r.emoji !== '💬' ? r.emoji + ' ' : '') + (r.text || '')).trim() || '답장'
+        });
+      });
+    });
+    items.sort(function (a, b) { return b.ts - a.ts; });
+    return items.slice(0, n || 2);
+  }
+  function mailLatestCardHTML() {
+    var list = mailLatestEvents(2);
+    if (!list.length) return '';
+    return '<div class="card soft-mint mail-latest">' +
+      cardHead('📬', '최근 온 편지·답장', '누르면 그 편지로 바로 가요',
+        '<span class="badge mint">최근 ' + list.length + '건</span>') +
+      '<div class="mail-latest-list">' + list.map(function (it) {
+        var tone = it.kind === '답장' ? 'sun' : (it.kind === '받은 편지' ? 'mint' : 'lav');
+        return '<button type="button" class="mail-latest-row" data-act="goto-mail" data-id="' + esc(it.letterId) + '"' +
+            (it.replyId ? ' data-reply="' + esc(it.replyId) + '"' : '') + '>' +
+          '<span class="chat-ava ' + (it.color === 'parent' ? 'parent' : it.color) + '">' + it.emoji + '</span>' +
+          '<span class="ml-col">' +
+            '<span class="ml-top"><b>' + esc(it.who) + '</b><span class="chat-arrow">→</span>' + esc(it.to) +
+              '<i class="ml-tag ' + tone + '">' + it.kind + '</i>' +
+              '<span class="ml-time">' + UI.ago(it.ts) + '</span></span>' +
+            '<span class="ml-text">' + esc(it.snippet) + '</span>' +
+          '</span>' +
+          '<span class="ml-go">보기 →</span>' +
+        '</button>';
+      }).join('') + '</div>' +
+    '</div>';
+  }
+  /* 그 편지·답장 말풍선으로 이동하고 잠깐 반짝입니다 */
+  function scrollToMailBubble(letterId, replyId) {
+    var m = S.messages.filter(function (x) { return x.id === letterId; })[0];
+    if (m && mailFilter !== 'all' && !mailInRoom(m, mailFilter)) {
+      mailFilter = 'all';
+      render({ keepScroll: true });
+    }
+    var rowId = 'mailrow-' + (replyId || letterId);
+    var focus = function () {
+      var el = document.getElementById(rowId);
+      if (!el) return false;
+      var r = el.getBoundingClientRect();
+      var off = (r.top < 96 || r.bottom > window.innerHeight - 16);
+      if (off) {
+        try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        catch (e) { el.scrollIntoView(); }
+      }
+      el.classList.add('mail-flash');
+      setTimeout(function () { el.classList.remove('mail-flash'); }, 1800);
+      return true;
+    };
+    var ok = focus();
+    if (ok) setTimeout(focus, 340);   /* 손글씨 종이 높이가 잡힌 뒤 한 번 더 맞춥니다 */
+    return ok;
+  }
   function renderMailbox() {
     /* 보이는 편지는 읽음 처리 (배지 계산에만 사용) */
     var changed = false;
@@ -2352,7 +2440,8 @@
       ? '엄마·아빠·민국·이준이 한 방에서 시간순으로 이야기해요'
       : childById(mailFilter).name + '이 보내고 받은 편지와 답장을 모아 봐요';
 
-    return (S.mode === 'parent' ? bannerComposeHTML() : '') +
+    return mailLatestCardHTML() +
+      (S.mode === 'parent' ? bannerComposeHTML() : '') +
       '<div class="mail-layout">' +
       '<div class="card soft-rose mail-compose-card">' +
         cardHead('✏️', '편지 쓰기', S.mode === 'parent' ? '부모님이 아이에게 마음을 보내요' : '손글씨로도, 그림으로도 보내요') +
@@ -2453,7 +2542,7 @@
   function letterBubbleHTML(m) {
     var from = mailPerson(m.fromId);
     var pictos = pictoChatChips(m);
-    return '<div class="chat-row them">' +
+    return '<div class="chat-row them" id="mailrow-' + esc(m.id) + '">' +
       '<span class="chat-ava ' + (from.kid ? from.color : 'parent') + '">' + from.emoji + '</span>' +
       '<div class="chat-col">' +
         '<div class="chat-meta"><b>' + esc(from.name) + '</b><span class="chat-arrow">→</span><span>' + esc(m.toName) + '</span>' +
@@ -2485,7 +2574,7 @@
   /* 부모님 답장 (오른쪽 말풍선) — 엄마 → 민국 처럼 방향을 함께 */
   function replyBubbleHTML(m, r) {
     var kid = mailPerson(m && m.fromId);
-    return '<div class="chat-row me">' +
+    return '<div class="chat-row me" id="mailrow-' + esc(r.id) + '">' +
       '<div class="chat-col right">' +
         '<div class="chat-meta right"><span class="chat-time">' + UI.ago(r.ts) + '</span>' +
           '<b>' + esc(r.by) + '</b><span class="chat-arrow">→</span><span>' + esc(kid.name) + '</span></div>' +
@@ -2599,11 +2688,13 @@
       pictos: pictos, text: text,
       ts: Date.now(), read: false, replies: []
     });
+    var newId = S.messages[0].id;
     window.__pictos = [];
     mailDraft = '';
     lastMsgAt = Date.now();
     save();
-    render({ keepScroll: true });
+    render();
+    scrollToMailBubble(newId);
     UI.confetti(18);
     UI.toast(rec.name + '에게 편지를 보냈어요', { emoji: '💌', kind: 'good' });
     /* 📲 가족 폰·패드 잠금화면 알림 */
@@ -2619,10 +2710,12 @@
     if (!t && input) t = input.value.trim();
     if (!t) { UI.toast('답장 내용을 적어 주세요', { kind: 'warn' }); return; }
     m.replies = m.replies || [];
-    m.replies.push({ id: UI.uid('reply'), by: S.actor || '부모님', text: t, emoji: emoji || '💬', ts: Date.now() });
+    var reply = { id: UI.uid('reply'), by: S.actor || '부모님', text: t, emoji: emoji || '💬', ts: Date.now() };
+    m.replies.push(reply);
     lastMsgAt = Date.now();
     save();
-    render({ keepScroll: true });
+    render();
+    scrollToMailBubble(m.id, reply.id);
     UI.toast('답장을 보냈어요', { emoji: '💬', kind: 'good' });
     /* 📲 가족 폰·패드 잠금화면 알림 */
     sendMailboxMessage('reply', { by: S.actor || '부모님', text: t, emoji: emoji || '💬', toName: m.fromName });
@@ -3884,7 +3977,8 @@
     HW.dctx.fillStyle = '#FFFFFF';
     HW.dctx.fillRect(0, 0, HW_W, HW_H);
     save();
-    render({ keepScroll: true });
+    render();
+    scrollToMailBubble(S.messages[0].id);
     UI.confetti(20);
     UI.toast(rec.name + '에게 손글씨 편지를 보냈어요', { emoji: '✍️', kind: 'good' });
     sendMailboxMessage('letter', { fromName: sender.name, toName: rec.name, text: text, hand: true });
@@ -4915,6 +5009,7 @@
       case 'send-mail': sendLetter(); break;
       case 'read-letter': readLetter(el.getAttribute('data-id')); break;
       case 'quick-reply': sendReply(el.getAttribute('data-id'), el.getAttribute('data-text'), el.getAttribute('data-emoji')); break;
+      case 'goto-mail': scrollToMailBubble(el.getAttribute('data-id'), el.getAttribute('data-reply')); break;
       case 'send-reply': sendReply(el.getAttribute('data-id')); break;
 
       /* ✍️ 손글씨 편지 */
@@ -5274,7 +5369,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 40;             /* index.html 의 ?v=40 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 41;             /* index.html 의 ?v=41 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
