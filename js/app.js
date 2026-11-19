@@ -2381,8 +2381,11 @@
     if (r.pokemon > 0) {
       UI.toast(name + ' 칭찬을 취소했어요 · 보유 별이 없어 포켓몬에게 먹인 별에서 ' + r.pokemon + '개 뺐어요',
         { emoji: '⚡', kind: 'warn', duration: 3600 });
-    } else {
+    } else if (r.held > 0) {
       UI.toast(name + ' 칭찬을 취소했어요 · 별 1개도 함께 뺐어요',
+        { emoji: '↩️', kind: 'warn', duration: 2600 });
+    } else {
+      UI.toast(name + ' 칭찬을 취소했어요 · 뺄 별이 없어 기록만 지웠어요',
         { emoji: '↩️', kind: 'warn', duration: 2600 });
     }
   }
