@@ -295,9 +295,9 @@ window.Art = (function () {
     function arm(side, up) {
       var sx = side * 17;
       if (up) {
-        return '<g transform="rotate(' + (side * 38) + ' ' + sx + ' -62)">' +
-          '<rect x="' + (sx - 5.5) + '" y="-99" width="11" height="40" rx="5.5" fill="' + c.shirt + '" stroke="#fff" stroke-width="1.6"/>' +
-          '<circle cx="' + sx + '" cy="-100" r="6.4" fill="' + c.skin + '" stroke="#fff" stroke-width="1.2"/>' +
+        return '<g transform="rotate(' + (side * 44) + ' ' + sx + ' -62)">' +
+          '<rect x="' + (sx - 5.5) + '" y="-101" width="11" height="43" rx="5.5" fill="' + c.shirt + '" stroke="#fff" stroke-width="1.8"/>' +
+          '<circle cx="' + sx + '" cy="-103" r="7" fill="' + c.skin + '" stroke="#fff" stroke-width="1.4"/>' +
           '</g>';
       }
       return '<g transform="rotate(' + (side * 9) + ' ' + sx + ' -62)">' +
@@ -341,14 +341,15 @@ window.Art = (function () {
         '<circle cx="27" cy="24" r="8" fill="#FFD24D"/>' +
         '<g stroke="#FFD24D" stroke-width="2.6" stroke-linecap="round"><path d="M27 12v3M27 33v3M15 24h3M36 24h3M18 15l2 2M34 31l2 2"/></g>' +
         '<g fill="#FFE9A8" opacity=".6"><circle cx="76" cy="20" r="3"/><circle cx="86" cy="38" r="2.2"/><circle cx="70" cy="44" r="2"/></g>' +
-        '<ellipse cx="112" cy="132" rx="26" ry="6" fill="#000" opacity=".06"/>' +
-        '<g transform="translate(112,132)">' + schBoy(c, { arms: 'up' }) + '</g>' +
-        '<rect x="58" y="112" width="134" height="26" rx="12" fill="#FFC9AC"/>' +
-        '<rect x="58" y="112" width="134" height="8" rx="4" fill="#FFE2D2"/>' +
-        '<rect x="100" y="101" width="92" height="16" rx="8" fill="#A5DBF3"/>' +
-        '<rect x="100" y="101" width="92" height="6" rx="3" fill="#CBEcFA"/>' +
-        '<rect x="62" y="99" width="34" height="16" rx="8" fill="#fff"/>' +
-        '<rect x="66" y="103" width="26" height="6" rx="3" fill="#F1F8FF"/>' +
+        '<ellipse cx="118" cy="140" rx="28" ry="6" fill="#000" opacity=".06"/>' +
+        '<g transform="translate(118,126)">' + schBoy(c, { arms: 'up' }) + '</g>' +
+        '<rect x="52" y="122" width="142" height="24" rx="12" fill="#FFC9AC"/>' +
+        '<rect x="52" y="122" width="142" height="8" rx="4" fill="#FFE2D2"/>' +
+        '<rect x="58" y="110" width="130" height="16" rx="8" fill="#F3E7D8"/>' +
+        '<rect x="112" y="102" width="82" height="20" rx="9" fill="#A5DBF3"/>' +
+        '<rect x="112" y="102" width="82" height="7" rx="3.5" fill="#CBEcFA"/>' +
+        '<rect x="62" y="100" width="38" height="18" rx="9" fill="#fff"/>' +
+        '<rect x="67" y="105" width="28" height="6" rx="3" fill="#F1F8FF"/>' +
         '<g transform="translate(30,120)">' +
           '<circle cx="0" cy="0" r="13" fill="#FFE9A8" stroke="#F0B44C" stroke-width="3"/>' +
           '<path d="M0 0v-6M0 0l5 3" stroke="#B4741E" stroke-width="2.4" stroke-linecap="round"/>' +
@@ -384,6 +385,12 @@ window.Art = (function () {
           '<path d="M-4 32l12-24 12 24z" fill="#9ED9F3"/><rect x="-4" y="30" width="24" height="6" rx="3" fill="#7FC3EC"/></g>' +
         '<ellipse cx="74" cy="142" rx="24" ry="5" fill="#000" opacity=".06"/>' +
         '<g transform="translate(74,142)">' + schBoy(c, { arms: 'up' }) + '</g>' +
+        /* 머리 위로 뒤집어쓰는 옷 */
+        '<g transform="translate(74,142)">' +
+          '<path d="M-30 -104h60l-3 16a9 9 0 0 1-9 8h-36a9 9 0 0 1-9-8z" fill="' + c.shirt2 + '" stroke="#fff" stroke-width="2.4"/>' +
+          '<path d="M-30 -104l-12 8 6 10 8-6zM30 -104l12 8-6 10-8-6z" fill="' + c.shirt2 + '" stroke="#fff" stroke-width="2.4"/>' +
+          '<path d="M-22 -104c4-6 14-8 22-8s18 2 22 8" fill="none" stroke="#fff" stroke-width="2.4"/>' +
+        '</g>' +
         '<g transform="translate(24,120)"><rect x="0" y="8" width="34" height="9" rx="4.5" fill="#C9B7E8"/>' +
           '<rect x="4" y="0" width="26" height="9" rx="4.5" fill="#FFD98A"/></g>' +
         '<g fill="#FFC46B"><path d="M112 40l2.4 5.8 5.8 2.4-5.8 2.4-2.4 5.8-2.4-5.8-5.8-2.4 5.8-2.4z"/></g>' +
