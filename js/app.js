@@ -4500,7 +4500,7 @@
             var px = pkOf(cid);
             var stars0 = S.stars[cid] || 0;
             UI.confirm('포켓몬을 알 받기 전으로 돌릴까요?',
-              childById(cid).name + '의 포켓몬이 <b>알 받기 전</b>으로 돌아가요. ' +
+              childById(cid).name + '의 포켓몬이 알 받기 전으로 돌아가요. ' +
               '보유 별(⭐' + stars0 + ')·도감은 그대로 남고, 포켓몬에게 먹인 별만 0이 돼요. ' +
               '아이 화면에서 🥚 신비한 알 받기를 누르면 새 알이 와요.',
               '알 받기 전으로', 'danger')
