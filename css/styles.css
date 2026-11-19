@@ -2038,6 +2038,10 @@ body.timer-ringing { overflow: hidden; }
   .mic-btn .mic-ico { width: 28px; height: 28px; font-size: 14px; }
   .mic-btn .mic-text b { font-size: 14px; }
   .mic-btn .mic-text small { font-size: 10px; }
+  /* 폰: 보낼 방법 두 가지를 같은 폭으로 나란히 */
+  .mail-compose-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mail-compose-foot .counter { grid-column: 1 / -1; }
+  .mail-compose-foot .btn { width: 100%; justify-content: center; }
   .kc-ava { width: 72px; height: 72px; }
   .kc-star { font-size: 24px; }
   .time-banner { padding: 13px 14px; gap: 10px; }
