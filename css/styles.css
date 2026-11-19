@@ -1259,7 +1259,7 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 .pick-child.mail-pick button { padding: 3px 10px 3px 3px; font-size: 12px; gap: 5px; }
 .pick-child.mail-pick button .avatar { width: 24px; height: 24px; font-size: 13px; }
 .mail-recipients.compact { display: flex; flex: 1; gap: 6px; }
-.mail-recipients.compact .mail-recipient { flex: 1; flex-direction: row; justify-content: center; gap: 5px; padding: 4px 8px; border-radius: 12px; font-size: 12px; }
+.mail-recipients.compact .mail-recipient { flex: 0 1 150px; flex-direction: row; justify-content: center; gap: 5px; padding: 4px 8px; border-radius: 12px; font-size: 12px; }
 .mail-recipients.compact .mail-recipient .emoji { font-size: 15px; }
 .mail-compose-grid { display: grid; gap: 9px; align-items: start; }
 .mail-compose-left { display: grid; gap: 7px; min-width: 0; }

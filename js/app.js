@@ -3718,6 +3718,8 @@
     var wrap = cv.parentNode;
     var cssW = Math.max(240, Math.floor(cv.getBoundingClientRect().width || (wrap && wrap.clientWidth) || 320));
     var cssH = Math.round(cssW * HW_H / HW_W);
+    /* 폰에서는 종이를 짧게 — 편지 쓰기가 너무 길어지지 않도록 */
+    if (window.innerWidth <= 760) cssH = Math.min(cssH, 170);
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     cv.style.height = cssH + 'px';
     cv.width = Math.round(cssW * dpr);
