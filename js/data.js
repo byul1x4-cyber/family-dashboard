@@ -64,6 +64,7 @@ window.APP_DATA = {
   praiseItems: [
     { id: 'p-self',    label: '스스로 했어요',      emoji: '🙌' },
     { id: 'p-greet',   label: '인사를 잘했어요',    emoji: '🙇' },
+    { id: 'p-polite',  label: '예쁜 말 했어요',      emoji: '💬' },
     { id: 'p-kind',    label: '형제에게 친절했어요', emoji: '🤝' },
     { id: 'p-homework',label: '숙제 먼저 했어요',   emoji: '📚' },
     { id: 'p-tidy',    label: '정리를 잘했어요',    emoji: '🧺' },
