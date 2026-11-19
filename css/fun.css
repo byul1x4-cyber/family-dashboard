@@ -1020,7 +1020,7 @@
 .sb-btn:active { transform: scale(.995); }
 .sb-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .sb-ico { font-size: 22px; line-height: 1; flex: none; }
-.sb-time { display: inline-flex; align-items: baseline; gap: 10px; min-width: 0; }
+.sb-time { display: inline-flex; align-items: baseline; gap: 12px; min-width: 0; }
 .sb-left {
   font-family: var(--font-round);
   font-size: 34px;
@@ -1062,11 +1062,11 @@
 .sb-fill.over { background: linear-gradient(90deg, #FFC2B6, #FF8F7C); }
 .sb-runner {
   position: absolute;
-  top: -14px;
+  top: 50%;
   left: 96%;
-  font-size: 28px;
+  font-size: 22px;
   line-height: 1;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   transition: left .9s linear;
   filter: drop-shadow(0 2px 3px rgba(150, 110, 70, .28));
   font-weight: 400;
@@ -1216,7 +1216,7 @@
   .sb-btn { padding: 9px 11px 11px; border-radius: 18px; gap: 13px; }
   .sb-top { flex-wrap: wrap; row-gap: 1px; }
   .sb-kids { width: 100%; margin-left: 0; padding-left: 34px; color: #6E5F4C; }
-  .sb-runner { top: -10px; }
+  .sb-runner { top: 50%; font-size: 20px; }
   .sb-left { font-size: 30px; }
   .sb-say { font-size: 12px; }
   .sb-kids { font-size: 11px; }
