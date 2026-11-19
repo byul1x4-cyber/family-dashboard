@@ -4216,28 +4216,24 @@
       (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
       '</div>';
   }
-  function pkDexHTML(c) {
-    var p = pkOf(c.id);
+  /* 도감 격자 — 그 아이가 모은 것만 보입니다 (아이마다 도감이 따로예요) */
+  function pkDexGridHTML(childId) {
+    var p = pkOf(childId);
     var got = {};
-    /* 그 아이가 모은 것만 이 도감에 보입니다 (아이마다 도감이 따로예요) */
     (p.dex || []).forEach(function (id) { got[id] = 1; });
-    var count = Object.keys(got).length;
-    return '<div class="card pk-dex">' +
-      cardHead('📖', c.name + '의 포켓몬 도감', '모은 포켓몬 ' + count + ' / ' + PK.finals.length + '마리') +
-      '<div class="pk-dex-grid">' + PK.finals.map(function (id) {
-        var sp = PK.species[id];
-        var owned = !!got[id];
-        return '<div class="pk-dex-cell' + (owned ? ' owned' : '') + '">' +
-          '<img src="' + pkIcon(id) + '" alt="" loading="lazy"' + (owned ? '' : ' aria-hidden="true"') + '>' +
-          '<span>' + (owned ? esc(sp.ko) : '???') + '</span></div>';
-      }).join('') + '</div>' +
-      '<p class="help" style="margin-top:8px">최종 진화한 포켓몬만 반짝하며 도감에 남아요. 별과 도감은 아이마다 따로 모여요.</p>' +
-    '</div>';
+    return '<div class="pk-dex-grid">' + PK.finals.map(function (id) {
+      var sp = PK.species[id];
+      var owned = !!got[id];
+      return '<div class="pk-dex-cell' + (owned ? ' owned' : '') + '">' +
+        '<img src="' + pkIcon(id) + '" alt="" loading="lazy"' + (owned ? '' : ' aria-hidden="true"') + '>' +
+        '<span>' + (owned ? esc(sp.ko) : '???') + '</span></div>';
+    }).join('') + '</div>';
   }
   function renderPokemon() {
     var c = childById(routineChild);
     var p = pkOf(c.id);
     var dexCount = (p.dex || []).length;
+    var total = PK.finals.length;
     return '<div class="card soft-sun pk-rules">' +
         '<div class="pk-rules-head"><b>⭐ 별 ' + pkPerLevel() + '개 모으면 진화!</b>' +
           '<span>' + D.children.map(function (k) { return k.emoji + ' ' + esc(k.name) + ' ⭐' + (S.stars[k.id] || 0); }).join(' · ') + '</span></div>' +
@@ -4245,7 +4241,7 @@
         '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 단계마다 먹인 별 ' + pkPerLevel() + '개를 모아야 진화해요.<br>' +
         '먹인 별은 포켓몬 안에서만 쌓여요(내 별과는 따로 보여요). 알 속 포켓몬은 <b>부화하는 순간까지 비밀</b>!</p>' +
         (S.mode === 'parent'
-          ? '<div class="btn-row" style="margin-top:10px">' +
+          ? '<div class="btn-row pk-rules-btns">' +
               D.children.map(function (k) {
                 return '<button type="button" class="btn btn-ghost btn-sm" data-act="pk-test" data-child="' + k.id + '">🧪 ' + esc(k.name) + ' 별 ' + pkPerLevel() + '개</button>';
               }).join('') +
@@ -4253,18 +4249,42 @@
             '</div>'
           : '') +
       '</div>' +
-      /* 누구 포켓몬·도감을 볼지 고르는 칩 — 고르면 그 아이 카드와 그 아이 도감이 바로 바뀌어요 */
+      /* 좁은 화면: 한 아이씩 골라 보는 칩 (넓은 화면에서는 두 아이가 나란히 다 보여서 숨겨요) */
       '<div class="chip-row pk-pick" role="group" aria-label="누구 포켓몬을 볼까요">' +
         D.children.map(function (k) {
           var kc = (pkOf(k.id).dex || []).length;
           return '<button type="button" class="chip ' + k.color + (k.id === c.id ? ' active' : '') + '" data-act="pick-pk-child" data-id="' + k.id + '" aria-pressed="' + (k.id === c.id ? 'true' : 'false') + '">' +
-            k.emoji + ' ' + esc(k.name) + '의 포켓몬 <small>📖 ' + kc + '/' + PK.finals.length + '</small></button>';
+            k.emoji + ' ' + esc(k.name) + '의 포켓몬 <small>📖 ' + kc + '/' + total + '</small></button>';
         }).join('') +
       '</div>' +
-      /* 알·키우기 카드 바로 아래에 그 아이 도감을 이어 붙입니다 (넓은 화면에서도 한 줄로 쌓임) */
-      '<div class="pk-stack" data-child="' + c.id + '">' +
-        pkCardHTML(c) +
-        pkDexHTML(c) +
+      /* 알·키우기 카드: 좁은 화면은 고른 아이 하나, 넓은 화면(패드·데스크톱)은 두 아이 2분할 */
+      '<div class="pk-duo" data-active="' + c.id + '">' +
+        D.children.map(function (k) {
+          return '<div class="pk-duo-col' + (k.id === c.id ? ' active' : '') + '" data-child="' + k.id + '">' +
+            pkCardHTML(k) +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      /* 카드 아래 전체 폭 도감 — 위쪽 칩으로 민국·이준 도감을 바로 전환 */
+      '<div class="card pk-dex" data-active="' + c.id + '">' +
+        '<div class="pk-dex-head">' +
+          '<span class="pk-dex-ico" aria-hidden="true">📖</span>' +
+          '<div class="pk-dex-title"><b>' + esc(c.name) + '의 포켓몬 도감</b>' +
+            '<small>모은 포켓몬 ' + dexCount + ' / ' + total + '마리</small></div>' +
+          '<div class="pk-dex-tabs" role="group" aria-label="누구 도감을 볼까요">' +
+            D.children.map(function (k) {
+              var kc = (pkOf(k.id).dex || []).length;
+              return '<button type="button" class="chip ' + k.color + (k.id === c.id ? ' active' : '') + '" data-act="pick-pk-child" data-id="' + k.id + '" aria-pressed="' + (k.id === c.id ? 'true' : 'false') + '">' +
+                k.emoji + ' ' + esc(k.name) + ' 도감 <small>' + kc + '/' + total + '</small></button>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+        D.children.map(function (k) {
+          return '<div class="pk-dex-pane' + (k.id === c.id ? ' active' : '') + '" data-child="' + k.id + '">' +
+            pkDexGridHTML(k.id) +
+          '</div>';
+        }).join('') +
+        '<p class="pk-dex-help">최종 진화한 포켓몬만 반짝하며 도감에 남아요. 별과 도감은 아이마다 따로 모여요.</p>' +
       '</div>';
   }
 

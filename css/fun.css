@@ -726,13 +726,27 @@
   font-weight: 800;
 }
 
+.pk-rules-btns { margin-top: 10px; }
+
 /* 도감 — 반짝이는 홀로그램 카드 */
 .pk-pick { margin-bottom: 12px; }
 .pk-pick .chip small { font-size: 10px; font-weight: 800; opacity: .9; }
-/* 알·키우기 카드 → 그 아이 도감 순서로 한 줄에 쌓기 (패드·데스크톱에서도 나란히 두지 않음) */
-.pk-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
-.pk-stack > .pk-dex { margin-top: 0; }
+/* 알·키우기 카드 묶음 — 좁은 화면은 고른 아이 하나만 */
+.pk-duo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.pk-duo-col { min-width: 0; display: none; }
+.pk-duo-col.active { display: block; }
+.pk-duo-col > .pk-card { height: 100%; }
 .pk-dex { margin-top: 12px; }
+/* 도감 머리 — 아이별 도감으로 바로 전환하는 칩 */
+.pk-dex-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 10px; }
+.pk-dex-ico { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 12px; background: var(--sun-soft); font-size: 17px; flex: none; }
+.pk-dex-title b { display: block; font-family: var(--font-round); font-weight: 400; font-size: 17px; color: #4B3A2B; letter-spacing: 0; }
+.pk-dex-title small { font-size: 11.5px; font-weight: 800; color: var(--ink-faint); }
+.pk-dex-tabs { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.pk-dex-tabs .chip small { font-size: 10px; font-weight: 800; opacity: .9; }
+.pk-dex-pane { display: none; }
+.pk-dex-pane.active { display: block; }
+.pk-dex-help { font-size: 11px; color: var(--ink-faint); margin-top: 8px; line-height: 1.45; }
 .pk-dex-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
@@ -864,6 +878,63 @@
 .sw-txt { font-size: 13px; font-weight: 800; color: var(--ink); }
 
 .pk-set-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ---------------- 패드·데스크톱: 두 아이 2분할 + 아래 도감을 한 화면에 ---------------- */
+@media (min-width: 761px) {
+  /* 카드가 둘 다 보이니 아이 고르기 칩은 숨기고, 도감 칩으로 전환해요 */
+  .pk-pick { display: none; }
+  .pk-duo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  .pk-duo-col { display: block; }
+
+  /* 위쪽 설명 카드는 한 줄 띠로 */
+  .pk-rules { padding: 9px 13px; margin-bottom: 9px; border-radius: 22px; }
+  .pk-rules p { display: none; }
+  .pk-rules-head { margin-bottom: 0; }
+  .pk-rules-head b { font-size: 16px; }
+  .pk-rules-btns { margin-top: 7px; }
+
+  /* 키우기 카드 — 위아래를 줄여 두 장이 한 화면에 들어오게 */
+  .pk-duo .pk-card { padding: 11px 12px; border-radius: 24px; }
+  .pk-duo .rk-head { gap: 7px; }
+  .pk-duo .rk-head strong { font-size: 17px; }
+  .pk-duo .rk-head .avatar { width: 33px; height: 33px; font-size: 18px; }
+  .pk-duo .pk-hero { gap: 8px; margin-top: 5px; padding: 6px 9px; border-radius: 18px; }
+  .pk-duo .pk-art { width: 86px; height: 86px; }
+  .pk-duo .pk-mon { width: 82px; height: 82px; }
+  .pk-duo .pk-egg-emoji { font-size: 54px; }
+  .pk-duo .pk-name { font-size: 18px; gap: 6px; }
+  .pk-duo .pk-lv { font-size: 10.5px; padding: 2px 7px; }
+  .pk-duo .pk-sub { font-size: 10.5px; margin-top: 1px; }
+  .pk-duo .pk-bar { height: 11px; margin-top: 6px; }
+  .pk-duo .pk-progtxt { font-size: 10.5px; margin-top: 4px; }
+  .pk-duo .pk-track { margin-top: 8px; padding: 5px 4px; border-radius: 14px; }
+  .pk-duo .pk-tr img { width: 30px; height: 30px; }
+  .pk-duo .pk-tr i { font-size: 19px; }
+  .pk-duo .pk-tr em { font-size: 9px; }
+  .pk-duo .pk-next { margin-top: 7px; padding: 5px 8px; gap: 6px; }
+  .pk-duo .pk-next-img { width: 26px; height: 26px; }
+  .pk-duo .pk-next-mystery { width: 25px; height: 25px; font-size: 13px; }
+  .pk-duo .pk-next b { font-size: 12px; }
+  .pk-duo .pk-next small { font-size: 10px; }
+  .pk-duo .pk-feed { margin-top: 8px; gap: 6px; flex-wrap: nowrap; }
+  .pk-duo .pk-feed .btn { min-width: 0; padding: 6px 3px; font-size: 11.5px; }
+  .pk-duo .pk-help { margin-top: 6px; font-size: 10.5px; line-height: 1.4; }
+  .pk-duo .pk-new { margin-top: 8px; }
+  .pk-duo .pk-choose-help { margin: 4px 0 8px; font-size: 11.5px; }
+  .pk-duo .pk-mystery { padding: 0; }
+  .pk-duo .pk-mystery-egg { padding: 10px; }
+  .pk-duo .pk-mystery-emoji { font-size: 50px; }
+  .pk-duo .pk-mystery-egg b { font-size: 16px; }
+
+  /* 아래 도감 — 컴팩트한 간격으로 시원하게 */
+  .pk-dex { margin-top: 10px; padding: 11px 14px 12px; border-radius: 24px; }
+  .pk-dex-head { margin-bottom: 8px; }
+  .pk-dex-grid { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
+  .pk-dex-cell { padding: 6px 2px 4px; border-radius: 13px; gap: 0; }
+  .pk-dex-cell img { width: 38px; height: 38px; }
+  .pk-dex-cell span { font-size: 9.5px; }
+  .pk-dex-help { margin-top: 7px; font-size: 10.5px; }
+}
 
 /* ---------------- 좁은 화면 ---------------- */
 @media (max-width: 760px) {
