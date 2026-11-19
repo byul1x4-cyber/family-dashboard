@@ -1945,3 +1945,10 @@
   .home-status .sc-ava { width: 26px; height: 26px; font-size: 13px; }
   .hm-cal .card-head { margin-bottom: 7px; }
 }
+
+@media (min-width: 1000px) {
+  .hm-cal .mini-cal { margin-bottom: 4px; }
+  .hm-cal .day-block { padding: 5px 7px 6px; }
+  .hm-cal .day-ev { padding: 4px 6px; margin-bottom: 3px; }
+  .hm-cal .day-go { padding: 4px; }
+}
