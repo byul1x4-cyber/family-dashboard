@@ -1796,8 +1796,8 @@
           '<b class="ps-name">' + esc(p.name) + '는 지금</b>' +
         '</span>' +
         '<span class="ps-big" aria-hidden="true">' + esc(big) + '</span>' +
-        '<span class="ps-txt">' + esc(txt) + '</span>' +
-        '<span class="ps-ago">' + (st && st.at ? UI.ago(st.at) : '✎ 눌러서 알리기') + '</span>' +
+        '<span class="ps-foot"><span class="ps-txt">' + esc(txt) + '</span>' +
+          (st && st.at ? '<span class="ps-ago">' + UI.ago(st.at) + '</span>' : '') + '</span>' +
       '</button>';
   }
 
