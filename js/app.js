@@ -4109,6 +4109,10 @@
       }
       kick();
     }
+    /* 화면 확인용(파티클 수·루프 상태) */
+    window.__pkFxStat = function () {
+      return { parts: parts.length, raf: raf, w: W, h: H, cv: !!(cv && cv.isConnected), ctx: !!ctx, hidden: document.hidden };
+    };
     return { burst: burst, fountain: fountain, resize: resize };
   })();
   /* 별을 먹인 만큼 화면에 별을 마구 뿌립니다 (1개→약 50개, 10개→약 250개)
