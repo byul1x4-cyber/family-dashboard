@@ -1562,6 +1562,17 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 .qm-hint { font-size: 11px; color: var(--ink-faint); font-weight: 700; }
 .qm-spacer { flex: 1; }
 .qm-empty { margin: 8px 0 0; }
+.qm-add-chip {
+  border: 2px dashed #E9D9C2;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #A98B5B;
+  background: #FFFDF8;
+  font-family: inherit;
+}
+.qm-add-chip:active { background: #FFF4DC; }
 .qm-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
 .qm-item {
   display: inline-flex;
