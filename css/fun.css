@@ -1668,3 +1668,11 @@
   .tv-finish { min-height: 58px; font-size: 21px; }
   .tv-mini { min-height: 42px; }
 }
+
+/* 폰: 시계는 시간만 — 브랜드·바로가기·시계가 한 줄에 들어갑니다 */
+@media (max-width: 719px) {
+  .clock-date { display: none; }
+  .clock { padding: 6px 10px; }
+  .clock::before { font-size: 14px; }
+  .clock-time { font-size: 16px; }
+}
