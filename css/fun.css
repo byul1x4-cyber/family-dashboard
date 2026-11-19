@@ -1020,7 +1020,7 @@
 .sb-btn:active { transform: scale(.995); }
 .sb-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .sb-ico { font-size: 22px; line-height: 1; flex: none; }
-.sb-time { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
+.sb-time { display: inline-flex; align-items: baseline; gap: 10px; min-width: 0; }
 .sb-left {
   font-family: var(--font-round);
   font-size: 34px;
