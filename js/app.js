@@ -4050,7 +4050,7 @@
         if (p.x > W + 24) { p.x = W + 24; p.vx = -Math.abs(p.vx) * 0.55; }
         var k = 1 - p.life / p.ttl;
         if (k <= 0 || p.y > H + 70) { parts.splice(i, 1); continue; }
-        ctx.globalAlpha = k > 0.7 ? 1 : Math.max(0, k / 0.7);
+        ctx.globalAlpha = k > 0.55 ? 1 : Math.max(0, k / 0.55);
         ctx.fillStyle = p.color;
         if (p.kind === 'dot') {
           ctx.beginPath();
@@ -4058,6 +4058,12 @@
           ctx.fill();
         } else {
           drawStar(p.x, p.y, p.r * (0.6 + 0.4 * k), p.rot);
+          if (p.r > 9) {
+            ctx.fillStyle = 'rgba(255,255,255,.85)';
+            ctx.beginPath();
+            ctx.arc(p.x - p.r * 0.18, p.y - p.r * 0.2, p.r * 0.22, 0, 6.283);
+            ctx.fill();
+          }
         }
       }
       ctx.globalAlpha = 1;
@@ -4068,7 +4074,7 @@
       var big = Math.random() < 0.22;
       return {
         x: x, y: y, vx: vx, vy: vy, g: g,
-        r: big ? 10 + Math.random() * 7 : 4 + Math.random() * 6,
+        r: big ? 14 + Math.random() * 9 : 6 + Math.random() * 8,
         rot: Math.random() * Math.PI,
         vr: (Math.random() - 0.5) * 6,
         life: 0,
@@ -4136,7 +4142,7 @@
     var cy = Math.round(box.top + box.height / 2);
     var base = Math.min(window.innerHeight - 6, box.bottom);
     var amount = Math.max(1, Math.min(30, Number(n) || 1));
-    var count = Math.min(150, 40 + Math.round(amount * 13) + (big ? 70 : 0));
+    var count = Math.min(180, 34 + Math.round(amount * 15) + (big ? 70 : 0));
     var power = 1 + Math.min(0.6, amount / 22);
     pkFx.rain(Math.round(count * 0.9));
     pkFx.burst(cx, cy, Math.round(count * 0.5), { power: power, up: true });
