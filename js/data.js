@@ -5,8 +5,8 @@ window.APP_DATA = {
 
   /* 가족 구성 - 아이 모드/부모 모드에서 쓰는 표시 이름 */
   children: [
-    { id: 'minguk', name: '민국', tag: '초1', emoji: '🧒', color: 'mint' },
-    { id: 'ijun',   name: '이준', tag: '유치원', emoji: '👦', color: 'coral' }
+    { id: 'minguk', name: '민국', tag: '초1', emoji: '👦', color: 'mint' },
+    { id: 'ijun',   name: '이준', tag: '유치원', emoji: '🧒', color: 'coral' }
   ],
   parents: [
     { id: 'mom', name: '엄마', emoji: '👩', color: 'lavender' },

@@ -708,6 +708,10 @@
   function childById(id) {
     return D.children.filter(function (c) { return c.id === id; })[0] || D.children[0];
   }
+  /* 아이 아바타 — 이모지 대신 남자아이 그림 캐릭터(형 민국 · 동생 이준) */
+  function kidAvaHTML(c, cls) {
+    return '<span class="avatar ' + (cls || 'sm') + ' ' + c.color + ' ava-kid">' + Art.kid(c.id) + '</span>';
+  }
   function memberColor(id) {
     var m = D.scheduleMembers.filter(function (x) { return x.id === id; })[0];
     return m ? m.color : 'mint';
@@ -1310,8 +1314,12 @@
   }
 
   /* ---- 홈: 오늘 날씨 · 옷차림 · 시간대별 ---- */
-  function wxEmoji(kind) {
-    return kind === 'rain' ? '🌧️' : kind === 'snow' ? '🌨️' : kind === 'sun' ? '☀️' : '⛅';
+  function wxEmoji(kind, hour) {
+    var night = typeof hour === 'number' && (hour < 7 || hour >= 19);
+    if (kind === 'rain') return '🌧️';
+    if (kind === 'snow') return '🌨️';
+    if (kind === 'sun') return night ? '🌙' : '☀️';
+    return night ? '☁️' : '⛅';
   }
   function wxHourlyHTML(w) {
     if (!w.hours || !w.hours.length) return '';
@@ -1320,7 +1328,7 @@
         return '<div class="wx-hr' + (h.now ? ' now' : '') + '" role="listitem">' +
           '<span class="wx-hr-t">' + (h.now ? '지금' : h.hour + '시') +
             (h.tomorrow ? '<i>내일</i>' : '') + '</span>' +
-          '<span class="wx-hr-i" aria-hidden="true">' + wxEmoji(h.kind) + '</span>' +
+          '<span class="wx-hr-i" aria-hidden="true">' + wxEmoji(h.kind, h.hour) + '</span>' +
           '<b class="wx-hr-tp">' + (h.temp == null ? '—' : h.temp + '°') + '</b>' +
           '<span class="wx-hr-pop">' + (h.pop == null ? '&nbsp;' : '☔ ' + h.pop + '%') + '</span>' +
         '</div>';
@@ -1969,7 +1977,7 @@
     if (routineSlot === 'all' || routineSlot === 'evening') body += routineGroupHTML(c, '저녁', '🌙', items.evening);
     return '<div class="card routine-kid ' + c.color + '">' +
       '<div class="rk-head">' +
-        '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span>' +
+        kidAvaHTML(c) +
         '<strong>' + esc(c.name) + '</strong>' +
         '<span class="badge sun">⭐ ' + (S.stars[c.id] || 0) + '</span>' +
         '<span class="rk-spacer"></span>' +
@@ -2124,7 +2132,7 @@
   function praiseKidCardHTML(c) {
     return '<div class="card praise-kid ' + c.color + '">' +
       '<div class="rk-head">' +
-        '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span>' +
+        kidAvaHTML(c) +
         '<strong>' + esc(c.name) + '</strong>' +
         '<span class="badge sun">⭐ ' + (S.stars[c.id] || 0) + '</span>' +
         '<span class="rk-spacer"></span>' +
@@ -2312,7 +2320,7 @@
         cardHead('✏️', '편지 쓰기', '손글씨로도, 그림으로도 보내요') +
         '<div class="pick-child">' + D.children.map(function (k) {
           return '<button type="button" class="' + (k.id === mailSender ? 'active ' + (k.color === 'coral' ? 'coral' : '') : '') + '" data-act="pick-mail-sender" data-id="' + k.id + '">' +
-            '<span class="avatar sm ' + k.color + '">' + k.emoji + '</span>' + esc(k.name) + '</button>';
+            kidAvaHTML(k) + esc(k.name) + '</button>';
         }).join('') + '</div>' +
         '<div class="mail-recipients">' + D.mailRecipients.map(function (r) {
           return '<button type="button" class="mail-recipient' + (r.id === mailRecipient ? ' active' : '') + '" data-act="pick-mail-recipient" data-id="' + r.id + '">' +
@@ -2680,7 +2688,7 @@
 
     return '<div class="card meal-kid ' + c.color + '">' +
       '<div class="rk-head">' +
-        '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span>' +
+        kidAvaHTML(c) +
         '<strong>' + esc(c.name) + '</strong>' +
         '<span class="rk-spacer"></span>' +
         '<span class="badge mint">먹은 음식 ' + picked.length + '가지</span>' +
@@ -3283,7 +3291,7 @@
     }).join('');
     return '<div class="sc-kid ' + c.color + (all ? ' all' : '') + '">' +
       '<div class="sc-kid-head">' +
-        '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span>' +
+        kidAvaHTML(c) +
         '<b>' + esc(c.name) + '</b>' +
         '<span class="sc-kid-cnt">' + done + '/' + morning.length + '</span>' +
       '</div>' +
@@ -4359,7 +4367,7 @@
     var stars = S.stars[c.id] || 0;
     var per = pkPerLevel();
     var head = '<div class="rk-head">' +
-      '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span><strong>' + esc(c.name) + '</strong>' +
+      kidAvaHTML(c) + '<strong>' + esc(c.name) + '</strong>' +
       '<span class="rk-spacer"></span>' +
       '<span class="badge sun">⭐ ' + stars + '</span>' +
       '</div>';
