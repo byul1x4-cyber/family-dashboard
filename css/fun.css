@@ -390,63 +390,196 @@
   font-weight: 700;
 }
 
-/* ---------------- ⚡ 포켓몬 ---------------- */
+/* ---------------- ⚡ 포켓몬 (알 → 3단계 진화) ---------------- */
 .pk-rules { margin-bottom: 12px; }
 .pk-rules-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
 .pk-rules-head b { font-family: var(--font-round); font-weight: 400; font-size: 20px; color: #8A5A10; letter-spacing: 0; }
 .pk-rules-head span { margin-left: auto; font-size: 12px; font-weight: 800; color: #A0763A; }
 .pk-rules p { font-size: 12.5px; color: var(--ink-soft); line-height: 1.65; }
-.pk-card { display: flex; flex-direction: column; }
-.pk-main { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+
+.pk-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.pk-card::after {
+  content: "";
+  position: absolute;
+  top: -70px; right: -60px;
+  width: 210px; height: 210px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 226, 160, .55), rgba(255, 226, 160, 0) 68%);
+  pointer-events: none;
+}
+.pk-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: 24px;
+  background: linear-gradient(150deg, #FFFDF6, #FFF4DE 62%, #FFF0F7);
+  border: 2px solid #FFEBC6;
+  overflow: hidden;
+}
+.pk-aura {
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  width: 190px; height: 190px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 218, 140, .7), rgba(255, 218, 140, 0) 66%);
+  animation: pkAura 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes pkAura {
+  0%, 100% { transform: translateY(-50%) scale(1); opacity: .7; }
+  50% { transform: translateY(-50%) scale(1.18); opacity: 1; }
+}
 .pk-art {
   position: relative;
-  width: 128px; height: 128px;
+  width: 130px; height: 130px;
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 26px;
-  background: radial-gradient(circle at 50% 62%, #FFF7DD, #FFFDF7 70%);
-  border: 2px solid #FCEBC5;
+  z-index: 1;
 }
-.pk-art img { width: 116px; height: 116px; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(160, 120, 60, .22)); }
-.pk-info { flex: 1; min-width: 0; }
-.pk-name { font-family: var(--font-round); font-weight: 400; font-size: 22px; color: #4B3A2B; letter-spacing: 0; display: flex; align-items: center; gap: 8px; }
+.pk-mon {
+  width: 122px; height: 122px;
+  object-fit: contain;
+  animation: pkFloat 3.2s ease-in-out infinite;
+  filter: drop-shadow(0 10px 14px rgba(160, 110, 40, .3));
+}
+@keyframes pkFloat {
+  0%, 100% { transform: translateY(-3px) rotate(-1deg); }
+  50% { transform: translateY(6px) rotate(1deg); }
+}
+.pk-egg-art { position: relative; display: grid; place-items: center; }
+.pk-egg-emoji {
+  font-size: 76px;
+  line-height: 1;
+  display: block;
+  animation: pkWobble 2.2s ease-in-out infinite;
+  filter: drop-shadow(0 8px 10px rgba(170, 130, 60, .3));
+}
+@keyframes pkWobble {
+  0%, 100% { transform: rotate(-8deg) translateY(0); }
+  25% { transform: rotate(7deg) translateY(-2px); }
+  50% { transform: rotate(-4deg) translateY(1px); }
+  75% { transform: rotate(9deg) translateY(-1px); }
+}
+.pk-egg-shine {
+  position: absolute;
+  right: 2px; top: 4px;
+  font-size: 20px;
+  animation: pkTwinkle 1.9s ease-in-out infinite;
+}
+@keyframes pkTwinkle {
+  0%, 100% { opacity: .2; transform: scale(.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+.pk-hero-info { flex: 1; min-width: 0; z-index: 1; }
+.pk-name {
+  font-family: var(--font-round);
+  font-weight: 400;
+  font-size: 22px;
+  color: #4B3A2B;
+  letter-spacing: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .pk-lv {
   font-family: var(--font);
   font-size: 12.5px;
   font-weight: 800;
   padding: 3px 9px;
   border-radius: 999px;
-  background: #4A3F35;
-  color: #FFF8EA;
+  background: linear-gradient(150deg, #FFD479, #F8B93E);
+  color: #6B4A08;
+  box-shadow: 0 3px 8px rgba(248, 188, 69, .35);
 }
+.pk-sub { font-size: 11.5px; font-weight: 800; color: var(--ink-faint); margin-top: 2px; }
 .pk-bar {
-  height: 14px;
+  height: 15px;
   margin-top: 8px;
   border-radius: 999px;
-  background: #F6EBDA;
+  background: #F5E7D2;
   overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(160, 130, 90, .16);
 }
 .pk-bar > i {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #FFD166, #FFB03A);
-  transition: width .4s ease;
+  background: linear-gradient(90deg, #FFE07A, #FFB23A 60%, #FF8FB4);
+  box-shadow: 0 0 10px rgba(255, 178, 58, .7);
+  transition: width .45s ease;
+  position: relative;
 }
+.pk-bar > i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.65), rgba(255,255,255,0));
+  transform: translateX(-100%);
+  animation: pkShineBar 2.6s linear infinite;
+}
+@keyframes pkShineBar { to { transform: translateX(100%); } }
 .pk-progtxt { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 800; color: var(--ink-faint); margin-top: 5px; }
-.pk-tag {
-  margin-top: 8px;
-  display: inline-block;
-  padding: 5px 10px;
-  border-radius: 12px;
-  background: #FFF4D6;
-  color: #8A6412;
-  font-size: 11.5px;
-  font-weight: 800;
+
+/* 단계 트랙 */
+.pk-track {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  margin-top: 10px;
+  padding: 7px 4px;
+  border-radius: 16px;
+  background: #FFFBF2;
+  border: 2px dashed #F7E4C4;
 }
-.pk-tag.done { background: #E9F9F1; color: #2C8563; }
-.pk-feed { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
+.pk-tr {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  opacity: .5;
+}
+.pk-tr img { width: 40px; height: 40px; object-fit: contain; image-rendering: pixelated; }
+.pk-tr:not(.on):not(.done) img { filter: brightness(0) opacity(.45); }
+.pk-tr i { font-size: 26px; font-style: normal; line-height: 1.15; }
+.pk-tr em { font-style: normal; font-size: 9.5px; font-weight: 800; color: var(--ink-faint); }
+.pk-tr.on { opacity: 1; }
+.pk-tr.on em { color: #B4467A; }
+.pk-tr.done { opacity: .95; }
+.pk-tr.done em { color: #2C8563; }
+
+/* 다음 모습 미리보기 */
+.pk-next {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 14px;
+  background: linear-gradient(150deg, #F6F0FF, #FFF8FD);
+  border: 2px solid #EADFFA;
+}
+.pk-next-label { font-size: 10.5px; font-weight: 800; color: #8A6BB8; }
+.pk-next-img { width: 34px; height: 34px; object-fit: contain; image-rendering: pixelated; filter: brightness(0) opacity(.5); }
+.pk-next b { font-size: 13px; color: #6A57C6; }
+.pk-next small { font-size: 10.5px; font-weight: 800; color: var(--ink-faint); margin-left: auto; }
+.pk-next.done { background: linear-gradient(150deg, #EDFBF4, #FFFFFF); border-color: #CDEBD9; }
+.pk-next.done .pk-next-label { color: #2C8563; }
+.pk-next.done b { color: #2C8563; }
+
+.pk-feed { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
 .pk-feed .btn { flex: 1; min-width: 96px; }
 .pk-help { font-size: 11.5px; color: var(--ink-faint); margin-top: 8px; line-height: 1.5; }
 .pk-new { margin-top: 10px; }
@@ -460,55 +593,128 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   padding: 8px 4px 6px;
   border-radius: 18px;
   border: 2px solid #F1E4D2;
   background: #FFFDF8;
-  transition: transform .12s, background .16s, border-color .16s;
+  transition: transform .12s, background .16s, border-color .16s, box-shadow .18s;
 }
-.pk-egg:hover { background: #fff; border-color: #FFE0A6; transform: translateY(-2px); }
+.pk-egg:hover { background: #fff; border-color: #FFE0A6; transform: translateY(-3px); box-shadow: 0 8px 18px rgba(200, 160, 90, .2); }
 .pk-egg:active { transform: scale(.97); }
 .pk-egg img { width: 54px; height: 54px; image-rendering: pixelated; object-fit: contain; }
 .pk-egg b { font-size: 12px; font-weight: 800; color: var(--ink); }
-.pk-egg small { font-size: 10px; color: var(--ink-faint); font-weight: 700; }
-.pk-evo-modal { text-align: center; }
-.pk-evo-modal img { width: 180px; height: 180px; object-fit: contain; margin: 0 auto 6px; display: block; filter: drop-shadow(0 8px 14px rgba(170, 130, 60, .25)); }
-.pk-evo-modal p { font-size: 14px; font-weight: 800; }
-.pk-branches { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.pk-branch {
-  padding: 8px;
-  border-radius: 18px;
-  border: 2px solid #F1E4D2;
-  background: #FFFDF8;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+.pk-egg small { font-size: 9.5px; color: var(--ink-faint); font-weight: 700; }
+
+/* 반짝이 · 플래시 */
+.pk-sparks { position: fixed; inset: 0; pointer-events: none; z-index: 400; }
+.pk-sparks span {
+  position: fixed;
+  animation-name: pkSparkUp;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
 }
-.pk-branch img { width: 90px; height: 90px; object-fit: contain; }
-.pk-branch b { font-size: 13px; }
+@keyframes pkSparkUp {
+  0% { opacity: 0; transform: translateY(0) scale(.5) rotate(0deg); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-70px) scale(1.25) rotate(35deg); }
+}
+.pk-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 395;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, #FFFFFF, rgba(255, 246, 214, .75) 45%, rgba(255, 255, 255, 0) 78%);
+  animation: pkFlash .85s ease-out forwards;
+}
+@keyframes pkFlash {
+  0% { opacity: 0; }
+  18% { opacity: .95; }
+  100% { opacity: 0; }
+}
+
+/* 진화 축하 모달 */
+.pk-evo-modal { text-align: center; }
+.pk-evo-lead { font-size: 13px; font-weight: 800; color: var(--ink-soft); }
+.pk-evo-stage {
+  position: relative;
+  margin: 8px auto 2px;
+  width: 200px; height: 200px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 228, 150, .85), rgba(255, 240, 200, 0) 68%);
+  animation: pkEvoPulse 2.2s ease-in-out infinite;
+}
+@keyframes pkEvoPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+.pk-evo-big {
+  width: 180px; height: 180px;
+  object-fit: contain;
+  animation: pkEvoIn .9s cubic-bezier(.16, 1.4, .4, 1) both, pkFloat 3s ease-in-out 1s infinite;
+  filter: drop-shadow(0 12px 18px rgba(160, 110, 40, .3));
+}
+@keyframes pkEvoIn {
+  0% { transform: scale(.2) rotate(-18deg); opacity: 0; }
+  60% { transform: scale(1.12) rotate(6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+.pk-evo-name { font-family: var(--font-round); font-size: 24px; color: #B4467A; letter-spacing: 0; margin-top: 2px; }
+.pk-evo-chain { display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; margin: 8px 0 4px; }
+.pk-evo-step { display: flex; flex-direction: column; align-items: center; }
+.pk-evo-step img { width: 52px; height: 52px; object-fit: contain; }
+.pk-evo-step b { font-size: 10.5px; font-weight: 800; color: var(--ink-soft); }
+.pk-evo-arrow { color: #C9B9A6; font-weight: 800; }
+.pk-evo-final {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: #FFF4D6;
+  color: #8A6412;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* 도감 — 반짝이는 홀로그램 카드 */
 .pk-dex { margin-top: 12px; }
 .pk-dex-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
   gap: 7px;
 }
 .pk-dex-cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 7px 3px 5px;
+  padding: 8px 3px 6px;
   border-radius: 16px;
   background: #F7F2EA;
   border: 2px solid #F2E7D7;
+  overflow: hidden;
 }
-.pk-dex-cell img { width: 44px; height: 44px; object-fit: contain; image-rendering: pixelated; filter: grayscale(1) brightness(.55) opacity(.4); }
-.pk-dex-cell.owned { background: #FFFDF5; border-color: #FFE3A3; }
-.pk-dex-cell.owned img { filter: none; }
+.pk-dex-cell img { width: 46px; height: 46px; object-fit: contain; image-rendering: pixelated; filter: grayscale(1) brightness(.55) opacity(.4); }
 .pk-dex-cell span { font-size: 10.5px; font-weight: 800; color: var(--ink-faint); }
-.pk-dex-cell.owned span { color: var(--ink); }
+.pk-dex-cell.owned {
+  background: linear-gradient(150deg, #FFF8DE, #FFE9F3 45%, #E6F7FF 90%);
+  border-color: #FFE3A3;
+  box-shadow: 0 4px 12px rgba(255, 200, 120, .3);
+}
+.pk-dex-cell.owned img { filter: none; animation: pkFloat 4s ease-in-out infinite; }
+.pk-dex-cell.owned span { color: #6B4A08; }
+.pk-dex-cell.owned::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(115deg, rgba(255,255,255,0) 35%, rgba(255,255,255,.85) 50%, rgba(255,255,255,0) 65%);
+  transform: translateX(-120%);
+  animation: pkHolo 3.4s linear infinite;
+  pointer-events: none;
+}
+@keyframes pkHolo { to { transform: translateX(120%); } }
 
 /* ---------------- 🎛️ 부모님 모드 · 새 기능 관리 ---------------- */
 .admin-grid {
@@ -621,10 +827,15 @@
   .td-panel { padding: 14px; border-radius: 26px; }
   .td-time { font-size: 54px; }
   .td-finish { min-width: 0; flex: 1; }
-  .pk-main { gap: 10px; }
-  .pk-art { width: 104px; height: 104px; border-radius: 22px; }
-  .pk-art img { width: 94px; height: 94px; }
+  .pk-hero { gap: 8px; padding: 8px; }
+  .pk-art { width: 106px; height: 106px; }
+  .pk-mon { width: 100px; height: 100px; }
+  .pk-egg-emoji { font-size: 62px; }
   .pk-name { font-size: 19px; }
+  .pk-tr img { width: 32px; height: 32px; }
+  .pk-tr i { font-size: 21px; }
+  .pk-evo-stage { width: 160px; height: 160px; }
+  .pk-evo-big { width: 142px; height: 142px; }
   .pk-eggs { grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); }
   .pk-egg img { width: 46px; height: 46px; }
   .pk-feed .btn { min-width: 0; font-size: 11.5px; padding: 7px 6px; }

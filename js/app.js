@@ -179,12 +179,22 @@
     D.children.forEach(function (c) {
       var p = (raw.pokemon && raw.pokemon[c.id]) || null;
       if (!p || typeof p !== 'object') return;
+      var lineKey = String(p.line || '');
+      var validLine = (D.pokemonLines || []).some(function (l) { return l.key === lineKey; });
       var cur = Number(p.cur) || 0;
+      var dex = (Array.isArray(p.dex) ? p.dex : []).map(Number)
+        .filter(function (id, i, arr) { return D.pokemonNames[id] && arr.indexOf(id) === i; });
+      /* 예전 버전(라인 없이 종류만 저장한 값)도 살려서 옮깁니다 */
+      if (!validLine && cur && D.pokemonNames[cur]) {
+        var ln = (D.pokemonLines || []).filter(function (l) { return (l.ids || []).indexOf(cur) >= 0; })[0];
+        if (ln) lineKey = ln.key;
+      }
+      if (!lineKey) return;
       s.pokemon[c.id] = {
-        cur: (D.pokemonNames && D.pokemonNames[cur]) ? cur : 0,
+        line: lineKey,
+        cur: 0,
         fed: Math.max(0, Math.min(100000, Math.floor(Number(p.fed) || 0))),
-        dex: (Array.isArray(p.dex) ? p.dex : []).map(Number)
-          .filter(function (id, i, arr) { return D.pokemonNames[id] && arr.indexOf(id) === i; })
+        dex: dex
       };
     });
 
@@ -3725,20 +3735,18 @@
   }
 
   /* =========================================================
-     ⚡ 별 모아서 포켓몬 키우기
+     ⚡ 별 모아서 포켓몬 키우기 (알 → 3단계 진화)
      ---------------------------------------------------------
-     · 진화 라인 20가지, 별 100개를 먹일 때마다 Lv.1 → Lv.2 → Lv.3
-     · Lv.2에서 1차 진화, Lv.3에서 최종 진화(2단계 라인은 Lv.2가 마지막)
+     · 3단계 진화 라인 20가지. 모두 알(🥚)에서 시작해요.
+       Lv.1 알 → (별 100개) → Lv.2 부화 → Lv.3 1차 진화 → Lv.4 최종 진화
      · 최종 진화하면 도감에 등록되고 새 알을 고를 수 있어요.
+     · 부화·레벨업·진화 순간에는 플래시·꽃가루·효과음과 함께 축하 화면이 떠요.
      ========================================================= */
   var PK = (function () {
     var species = {};
     var lines = [];
     (D.pokemonLines || []).forEach(function (line) {
       var stages = (line.ids || []).map(function (id) { return [id]; });
-      if (line.branches && line.branches.length && stages.length) {
-        stages[stages.length - 1] = line.branches.slice();
-      }
       lines.push({ key: line.key, name: line.name, stages: stages });
       stages.forEach(function (ids, si) {
         ids.forEach(function (id) {
@@ -3763,44 +3771,131 @@
   function pkIcon(id) {
     return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + id + '.png';
   }
-  function pkOf(childId) {
-    S.pokemon = S.pokemon || {};
-    if (!S.pokemon[childId]) S.pokemon[childId] = { cur: 0, fed: 0, dex: [] };
-    var p = S.pokemon[childId];
-    p.cur = Number(p.cur) || 0;
-    p.fed = Math.max(0, Number(p.fed) || 0);
-    if (!Array.isArray(p.dex)) p.dex = [];
-    return p;
-  }
   function pkPerLevel() {
     return clampNum((S && S.pkCfg && S.pkCfg.perLevel), 10, 1000, 100);
   }
+  function pkOf(childId) {
+    S.pokemon = S.pokemon || {};
+    if (!S.pokemon[childId]) S.pokemon[childId] = { line: '', cur: 0, fed: 0, dex: [] };
+    var p = S.pokemon[childId];
+    p.fed = Math.max(0, Number(p.fed) || 0);
+    if (!Array.isArray(p.dex)) p.dex = [];
+    /* 예전(단계 없이 종류만 있던) 값도 알아서 라인으로 옮겨 줍니다 */
+    if (!p.line && p.cur && PK.species[p.cur]) p.line = PK.species[p.cur].line;
+    if (!p.line) p.cur = 0;
+    return p;
+  }
+  function pkLine(p) {
+    if (!p || !p.line) return null;
+    return PK.lines.filter(function (l) { return l.key === p.line; })[0] || null;
+  }
   function pkLevel(fed) { return 1 + Math.floor(Math.max(0, fed) / pkPerLevel()); }
   function pkProg(fed) { return Math.max(0, Math.floor(fed)) % pkPerLevel(); }
+  /* 0 = 알, 1~3 = 진화 단계 */
+  function pkStage(p) { return Math.min(3, Math.max(0, pkLevel(p.fed) - 1)); }
+  function pkSpecies(p) {
+    var line = pkLine(p);
+    if (!line) return null;
+    var st = pkStage(p);
+    if (st <= 0) return null;
+    return PK.species[line.stages[st - 1][0]] || null;
+  }
+  /* 다음에 될 모습 (알이면 부화할 1단계) */
+  function pkNextSpecies(p) {
+    var line = pkLine(p);
+    if (!line) return null;
+    var st = pkStage(p);
+    if (st >= 3) return null;
+    return PK.species[line.stages[st === 0 ? 0 : st][0]] || null;
+  }
+  function pkStageName(st) { return st <= 0 ? '알' : st + '단계'; }
+  function pkStateText(childId) {
+    var p = pkOf(childId);
+    var line = pkLine(p);
+    var sp = pkSpecies(p);
+    var who = sp ? sp.ko : (line ? '🥚 ' + line.name + ' 알' : '아직 알을 안 골랐어요');
+    return who + ' Lv.' + pkLevel(p.fed) + ' · 별 ' + (S.stars[childId] || 0);
+  }
   function pkRegisterDex(childId, id) {
     var p = pkOf(childId);
     if (p.dex.indexOf(id) >= 0) return false;
     p.dex.push(id);
     return true;
   }
-  function pkEvolveChain(childId) {
-    var p = pkOf(childId);
-    var sp = PK.species[p.cur];
-    var chain = [];
-    var guard = 0;
-    while (sp && sp.next.length && pkLevel(p.fed) >= sp.stage + 2 && guard++ < 6) {
-      if (sp.next.length > 1) break;            // 이브이: 모달에서 고름
-      p.cur = sp.next[0];
-      sp = PK.species[p.cur];
-      chain.push(sp.id);
-      if (sp.final) pkRegisterDex(childId, sp.id);
-    }
-    return chain;
+  /* ---------- 효과음 (Web Audio) ---------- */
+  function pkTone(freq, start, dur, type, vol) {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!pkTone.ctx) pkTone.ctx = new AC();
+      var ctx = pkTone.ctx;
+      if (ctx.state === 'suspended') ctx.resume();
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || 'triangle';
+      o.frequency.setValueAtTime(freq, start);
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(vol || 0.13, start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start(start);
+      o.stop(start + dur + 0.02);
+    } catch (e) {}
   }
+  function pkSound(kind) {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!pkTone.ctx) pkTone.ctx = new AC();
+      var t0 = pkTone.ctx.currentTime + 0.02;
+      if (kind === 'feed') {
+        pkTone(1046.5, t0, 0.12, 'sine', 0.1);
+        pkTone(1568, t0 + 0.07, 0.16, 'sine', 0.08);
+      } else if (kind === 'level') {
+        [784, 988, 1175].forEach(function (f, i) { pkTone(f, t0 + i * 0.09, 0.2, 'triangle', 0.11); });
+      } else {
+        /* 부화·진화 팡파레 */
+        [523, 659, 784, 1046, 1318].forEach(function (f, i) {
+          pkTone(f, t0 + i * 0.11, 0.3, 'triangle', 0.13);
+          pkTone(f / 2, t0 + i * 0.11, 0.26, 'sine', 0.08);
+        });
+        pkTone(1568, t0 + 0.62, 0.6, 'sine', 0.12);
+      }
+    } catch (e) {}
+  }
+  /* ---------- 반짝이 파티클 ---------- */
+  function pkSparkle(host, n) {
+    if (!host) return;
+    var box = host.getBoundingClientRect();
+    if (!box.width) return;
+    var layer = document.createElement('div');
+    layer.className = 'pk-sparks';
+    document.body.appendChild(layer);
+    var emojis = ['✨', '⭐', '💫', '🌟'];
+    for (var i = 0; i < (n || 12); i++) {
+      var sp = document.createElement('span');
+      sp.textContent = emojis[i % emojis.length];
+      sp.style.left = (box.left + Math.random() * box.width) + 'px';
+      sp.style.top = (box.top + box.height * (0.15 + Math.random() * 0.6)) + 'px';
+      sp.style.fontSize = (11 + Math.random() * 16) + 'px';
+      sp.style.animationDelay = (Math.random() * 0.25) + 's';
+      sp.style.animationDuration = (0.8 + Math.random() * 0.6) + 's';
+      layer.appendChild(sp);
+    }
+    setTimeout(function () { layer.remove(); }, 2200);
+  }
+  /* 화면 전체가 번쩍이는 플래시 */
+  function pkFlash() {
+    var f = document.createElement('div');
+    f.className = 'pk-flash';
+    document.body.appendChild(f);
+    setTimeout(function () { f.remove(); }, 900);
+  }
+  /* ---------- 별 먹이기 ---------- */
   function pkFeed(childId, n) {
     var p = pkOf(childId);
-    if (!p.cur || !PK.species[p.cur]) {
-      UI.toast('먼저 함께할 포켓몬을 골라 주세요 🥚', { emoji: '⚡', kind: 'warn' });
+    if (!p.line) {
+      UI.toast('먼저 알을 골라 주세요 🥚', { emoji: '⚡', kind: 'warn' });
       return;
     }
     n = Math.max(1, Math.min(50, Math.floor(Number(n) || 1)));
@@ -3810,123 +3905,104 @@
       return;
     }
     var beforeLv = pkLevel(p.fed);
+    var beforeStage = pkStage(p);
     S.stars[childId] = have - n;
     p.fed += n;
-    save();
     var afterLv = pkLevel(p.fed);
-    var per = pkPerLevel();
-    var sp = PK.species[p.cur];
-    var chain = [];
-    var branch = null;
-    if (afterLv > beforeLv) {
-      if (sp.next.length > 1 && afterLv >= sp.stage + 2) {
-        branch = sp;
-      } else {
-        chain = pkEvolveChain(childId);
-      }
-      save();
+    var afterStage = pkStage(p);
+    var line = pkLine(p);
+    var newIds = [];
+    for (var st = beforeStage + 1; st <= afterStage; st++) {
+      if (line && line.stages[st - 1]) newIds.push(line.stages[st - 1][0]);
     }
+    if (afterStage >= 3) pkRegisterDex(childId, line.stages[2][0]);
+    save();
     render({ keepScroll: true });
-    if (branch) {
-      pkBranchModal(childId, branch);
-    } else if (chain.length) {
-      pkEvolvedModal(childId, chain);
+
+    var art = document.querySelector('.pk-art[data-child="' + childId + '"]');
+    if (newIds.length) {
+      pkStageCelebrate(childId, beforeStage, afterStage, newIds);
     } else if (afterLv > beforeLv) {
-      UI.confetti(26);
-      chime();
-      UI.toast('Lv.' + afterLv + '이 됐어요! 별 ' + pkProg(p.fed) + '/' + per + ' ⭐', { emoji: '⚡', kind: 'good', duration: 3000 });
+      pkSound('level');
+      pkFlash();
+      pkSparkle(art, 16);
+      UI.confetti(24);
+      UI.toast('Lv.' + afterLv + '! 별 ' + pkProg(p.fed) + '/' + pkPerLevel() + ' ⭐', { emoji: '⚡', kind: 'good', duration: 2600 });
     } else {
-      UI.toast('별 ' + n + '개를 먹였어요 · ' + pkProg(p.fed) + '/' + per + ' ⭐', { emoji: '⭐', kind: 'good', duration: 1600 });
+      pkSound('feed');
+      pkSparkle(art, 7);
+      UI.toast('별 ' + n + '개를 먹였어요 · ' + pkProg(p.fed) + '/' + pkPerLevel() + ' ⭐', { emoji: '⭐', kind: 'good', duration: 1500 });
     }
   }
-  function pkEvolvedModal(childId, chain) {
+  /* 부화 · 진화 축하 화면 */
+  function pkStageCelebrate(childId, beforeStage, afterStage, ids) {
     var p = pkOf(childId);
-    var sp = PK.species[p.cur];
-    var names = chain.map(function (id) { return PK.species[id].ko; }).join(' → ');
-    UI.confetti(56);
-    chime();
+    var line = pkLine(p);
+    var sp = PK.species[ids[ids.length - 1]];
+    var isHatch = beforeStage === 0;
+    var isFinal = afterStage >= 3;
+    pkSound('evo');
+    pkFlash();
+    UI.confetti(isFinal ? 90 : 60);
+    setTimeout(function () { UI.confetti(40); }, 350);
+    var rows = ids.map(function (id) {
+      return '<span class="pk-evo-step"><img src="' + pkArt(id) + '" alt="' + esc(PK.species[id].ko) + '"><b>' + esc(PK.species[id].ko) + '</b></span>';
+    }).join('<span class="pk-evo-arrow">→</span>');
     UI.modal({
-      title: '⚡ 진화했어요!',
+      title: isHatch ? '🐣 알이 부화했어요!' : (isFinal ? '✨ 최종 진화!' : '⚡ 진화했어요!'),
       bodyHTML: '<div class="pk-evo-modal">' +
-          '<img src="' + pkArt(sp.id) + '" alt="' + esc(sp.ko) + '">' +
-          '<p><b>' + esc(sp.ko) + '</b>(으)로 진화했어요!</p>' +
-          '<p class="help">' + esc(childById(childId).name) + '의 포켓몬 · Lv.' + pkLevel(p.fed) + ' · ' + esc(names) + '</p>' +
-          (sp.final ? '<p class="help"><b>🏅 도감에 등록됐어요!</b> 이제 새 알을 골라 다른 친구도 키울 수 있어요.</p>' : '') +
+          '<p class="pk-evo-lead">' + esc(childById(childId).name) + '의 ' + (line ? esc(line.name) : '') + ' ' +
+            (isHatch ? '알이 깨어났어요!' : (isFinal ? '가 마지막 모습이 됐어요!' : '가 자랐어요!')) + '</p>' +
+          '<div class="pk-evo-stage"><img class="pk-evo-big" src="' + pkArt(sp.id) + '" alt="' + esc(sp.ko) + '"></div>' +
+          '<p class="pk-evo-name">' + esc(sp.ko) + '</p>' +
+          '<div class="pk-evo-chain">' + rows + '</div>' +
+          '<p class="help">Lv.' + pkLevel(p.fed) + ' · ' + pkStageName(afterStage) + '</p>' +
+          (isFinal ? '<p class="pk-evo-final">🏅 도감에 등록됐어요! 이제 새 알을 골라 다른 친구도 키울 수 있어요.</p>' : '') +
         '</div>',
-      actions: [{ label: '좋아!', kind: 'primary' }]
+      actions: [{ label: '좋아! 🎉', kind: 'primary' }]
     });
   }
-  function pkBranchModal(childId, sp) {
-    UI.modal({
-      title: '어떤 모습으로 자랄까요?',
-      bodyHTML: '<p class="help" style="margin-bottom:10px">' + esc(sp.ko) + '이(가) 진화해요! 한 가지만 고를 수 있어요.</p>' +
-        '<div class="pk-branches">' + sp.next.map(function (id) {
-          var s = PK.species[id];
-          return '<button type="button" class="pk-branch" data-branch="' + id + '">' +
-            '<img src="' + pkArt(id) + '" alt="' + esc(s.ko) + '">' +
-            '<b>' + esc(s.ko) + '</b></button>';
-        }).join('') + '</div>',
-      actions: [{ label: '나중에 고를래요', kind: 'ghost' }],
-      onOpen: function (wrap, close) {
-        wrap.addEventListener('click', function (e) {
-          var b = e.target.closest('[data-branch]');
-          if (!b) return;
-          var id = Number(b.getAttribute('data-branch'));
-          var p = pkOf(childId);
-          p.cur = id;
-          pkRegisterDex(childId, id);
-          save();
-          close();
-          render({ keepScroll: true });
-          pkEvolvedModal(childId, [id]);
-        });
-      }
-    });
-  }
-  function pkPick(childId, id) {
-    var sp = PK.species[id];
-    if (!sp) return;
+  function pkPick(childId, lineKey) {
+    var line = PK.lines.filter(function (l) { return l.key === lineKey; })[0];
+    if (!line) return;
     var p = pkOf(childId);
-    var cur = PK.species[p.cur];
-    if (cur && !cur.final) {
-      UI.confirm('포켓몬을 바꿀까요?', '지금 ' + cur.ko + '(Lv.' + pkLevel(p.fed) + ')를 키우고 있어요. 새 알로 바꾸면 모은 별(' + pkProg(p.fed) + '/' + pkPerLevel() + ')은 새 알에서 처음부터 쌓여요.', '새 알 고르기', 'danger')
-        .then(function (ok) { if (ok) pkApplyPick(childId, id); });
+    if (p.line && p.line !== lineKey && pkStage(p) > 0) {
+      UI.confirm('알을 바꿀까요?', '지금 ' + (pkSpecies(p) ? pkSpecies(p).ko : '알') + '(Lv.' + pkLevel(p.fed) + ')를 키우고 있어요. 새 알로 바꾸면 별 진행(' + pkProg(p.fed) + '/' + pkPerLevel() + ')은 처음부터 다시 쌓여요.', '새 알 고르기', 'danger')
+        .then(function (ok) { if (ok) pkApplyPick(childId, lineKey); });
       return;
     }
-    pkApplyPick(childId, id);
+    pkApplyPick(childId, lineKey);
   }
-  function pkApplyPick(childId, id) {
+  function pkApplyPick(childId, lineKey) {
     var p = pkOf(childId);
-    p.cur = id;
+    p.line = lineKey;
+    p.cur = 0;
     p.fed = 0;
-    save();
+    saveNow();
     render({ keepScroll: true });
     UI.confetti(24);
-    chime();
-    UI.toast(childById(childId).name + '의 새 친구 ' + PK.species[id].ko + '! 알에서 태어났어요 🥚', { emoji: '⚡', kind: 'good', duration: 3200 });
+    pkSound('level');
+    UI.toast(childById(childId).name + '의 신비한 알이 도착했어요 🥚 별 ' + pkPerLevel() + '개를 모으면 부화해요!', { emoji: '⚡', kind: 'good', duration: 3600 });
+  }
+  function pkEggGridHTML(childId) {
+    return '<div class="pk-eggs">' + PK.lines.map(function (line) {
+      var base = PK.species[line.stages[0][0]];
+      var fin = PK.species[line.stages[2][0]];
+      return '<button type="button" class="pk-egg" data-act="pk-pick" data-child="' + childId + '" data-id="' + line.key + '">' +
+        '<img src="' + pkIcon(base.id) + '" alt="" loading="lazy">' +
+        '<b>' + esc(base.ko) + '</b>' +
+        '<small>' + esc(fin.ko) + '까지</small></button>';
+    }).join('') + '</div>';
   }
   function pkChooserModal(childId) {
     var c = childById(childId);
     UI.modal({
-      title: '🥚 새 알 고르기',
-      bodyHTML: '<p class="help" style="margin-bottom:10px">' + esc(c.name) + '와 함께할 포켓몬을 골라요. 별 ' + pkPerLevel() + '개를 먹일 때마다 레벨이 올라요.</p>' +
-        '<div class="pk-eggs">' + PK.lines.map(function (line) {
-          var base = PK.species[line.stages[0][0]];
-          return '<button type="button" class="pk-egg" data-pick="' + base.id + '">' +
-            '<img src="' + pkIcon(base.id) + '" alt="" loading="lazy">' +
-            '<b>' + esc(base.ko) + '</b>' +
-            '<small>' + line.stages.length + '단계</small></button>';
-        }).join('') + '</div>',
-      actions: [{ label: '닫기', kind: 'ghost' }],
-      onOpen: function (wrap, close) {
-        wrap.addEventListener('click', function (e) {
-          var b = e.target.closest('[data-pick]');
-          if (!b) return;
-          var id = Number(b.getAttribute('data-pick'));
-          close();
-          pkPick(childId, id);
-        });
-      }
+      size: 'wide',
+      title: '🥚 신비한 알 고르기',
+      bodyHTML: '<p class="help" style="margin-bottom:10px">' + esc(c.name) +
+        '의 알을 골라요. 별 ' + pkPerLevel() + '개를 모을 때마다 자라서, 최종 진화까지 4단계예요.</p>' +
+        pkEggGridHTML(childId),
+      actions: [{ label: '닫기', kind: 'ghost' }]
     });
   }
   function pkTestStars(childId) {
@@ -3937,49 +4013,80 @@
     render({ keepScroll: true });
     UI.toast('테스트로 별 ' + per + '개를 넣었어요 (레벨업 확인용)', { emoji: '🧪', kind: 'good', duration: 3000 });
   }
+  /* ---------- 카드 ---------- */
+  function pkTrackHTML(p) {
+    var line = pkLine(p);
+    if (!line) return '';
+    var st = pkStage(p);
+    var cells = ['<span class="pk-tr' + (st === 0 ? ' on' : '') + '"><i>🥚</i><em>알</em></span>'];
+    line.stages.forEach(function (ids, i) {
+      var sp = PK.species[ids[0]];
+      var on = st === i + 1;
+      var done = st > i + 1;
+      cells.push('<span class="pk-tr' + (on ? ' on' : '') + (done ? ' done' : '') + '">' +
+        '<img src="' + pkIcon(sp.id) + '" alt="' + esc(sp.ko) + '" loading="lazy">' +
+        '<em>' + (done || on ? esc(sp.ko) : '?') + '</em></span>');
+    });
+    return '<div class="pk-track">' + cells.join('') + '</div>';
+  }
   function pkCardHTML(c) {
     var p = pkOf(c.id);
     var stars = S.stars[c.id] || 0;
+    var per = pkPerLevel();
     var head = '<div class="rk-head">' +
       '<span class="avatar sm ' + c.color + '">' + c.emoji + '</span><strong>' + esc(c.name) + '</strong>' +
       '<span class="rk-spacer"></span>' +
       '<span class="badge sun">⭐ ' + stars + '</span>' +
       '</div>';
-    if (!p.cur || !PK.species[p.cur]) {
+
+    if (!p.line) {
       return '<div class="card pk-card ' + c.color + '">' + head +
-        '<div class="pk-choose-help"><b>🥚 ' + esc(c.name) + '</b>와 함께할 포켓몬을 골라요</div>' +
-        '<div class="pk-eggs">' + PK.lines.map(function (line) {
-          var base = PK.species[line.stages[0][0]];
-          return '<button type="button" class="pk-egg" data-act="pk-pick" data-child="' + c.id + '" data-id="' + base.id + '">' +
-            '<img src="' + pkIcon(base.id) + '" alt="" loading="lazy">' +
-            '<b>' + esc(base.ko) + '</b>' +
-            '<small>' + line.stages.length + '단계</small></button>';
-        }).join('') + '</div></div>';
+        '<div class="pk-choose-help"><b>🥚 ' + esc(c.name) + '</b>와 함께할 신비한 알을 골라요</div>' +
+        pkEggGridHTML(c.id) + '</div>';
     }
-    var sp = PK.species[p.cur];
+
+    var line = pkLine(p);
+    var st = pkStage(p);
+    var sp = pkSpecies(p);
+    var next = pkNextSpecies(p);
     var lvl = pkLevel(p.fed);
     var prog = pkProg(p.fed);
-    var per = pkPerLevel();
-    var nextNames = sp.next.map(function (id) { return PK.species[id].ko; }).join(' / ');
-    return '<div class="card pk-card ' + c.color + '">' + head +
-      '<div class="pk-main">' +
-        '<div class="pk-art"><img src="' + pkArt(sp.id) + '" alt="' + esc(sp.ko) + '" loading="lazy" onerror="this.onerror=null;this.src=&#39;' + pkIcon(sp.id) + '&#39;"></div>' +
-        '<div class="pk-info">' +
-          '<div class="pk-name">' + esc(sp.ko) + '<span class="pk-lv">Lv.' + lvl + '</span></div>' +
+    var maxed = st >= 3;
+    var artInner;
+    if (st === 0) {
+      artInner = '<div class="pk-egg-art"><span class="pk-egg-emoji">🥚</span><span class="pk-egg-shine">✨</span></div>';
+    } else {
+      artInner = '<img class="pk-mon" src="' + pkArt(sp.id) + '" alt="' + esc(sp.ko) + '" loading="lazy" ' +
+        'onerror="this.onerror=null;this.src=\'' + pkIcon(sp.id) + '\'">';
+    }
+    var nextBlock = next
+      ? '<div class="pk-next"><span class="pk-next-label">다음 모습</span>' +
+          '<img src="' + pkIcon(next.id) + '" alt="" loading="lazy" class="pk-next-img">' +
+          '<b>' + esc(next.ko) + '</b>' +
+          '<small>' + (st === 0 ? 'Lv.2 부화' : 'Lv.' + (lvl + 1) + ' 진화') + '</small></div>'
+      : '<div class="pk-next done"><span class="pk-next-label">최종 진화 완료</span><b>🏅 도감 등록</b></div>';
+
+    return '<div class="card pk-card ' + c.color + (maxed ? ' maxed' : '') + '">' + head +
+      '<div class="pk-hero">' +
+        '<div class="pk-aura" aria-hidden="true"></div>' +
+        '<div class="pk-art" data-child="' + c.id + '">' + artInner + '</div>' +
+        '<div class="pk-hero-info">' +
+          '<div class="pk-name">' + (sp ? esc(sp.ko) : '신비한 알') + '<span class="pk-lv">Lv.' + lvl + '</span></div>' +
+          '<div class="pk-sub">' + esc(line.name) + ' 라인 · ' + pkStageName(st) + '</div>' +
           '<div class="pk-bar"><i style="width:' + prog + '%"></i></div>' +
-          '<div class="pk-progtxt"><span>다음 레벨까지 ' + (per - prog) + '별</span><span>' + prog + ' / ' + per + ' ⭐</span></div>' +
-          (sp.final
-            ? '<div class="pk-tag done">🏅 최종 진화 완료 · 도감 등록</div>'
-            : '<div class="pk-tag">Lv.' + (sp.stage + 2) + '에서 ' + esc(nextNames) + '(으)로 진화!</div>') +
+          '<div class="pk-progtxt"><span>' + (st === 0 ? '부화까지 ' : maxed ? '다음 레벨까지 ' : '진화까지 ') + (per - prog) + '별</span><span>' + prog + ' / ' + per + ' ⭐</span></div>' +
         '</div>' +
       '</div>' +
+      pkTrackHTML(p) +
+      nextBlock +
       '<div class="pk-feed">' +
         [1, 5, 10].map(function (n) {
           return '<button type="button" class="btn btn-sun btn-sm" data-act="pk-feed" data-child="' + c.id + '" data-n="' + n + '"' + (stars < n ? ' disabled' : '') + '>별 ' + n + '개 먹이기</button>';
         }).join('') +
       '</div>' +
-      '<p class="pk-help">별 ' + per + '개를 먹이면 Lv.' + (lvl + 1) + '이 되고, 별이 떨어지면 할 일·등교·정리로 다시 모아요.</p>' +
-      (sp.final ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
+      '<p class="pk-help">별 ' + per + '개 모으면 Lv.' + (lvl + 1) + '! ' +
+        (st === 0 ? '알이 흔들리고 있어요 🥚' : maxed ? '새 알을 골라 다른 친구도 키워 보세요.' : '조금 더 모으면 진화해요 ✨') + '</p>' +
+      (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
       '</div>';
   }
   function pkDexHTML() {
@@ -3997,7 +4104,7 @@
           '<img src="' + pkIcon(id) + '" alt="" loading="lazy">' +
           '<span>' + (owned ? esc(sp.ko) : '???') + '</span></div>';
       }).join('') + '</div>' +
-      '<p class="help" style="margin-top:8px">최종 진화한 포켓몬만 도감에 남아요. 별은 아이마다 따로 모여요.</p>' +
+      '<p class="help" style="margin-top:8px">최종 진화한 포켓몬만 반짝이며 도감에 남아요. 별은 아이마다 따로 모여요.</p>' +
     '</div>';
   }
   function renderPokemon() {
@@ -4005,7 +4112,7 @@
         '<div class="pk-rules-head"><b>⭐ 별 ' + pkPerLevel() + '개 = 레벨 1업!</b>' +
           '<span>' + D.children.map(function (c) { return c.emoji + ' ' + esc(c.name) + ' ⭐' + (S.stars[c.id] || 0); }).join(' · ') + '</span></div>' +
         '<p>할 일 체크 · 등교 준비 · 정리하기로 모은 별을 포켓몬에게 먹여 키워요.<br>' +
-        '<b>Lv.2에 1차 진화, Lv.3에 최종 진화</b>하고, 최종 진화하면 도감에 등록돼요. (2단계 포켓몬은 Lv.2가 마지막)</p>' +
+        '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 별 ' + pkPerLevel() + '개마다 한 단계씩 자라요.</p>' +
         (S.mode === 'parent'
           ? '<div class="btn-row" style="margin-top:10px">' +
               D.children.map(function (c) {
@@ -4201,10 +4308,10 @@
           '<p class="help">기본 100개예요. 작게 넣으면 빨리 자라요(시험해 볼 때 좋아요).</p></div>' +
         D.children.map(function (c) {
           var p = pkOf(c.id);
-          var sp = PK.species[p.cur];
+          var sp = pkSpecies(p);
           return '<div class="ed-block">' +
             '<div class="ed-block-head"><b>' + c.emoji + ' ' + esc(c.name) + '</b>' +
-              '<span id="pkSetState-' + c.id + '">' + (sp ? esc(sp.ko) + ' Lv.' + pkLevel(p.fed) : '아직 알을 안 골랐어요') + ' · 별 ' + (S.stars[c.id] || 0) + '</span></div>' +
+              '<span id="pkSetState-' + c.id + '">' + pkStateText(c.id) + '</span></div>' +
             '<div class="pk-set-row">' +
               '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="10">별 ＋10</button>' +
               '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="-10">별 －10</button>' +
@@ -4225,10 +4332,7 @@
       onOpen: function (wrap, close) {
         function refreshState(cid) {
           var el = document.getElementById('pkSetState-' + cid);
-          if (!el) return;
-          var p = pkOf(cid);
-          var sp = PK.species[p.cur];
-          el.textContent = (sp ? sp.ko + ' Lv.' + pkLevel(p.fed) : '아직 알을 안 골랐어요') + ' · 별 ' + (S.stars[cid] || 0);
+          if (el) el.textContent = pkStateText(cid);
         }
         wrap.addEventListener('click', function (e) {
           var b = e.target.closest('[data-pk]');
@@ -4247,7 +4351,7 @@
             setTimeout(function () { pkChooserModal(cid); }, 220);
           } else if (act === 'reset') {
             var px = pkOf(cid);
-            var sx = PK.species[px.cur];
+            var sx = pkSpecies(px);
             UI.confirm('포켓몬을 처음부터 다시 키울까요?',
               childById(cid).name + '의 ' + (sx ? sx.ko + '이(가) 알로 돌아가요. ' : '') +
               '지금 모은 별 진행(' + pkProg(px.fed) + '/' + pkPerLevel() + ')은 사라지고, 도감 기록은 그대로 남아요.',
@@ -4350,7 +4454,7 @@
       case 'edit-routines': setView('routine'); UI.toast(S.mode === 'parent' ? '할 일 탭에서 ＋ 할 일 추가 · 🗑️ 로 고쳐요' : '아침·저녁 할 일은 부모님 모드에서 고칠 수 있어요', { emoji: '✅', duration: 2800 }); break;
 
       /* ⚡ 포켓몬 */
-      case 'pk-pick': pkPick(el.getAttribute('data-child'), Number(el.getAttribute('data-id'))); break;
+      case 'pk-pick': pkPick(el.getAttribute('data-child'), el.getAttribute('data-id')); break;
       case 'pk-feed': pkFeed(el.getAttribute('data-child'), Number(el.getAttribute('data-n'))); break;
       case 'pk-chooser': pkChooserModal(el.getAttribute('data-child')); break;
       case 'pk-test': pkTestStars(el.getAttribute('data-child')); break;
