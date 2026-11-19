@@ -4166,7 +4166,7 @@
 
     if (!p.line) {
       return '<div class="card pk-card ' + c.color + '">' + head +
-        '<div class="pk-choose-help"><b>🥚 ' + esc(c.name) + '이랑</b> 함께할 신비한 알을 받아요</div>' +
+        '<div class="pk-choose-help"><b>🥚 알을 누르면 시작!</b> ' + esc(c.name) + '이랑 함께할 신비한 알이 와요</div>' +
         pkEggGridHTML(c.id) + '</div>';
     }
 
@@ -4201,7 +4201,7 @@
           '<div class="pk-name">' + (sp ? esc(sp.ko) : '신비한 알') + '<span class="pk-lv">Lv.' + lvl + '</span></div>' +
           '<div class="pk-sub">' + (st === 0 ? '무슨 포켓몬이 나올까? · 알' : esc(line.name) + ' 라인 · ' + pkStageName(st)) + '</div>' +
           '<div class="pk-bar"><i style="width:' + prog + '%"></i></div>' +
-          '<div class="pk-progtxt"><span>' + (maxed ? '다음 별까지 ' : '다음 진화까지 ') + (per - prog) + '개</span><span>' + prog + ' / ' + per + ' ⭐</span></div>' +
+          '<div class="pk-progtxt"><span>' + (maxed ? '다음 별까지 ' : '다음 진화까지 ') + (per - prog) + '개</span><span>먹인 별 ' + prog + ' / ' + per + ' ⭐</span></div>' +
         '</div>' +
       '</div>' +
       pkTrackHTML(p) +
@@ -4211,7 +4211,7 @@
           return '<button type="button" class="btn btn-sun btn-sm" data-act="pk-feed" data-child="' + c.id + '" data-n="' + n + '"' + (stars < n ? ' disabled' : '') + '>별 ' + n + '개 먹이기</button>';
         }).join('') +
       '</div>' +
-      '<p class="pk-help"><b>별 ' + per + '개</b>를 모으면 ' +
+      '<p class="pk-help">내 별 <b>⭐' + stars + '</b> 중에서 먹여요 · <b>별 ' + per + '개</b>를 먹이면 ' +
         (st === 0 ? '알이 부화해요 🥚' : maxed ? '다음 별이 쌓여요 (최종 진화 완료 · 새 알을 골라도 돼요)' : '한 단계 더 진화해요 ✨') + '</p>' +
       (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
       '</div>';
@@ -4241,9 +4241,9 @@
     return '<div class="card soft-sun pk-rules">' +
         '<div class="pk-rules-head"><b>⭐ 별 ' + pkPerLevel() + '개 모으면 진화!</b>' +
           '<span>' + D.children.map(function (k) { return k.emoji + ' ' + esc(k.name) + ' ⭐' + (S.stars[k.id] || 0); }).join(' · ') + '</span></div>' +
-        '<p>할 일 체크 · 등교 준비 · 정리하기로 모은 별을 포켓몬에게 먹여 키워요.<br>' +
-        '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 단계마다 별 ' + pkPerLevel() + '개를 모아야 진화해요.<br>' +
-        '알 속 포켓몬은 <b>부화하는 순간까지 비밀</b>! 다음 모습도 진화할 때 짠 하고 나타나요.</p>' +
+        '<p>할 일 체크 · 등교 준비 · 정리하기로 <b>내 별(⭐)</b>을 모아서 포켓몬에게 먹여요.<br>' +
+        '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 단계마다 먹인 별 ' + pkPerLevel() + '개를 모아야 진화해요.<br>' +
+        '먹인 별은 포켓몬 안에서만 쌓여요(내 별과는 따로 보여요). 알 속 포켓몬은 <b>부화하는 순간까지 비밀</b>!</p>' +
         (S.mode === 'parent'
           ? '<div class="btn-row" style="margin-top:10px">' +
               D.children.map(function (k) {
@@ -4498,20 +4498,20 @@
             setTimeout(function () { pkReroll(cid); }, 220);
           } else if (act === 'reset') {
             var px = pkOf(cid);
-            var sx = pkSpecies(px);
-            UI.confirm('포켓몬을 처음부터 다시 키울까요?',
-              childById(cid).name + '의 ' + (sx ? sx.ko + '이(가) 알로 돌아가요. ' : '지금 알을 그대로 두고 별만 0으로 돌려요. ') +
-              '지금 모은 별 진행(' + pkProg(px.fed) + '/' + pkPerLevel() + ')은 사라지고, 도감 기록은 그대로 남아요. ' +
-              '다른 알을 원하면 🎲 알 다시 뽑기를 눌러 주세요.',
-              '처음부터', 'danger')
+            var stars0 = S.stars[cid] || 0;
+            UI.confirm('포켓몬을 알 받기 전으로 돌릴까요?',
+              childById(cid).name + '의 포켓몬이 <b>알 받기 전</b>으로 돌아가요. ' +
+              '보유 별(⭐' + stars0 + ')·도감은 그대로 남고, 포켓몬에게 먹인 별만 0이 돼요. ' +
+              '아이 화면에서 🥚 신비한 알 받기를 누르면 새 알이 와요.',
+              '알 받기 전으로', 'danger')
               .then(function (ok) {
                 if (!ok) return;
                 var p2 = pkOf(cid);
-                p2.cur = 0; p2.fed = 0;
+                p2.line = ''; p2.cur = 0; p2.fed = 0;
                 saveNow();
                 render({ keepScroll: true });
                 refreshState(cid);
-                UI.toast(childById(cid).name + '의 포켓몬을 처음부터 시작해요 🥚', { emoji: '⚡', kind: 'good' });
+                UI.toast(childById(cid).name + '의 포켓몬을 알 받기 전으로 돌렸어요 · 이제 🥚 알을 누르면 시작해요', { emoji: '⚡', kind: 'good', duration: 3200 });
               });
           }
         });
