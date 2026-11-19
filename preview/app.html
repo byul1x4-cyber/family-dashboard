@@ -116,6 +116,16 @@
 (function () {
   var qs = new URLSearchParams(location.search);
   var mode = qs.get('mode') === 'parent' ? 'parent' : 'child';
+
+  /* ?clean=1 — 미리보기가 브라우저에 남긴 저장값을 지우고 앱은 열지 않습니다 */
+  if (qs.get('clean') === '1') {
+    try {
+      localStorage.removeItem('family-dashboard-v1');
+      localStorage.removeItem('family-dashboard-gate');
+    } catch (e) {}
+    document.documentElement.setAttribute('data-preview-clean', '1');
+    return;
+  }
   var at = qs.get('at') || '08:15:02';
   var hold = qs.get('hold') === '1';
   var p = at.split(':');
