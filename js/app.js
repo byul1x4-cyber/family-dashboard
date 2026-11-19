@@ -1480,9 +1480,9 @@
         '<div class="status-rail">' + D.parents.map(statusChipHTML).join('') + '</div>' +
       '</div>' +
 
-      '<div class="kids-row">' + D.children.map(kidCardHTML).join('') + '</div>' +
-
       homeTodayCardHTML() +
+
+      '<div class="kids-row">' + D.children.map(kidCardHTML).join('') + '</div>' +
 
       modeStripHTML() +
 
