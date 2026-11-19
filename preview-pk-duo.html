@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=28">
-<link rel="stylesheet" href="css/fun.css?v=28">
+<link rel="stylesheet" href="css/styles.css?v=29">
+<link rel="stylesheet" href="css/fun.css?v=29">
 </head>
 <body>
 
@@ -104,13 +104,13 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="js/data.js?v=28"></script>
-<script src="js/storage.js?v=28"></script>
-<script src="js/ui.js?v=28"></script>
-<script src="js/art.js?v=28"></script>
-<script src="js/weather.js?v=28"></script>
-<script src="js/ntfy.js?v=28"></script>
-<script src="js/app.js?v=28"></script>
+<script src="js/data.js?v=29"></script>
+<script src="js/storage.js?v=29"></script>
+<script src="js/ui.js?v=29"></script>
+<script src="js/art.js?v=29"></script>
+<script src="js/weather.js?v=29"></script>
+<script src="js/ntfy.js?v=29"></script>
+<script src="js/app.js?v=29"></script>
 <script>
 /* ===== 임시 미리보기용 저장소 스텁 (확인 후 삭제) =====
    실제 Firestore·가족 문서는 건드리지 않고, 이 브라우저의 미리보기 저장소만 씁니다. */
@@ -159,7 +159,21 @@
   Object.defineProperty(Storage, 'mode', { get: function () { return 'local'; }, configurable: true });
   Storage.status = { mode: 'local', secure: true, hasGate: true, familyId: 'fam_preview', projectId: 'preview', error: null, lastSyncAt: null };
   document.title = '우리집 다모아 · 미리보기(포켓몬 2분할)';
+  /* 미리보기 전용: ?auto=1 이면 별 먹이기를 반복해 폭죽 연출을 계속 보여 줍니다 */
+  if (q.get('auto') === '1') {
+    setInterval(function () {
+      var btns = document.querySelectorAll('.pk-duo .pk-feed .btn');
+      if (btns && btns[0] && !btns[0].disabled) btns[0].click();
+    }, 2500);
+  }
 })();
 </script>
+  /* 미리보기 전용: ?auto=1 이면 별 먹이기를 반복해 폭죽 연출을 계속 보여 줍니다 */
+  if (q.get('auto') === '1') {
+    setInterval(function () {
+      var btns = document.querySelectorAll('.pk-duo .pk-feed .btn');
+      if (btns && btns[0] && !btns[0].disabled) btns[0].click();
+    }, 2500);
+  }
 </body>
 </html>

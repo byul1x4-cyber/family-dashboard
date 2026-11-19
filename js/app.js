@@ -4161,11 +4161,11 @@
     var amount = Math.max(1, Math.min(30, Number(n) || 1));
     var count = Math.min(180, 34 + Math.round(amount * 15) + (big ? 70 : 0));
     var power = 1 + Math.min(0.6, amount / 22);
-    pkFx.rain(Math.min(240, count + 50), 2400);
+    pkFx.rain(Math.min(300, count + 90), 4200);
     pkFx.burst(cx, cy, Math.round(count * 0.5), { power: power, up: true });
     pkFx.fountain(cx, base, Math.round(count * 0.55));
     /* 0.25초 간격으로 카드 위에서 한 번씩 더 터뜨려요 */
-    [[250, 0.7], [520, 0.55], [820, 0.42]].forEach(function (wv) {
+    [[260, 0.7], [560, 0.6], [900, 0.5], [1260, 0.4]].forEach(function (wv) {
       setTimeout(function () {
         pkFx.fountain(cx, base, Math.round(count * wv[1] * 0.4));
         pkFx.burst(cx, cy, Math.round(count * wv[1] * 0.35), { power: power * 0.9, up: true });
