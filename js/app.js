@@ -4086,7 +4086,7 @@
           '<div class="pk-name">' + (sp ? esc(sp.ko) : '신비한 알') + '<span class="pk-lv">Lv.' + lvl + '</span></div>' +
           '<div class="pk-sub">' + esc(line.name) + ' 라인 · ' + pkStageName(st) + '</div>' +
           '<div class="pk-bar"><i style="width:' + prog + '%"></i></div>' +
-          '<div class="pk-progtxt"><span>' + (maxed ? '다음 별까지 ' : '다음 진화까지 ') + (per - prog) + '개</span><span>현재 단계 별 ' + prog + ' / ' + per + '</span></div>' +
+          '<div class="pk-progtxt"><span>' + (maxed ? '다음 별까지 ' : '다음 진화까지 ') + (per - prog) + '개</span><span>' + prog + ' / ' + per + ' ⭐</span></div>' +
         '</div>' +
       '</div>' +
       pkTrackHTML(p) +

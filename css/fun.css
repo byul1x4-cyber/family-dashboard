@@ -530,7 +530,7 @@
   animation: pkShineBar 2.6s linear infinite;
 }
 @keyframes pkShineBar { to { transform: translateX(100%); } }
-.pk-progtxt { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 800; color: var(--ink-faint); margin-top: 5px; }
+.pk-progtxt { display: flex; justify-content: space-between; gap: 6px; font-size: 11.5px; font-weight: 800; color: var(--ink-faint); margin-top: 5px; white-space: nowrap; }
 
 /* 단계 트랙 */
 .pk-track {
@@ -835,6 +835,7 @@
   .pk-mon { width: 100px; height: 100px; }
   .pk-egg-emoji { font-size: 62px; }
   .pk-name { font-size: 19px; }
+  .pk-progtxt { font-size: 10.5px; letter-spacing: -0.2px; }
   .pk-tr img { width: 32px; height: 32px; }
   .pk-tr i { font-size: 21px; }
   .pk-evo-stage { width: 160px; height: 160px; }
