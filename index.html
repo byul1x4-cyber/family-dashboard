@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=68">
-<link rel="stylesheet" href="css/fun.css?v=68">
+<link rel="stylesheet" href="css/styles.css?v=69">
+<link rel="stylesheet" href="css/fun.css?v=69">
 </head>
 <body>
 
@@ -59,6 +59,15 @@
         <span class="clock-date" id="clockDate">—</span>
         <strong class="clock-time" id="clockTime">—</strong>
       </div>
+    </div>
+
+    <div class="quick-bar" role="group" aria-label="바로가기">
+      <button type="button" class="qb-btn" id="quickMail" aria-label="우체통으로 가기">
+        <span class="qb-ico" aria-hidden="true">✏️</span><span class="qb-label">편지</span>
+      </button>
+      <button type="button" class="qb-btn tidy" id="quickTidy" aria-label="정리시간 시작">
+        <span class="qb-ico" aria-hidden="true">🧹</span><span class="qb-label">정리</span>
+      </button>
     </div>
 
     <div class="mode-bar">
@@ -107,6 +116,18 @@
     </button>
   </div>
 
+  <!-- 🧹 정리시간 중에만 보이는 남은 시간 바 (모든 탭 공통) -->
+  <div class="tidy-bar" id="tidyBar" hidden>
+    <button type="button" class="tbar-btn" id="tidyBarBtn" aria-label="정리시간 화면 열기">
+      <span class="tbar-top">
+        <span class="tbar-ico" aria-hidden="true">🧹</span>
+        <span class="tbar-time"><b class="tbar-left" id="tdBarLeft">10:00</b><span class="tbar-say">남았어요</span></span>
+      </span>
+      <span class="tbar-hint" id="tdBarHint">정리 화면으로</span>
+      <span class="tbar-track"><i class="tbar-fill" id="tdBarFill"></i><b class="tbar-runner" id="tdBarRunner" aria-hidden="true"><img id="tdBarPkm" alt=""></b><span class="tbar-flag" aria-hidden="true">🏁</span></span>
+    </button>
+  </div>
+
   <main id="view" class="view" tabindex="-1"></main>
 
   <div class="mode-banner" id="modeBanner" hidden>
@@ -119,12 +140,12 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="js/data.js?v=68"></script>
-<script src="js/storage.js?v=68"></script>
-<script src="js/ui.js?v=68"></script>
-<script src="js/art.js?v=68"></script>
-<script src="js/weather.js?v=68"></script>
-<script src="js/ntfy.js?v=68"></script>
-<script src="js/app.js?v=68"></script>
+<script src="js/data.js?v=69"></script>
+<script src="js/storage.js?v=69"></script>
+<script src="js/ui.js?v=69"></script>
+<script src="js/art.js?v=69"></script>
+<script src="js/weather.js?v=69"></script>
+<script src="js/ntfy.js?v=69"></script>
+<script src="js/app.js?v=69"></script>
 </body>
 </html>

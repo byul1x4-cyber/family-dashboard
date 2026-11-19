@@ -1383,6 +1383,10 @@
     var sb = schoolBarEl();
     if (sb) { sb.hidden = !schoolActive; if (schoolActive) paintSchoolBar(); }
     document.body.classList.toggle('school-on', !!schoolActive);
+    /* 🧹 정리시간 중에도 모든 탭 위에 남은 시간 바가 늘 보입니다 */
+    var tb = tidyBarEl();
+    if (tb) { tb.hidden = !tidyActive; if (tidyActive) paintTidyBar(); }
+    document.body.classList.toggle('tidy-on', !!tidyActive);
   }
 
   /* ================= 홈 ================= */
@@ -1477,6 +1481,8 @@
       '</div>' +
 
       '<div class="kids-row">' + D.children.map(kidCardHTML).join('') + '</div>' +
+
+      homeTodayCardHTML() +
 
       modeStripHTML() +
 
@@ -1615,12 +1621,50 @@
   }
 
   /* ---- 홈: 이번 달 일정 ---- */
+  /* ---- 홈: 오늘·내일 미니 달력 카드 (카드를 누르면 우리 가족 일정 탭) ---- */
+  function dayEvRowHTML(label, e) {
+    var type = eventTypeInfo(e.type);
+    return '<button type="button" class="day-ev ' + memberColor(e.member) + '" data-act="goto" data-view="calendar"' +
+        ' aria-label="' + esc(label) + ' ' + esc(e.title) + ' · 우리 가족 일정으로 이동">' +
+        '<span class="de-time">' + (e.time ? esc(e.time) : '종일') + '</span>' +
+        '<span class="de-title">' + esc(e.title) + '</span>' +
+        '<span class="de-type" aria-hidden="true">' + type.emoji + '</span>' +
+      '</button>';
+  }
+  function dayBlockHTML(label, key, evs) {
+    return '<div class="day-block">' +
+      '<div class="day-head"><b>' + label + '</b><span>' + esc(UI.dateKo(key)) + '</span></div>' +
+      (evs.length
+        ? evs.slice(0, 3).map(function (e) { return dayEvRowHTML(label, e); }).join('') +
+          (evs.length > 3 ? '<p class="day-more">+' + (evs.length - 3) + '개 더 있어요</p>' : '')
+        : '<p class="day-none">일정이 없어요' + (label === '오늘' ? ' 🍃' : '') + '</p>') +
+    '</div>';
+  }
+  function homeTodayCardHTML() {
+    var tKey = todayKey();
+    var tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+    var mKey = todayKey(tmr);
+    var tEvs = eventsOn(tKey), mEvs = eventsOn(mKey);
+    return '<div class="card soft-sun day-card">' +
+      cardHead('📅', '오늘·내일 일정', UI.dateKo(tKey),
+        '<button type="button" class="link-btn" data-act="goto" data-view="calendar">달력 크게</button>') +
+      '<div class="day-cols">' +
+        '<div class="day-cal" aria-label="이번 달 미니 달력">' + miniCalendarHTML() + '</div>' +
+        '<div class="day-list">' +
+          dayBlockHTML('오늘', tKey, tEvs) +
+          dayBlockHTML('내일', mKey, mEvs) +
+          (tEvs.length + mEvs.length
+            ? '<button type="button" class="day-go" data-act="goto" data-view="calendar">우리 가족 일정 전체 보기 →</button>'
+            : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
   function homeCalendarCardHTML(monthLabel, upcoming) {
     return '<div class="card soft-sun home-cal-card">' +
-        cardHead('📅', '이번 달 우리 가족 일정', monthLabel,
+        cardHead('⏳', '다가오는 일정', monthLabel,
           '<button type="button" class="link-btn" data-act="goto" data-view="calendar">달력 크게</button>') +
-        miniCalendarHTML() +
-        '<p class="mini-sub">⏳ 다가오는 일정</p>' +
         (upcoming.length
           ? '<div class="ev-list">' + upcoming.map(function (e) { return evItemHTML(e, true); }).join('') + '</div>'
           : '<div class="empty"><span class="big">🗓️</span>아직 등록된 일정이 없어요.<br>부모님 모드에서 일정을 추가해 보세요.</div>') +
@@ -2080,6 +2124,8 @@
   }
 
   function renderRoutine() {
+    /* 🧹 정리시간이 켜져 있으면 '할 일' 탭은 정리 화면으로 동작해요 */
+    if (tidyActive) return renderTidyInline();
     /* 🌅 등교 시작이 켜져 있으면 '할 일' 탭은 등교 화면으로만 동작해요 */
     if (schoolActive) return renderSchoolInline();
     var today = todayKey();
@@ -4119,8 +4165,7 @@
     if (!S || !Storage.hasGate()) return false;
     if (document.body.classList.contains('gated')) return false;
     if (schoolActive) return false;
-    var tidyEl = document.getElementById('tidyLayer');
-    if (tidyEl && !tidyEl.hidden) return false;
+    if (tidyActive) return false;          /* 정리시간 중에는 등교 화면이 끼어들지 않아요 */
     if (document.querySelector('.modal-wrap')) return false;
     return true;
   }
@@ -4160,16 +4205,31 @@
   }
 
   /* =========================================================
-     🧹 정리시간 모드 (5 / 10 / 15분)
+     🧹 정리시간 (5 / 10 / 15분)
      ---------------------------------------------------------
-     · 5·10·15분 버튼 → 바로 집중 타이머 화면.
-     · 남은 시간 막대가 줄어들고, 신나는 동요 멜로디를 Web Audio로 직접 연주합니다
-       (외부 음원 링크를 쓰지 않아 끊기지 않아요. 음소거·일시정지 토글 있음).
-     · '정리 끝!'을 누르면 축하(반짝이·소리·토스트)만 하고, 별은 주지 않습니다
+     · 팝업이 아니라 '✅ 할 일' 탭 안의 큰 화면입니다 — 위쪽 헤더와 7개 탭이
+       그대로 살아 있어서 정리하는 중에도 홈·포켓몬으로 옮겨 다닐 수 있어요.
+     · 다른 탭에 있어도 탭 바로 아래 남은 시간 바(#tidyBar)가 늘 보이고,
+       누르면 정리 화면으로 바로 돌아옵니다.
+     · 게이지 위 미니 포켓몬이 결승 깃발까지 통통 달리고, 가운데 큰 포켓몬이
+       살아 움직이며 정리 응원 문구가 돌아가요.
+     · 신나는 동요 멜로디는 Web Audio로 직접 연주합니다(외부 음원 없음).
+     · '정리 끝! ✓'을 누르면 축하(반짝이·소리·토스트)만 하고, 별은 주지 않습니다
        (정리시간은 보상 없이 스스로 하는 습관으로 둔다고 해서요).
      ========================================================= */
   var tidy = null;
   var tidyInt = null;
+  var tidyActive = false;
+  var TIDY_CHEERS = [
+    '장난감은 상자에 쏙!',
+    '책은 책꽂이에 나란히!',
+    '옷은 바구니에 쏙!',
+    '인형은 침대 위에 폭신!',
+    '연필은 필통에 쏙!',
+    '바닥에 떨어진 건 주워요!',
+    '형이랑 동생이랑 하나둘!',
+    '정리하면 마음이 반짝반짝 ✨'
+  ];
 
   var TM = { ctx: null, master: null, timer: null, playing: false, muted: false, paused: false };
   var TM_BEAT = 0.34;
@@ -4245,127 +4305,299 @@
     if (TM.master) { try { TM.master.gain.value = 0; } catch (e) {} }
     if (TM.ctx) { try { TM.ctx.suspend(); } catch (e) {} }
   }
-  function tmToggleMute() {
-    TM.muted = !TM.muted;
-    if (TM.master) TM.master.gain.value = TM.muted ? 0 : 0.5;
-    UI.toast(TM.muted ? '음악을 껐어요 🔇' : '음악을 켰어요 🔊', { emoji: '🎵', duration: 1400 });
-    paintTidy(true);
-  }
-  function tmTogglePause() {
-    if (!TM.playing) { tmStart(); paintTidy(true); return; }
-    TM.paused = !TM.paused;
-    if (TM.paused) {
+  /* 노래만 잠깐 멈추기 / 이어서 (타이머와 함께 멈출 때 씁니다) */
+  function tmSetPaused(on) {
+    if (!TM.ctx || !TM.playing) return;
+    TM.paused = !!on;
+    if (on) {
       clearInterval(TM.timer); TM.timer = null;
-      if (TM.ctx) { try { TM.ctx.suspend(); } catch (e) {} }
+      try { TM.ctx.suspend(); } catch (e) {}
     } else {
-      try { if (TM.ctx && TM.ctx.state === 'suspended') TM.ctx.resume(); } catch (e) {}
+      try { if (TM.ctx.state === 'suspended') TM.ctx.resume(); } catch (e) {}
       tmScheduleLoop();
       var loopMs = Math.round(tmBeats() * TM_BEAT * 1000) - 80;
       clearInterval(TM.timer);
       TM.timer = setInterval(tmScheduleLoop, Math.max(1000, loopMs));
     }
-    paintTidy(true);
+  }
+  function tmToggleMute() {
+    TM.muted = !TM.muted;
+    if (TM.master) TM.master.gain.value = TM.muted ? 0 : 0.5;
+    UI.toast(TM.muted ? '노래를 껐어요 🔇' : '노래를 켰어요 🔊', { emoji: '🎵', duration: 1400 });
+    tidyRepaint();
   }
 
-  function tidyLayer() {
-    var el = document.getElementById('tidyLayer');
-    if (el) return el;
-    el = document.createElement('div');
-    el.id = 'tidyLayer';
-    el.className = 'td-layer';
-    el.hidden = true;
-    el.addEventListener('click', onTidyClick);
-    document.body.appendChild(el);
-    return el;
+  /* ---------------- 남은 시간 · 게이지 계산 ---------------- */
+  function tidyLeftMs() {
+    if (!tidy) return 0;
+    var now = tidy.paused ? (tidy.pausedAt || Date.now()) : Date.now();
+    return Math.max(0, tidy.endsAt - now);
   }
-  function tidyPanelHTML() {
-    var who = tidy.childId;
+  function tidyLeftText(ms) {
+    var total = Math.floor(Math.max(0, ms) / 1000);
+    var m = Math.floor(total / 60), s = total % 60;
+    if (m > 0) return UI.pad(m) + '분 ' + UI.pad(s) + '초';
+    return s + '초';
+  }
+  /* 진행률(0 → 100): 포켓몬이 왼쪽에서 오른쪽 결승 깃발까지 달려요 */
+  function tidyPct(ms) {
+    var total = Math.max(60000, (tidy ? tidy.minutes : 10) * 60000);
+    return Math.max(0, Math.min(100, ((total - ms) / total) * 100));
+  }
+  /* 정리에 맞는 포켓몬: 그 아이가 키우는 포켓몬, 아직 알이면 인기 포켓몬(피카츄) */
+  function tidyPokemonId() {
+    var cid = (tidy && tidy.childId && tidy.childId !== 'family')
+      ? tidy.childId : (D.children[0] && D.children[0].id);
+    var raw = (S && S.pokemon && S.pokemon[cid]) || null;
+    if (raw) {
+      var p = { line: raw.line || '', fed: Math.max(0, Number(raw.fed) || 0), cur: raw.cur || 0 };
+      if (!p.line && p.cur && PK.species[p.cur]) p.line = PK.species[p.cur].line;
+      if (p.line) {
+        var sp = pkSpecies(p);
+        if (sp && sp.id) return sp.id;
+      }
+    }
+    return 25;
+  }
+  function tidyPokeName(id) {
+    return (D.pokemonNames && D.pokemonNames[id]) || '포켓몬';
+  }
+  function tidyWhoName() {
+    if (!tidy) return '가족';
+    return tidy.childId === 'family' ? '가족 모두' : childById(tidy.childId).name;
+  }
+
+  /* ---------------- 모든 탭 위 남은 시간 바 ---------------- */
+  function tidyBarEl() { return document.getElementById('tidyBar'); }
+  function paintTidyBar() {
+    var el = tidyBarEl();
+    if (!el) return;
+    el.hidden = !tidyActive;
+    if (!tidyActive || !tidy) return;
+    var left = tidyLeftMs();
+    var pct = tidyPct(left);
+    var lb = document.getElementById('tdBarLeft');
+    var fill = document.getElementById('tdBarFill');
+    var run = document.getElementById('tdBarRunner');
+    var pkm = document.getElementById('tdBarPkm');
+    var hint = document.getElementById('tdBarHint');
+    if (lb) lb.textContent = left > 0 ? clockText(left) : '00:00';
+    if (fill) {
+      fill.style.width = pct + '%';
+      fill.className = 'tbar-fill' + (left <= 0 ? ' over' : (pct > 82 ? ' soon' : ''));
+    }
+    if (run) run.style.left = Math.max(4, Math.min(96, pct)) + '%';
+    if (pkm) {
+      var src = pkIcon(tidyPokemonId());
+      if (pkm.getAttribute('src') !== src) pkm.setAttribute('src', src);
+    }
+    if (hint) hint.textContent = tidy.paused ? '⏸ 멈춤' : (left <= 0 ? '정리 마무리!' : '정리 화면으로');
+    el.classList.toggle('over', left <= 0);
+  }
+
+  /* ---------------- 할 일 탭 안의 정리시간 화면 ---------------- */
+  function renderTidyInline() {
+    if (!tidy) return '';
+    var left = tidyLeftMs();
+    var pct = tidyPct(left);
+    var pid = tidyPokemonId();
+    var cheer = tidy.paused ? '잠깐 쉬는 중이에요 ⏸'
+      : (left <= 0 ? '시간이 다 됐어요! 다 같이 마무리해요 🎉' : (TIDY_CHEERS[tidy.cheerIdx || 0] || TIDY_CHEERS[0]));
     var chips = D.children.map(function (c) {
-      return '<button type="button" class="chip ' + c.color + (who === c.id ? ' active' : '') + '" data-td="who" data-id="' + c.id + '">' + c.emoji + ' ' + esc(c.name) + '</button>';
-    }).join('') + '<button type="button" class="chip' + (who === 'family' ? ' active' : '') + '" data-td="who" data-id="family">👪 가족 모두</button>';
-    return '<div class="td-panel" role="dialog" aria-modal="true" aria-label="정리시간">' +
-      '<div class="td-head">' +
-        '<span class="td-ico" aria-hidden="true">🧹</span>' +
-        '<div class="td-head-txt"><b>정리시간</b><small>' + tidy.minutes + '분 동안 힘내요!</small></div>' +
-        '<button type="button" class="sc-x" data-td="close" aria-label="그만하기">✕</button>' +
+      return '<button type="button" class="chip ' + c.color + (tidy.childId === c.id ? ' active' : '') +
+        '" data-act="tidy-who" data-id="' + c.id + '">' + c.emoji + ' ' + esc(c.name) + '</button>';
+    }).join('') + '<button type="button" class="chip' + (tidy.childId === 'family' ? ' active' : '') +
+      '" data-act="tidy-who" data-id="family">👪 가족 모두</button>';
+    return '<div class="tidy-view' + (tidy.paused ? ' paused' : '') + '">' +
+      '<div class="tv-head">' +
+        '<div class="tv-h1"><span class="tv-ico" aria-hidden="true">🧹</span>' +
+          '<span class="tv-h1t"><b>정리 시간 · ' + tidy.minutes + '분</b>' +
+            '<small>' + (tidy.paused ? '일시정지했어요 · [▶️ 계속하기]를 눌러요'
+              : '노래가 나와요 · 다 정리하면 [정리 끝! ✓]') + '</small></span></div>' +
+        '<div class="tv-who">' + chips + '</div>' +
       '</div>' +
-      '<div class="td-who">누가 정리할까요? <span class="td-who-chips">' + chips + '</span></div>' +
-      '<div class="td-time" id="tdBig">--:--</div>' +
-      '<div class="td-bar"><i id="tdBar" style="width:100%"></i></div>' +
-      '<p class="td-note" id="tdNote">🎵 노래가 나와요! 신나게 정리해요</p>' +
-      '<div class="td-actions">' +
-        '<button type="button" class="td-mini" data-td="music" aria-label="음악 켜기/끄기">' + (TM.muted ? '🔇' : '🔊') + '</button>' +
-        '<button type="button" class="td-mini" data-td="pause" aria-label="음악 멈춤">' + (TM.paused ? '▶️' : '⏸️') + '</button>' +
-        '<button type="button" class="btn btn-primary td-finish" data-td="finish">정리 끝! 🎉</button>' +
+      '<div class="tv-timer">' +
+        '<div class="tv-left"><b id="tvLeft">' + tidyLeftText(left) + '</b><span>남았어요</span></div>' +
+        '<div class="tv-track" aria-hidden="true">' +
+          '<i class="tv-fill' + (left <= 0 ? ' over' : (pct > 82 ? ' soon' : '')) + '" id="tvFill" style="width:' + pct + '%"></i>' +
+          '<b class="tv-runner" id="tvRunner" style="left:' + Math.max(4, Math.min(96, pct)) + '%">' +
+            '<img src="' + pkIcon(pid) + '" alt=""></b>' +
+          '<span class="tv-goal">🏁</span>' +
+        '</div>' +
       '</div>' +
+      '<div class="tv-stage">' +
+        '<div class="tv-bubble" id="tvCheer" aria-live="polite">' + esc(cheer) + '</div>' +
+        '<div class="tv-mon"><img src="' + pkArt(pid) + '" alt="' + esc(tidyPokeName(pid)) + '가 정리를 응원해요"></div>' +
+        '<div class="tv-floor" aria-hidden="true"></div>' +
+        '<p class="tv-say">' + esc(tidyPokeName(pid)) + '가 ' + esc(tidyWhoName()) + '랑 같이 정리해요!</p>' +
+      '</div>' +
+      '<div class="tv-actions">' +
+        '<button type="button" class="btn btn-primary tv-finish" data-act="tidy-finish">정리 끝! ✓</button>' +
+        '<div class="tv-minis">' +
+          '<button type="button" class="tv-mini" data-act="tidy-music" aria-pressed="' + (TM.muted ? 'false' : 'true') + '">' +
+            (TM.muted ? '🔇 노래 켜기' : '🔊 노래 끄기') + '</button>' +
+          '<button type="button" class="tv-mini" data-act="tidy-pause" aria-pressed="' + (tidy.paused ? 'true' : 'false') + '">' +
+            (tidy.paused ? '▶️ 계속하기' : '⏸ 일시정지') + '</button>' +
+          '<button type="button" class="tv-mini ghost" data-act="tidy-stop">그만하기</button>' +
+        '</div>' +
+      '</div>' +
+      '<p class="tv-note">정리시간은 별을 주지 않아요 · 다 같이 깨끗하게 정리하고 반짝반짝 축하만!</p>' +
     '</div>';
   }
-  function paintTidy(full) {
-    var el = tidyLayer();
-    if (!el || el.hidden || !tidy) return;
-    if (full || !el.querySelector('.td-panel')) el.innerHTML = tidyPanelHTML();
-    var left = Math.max(0, tidy.endsAt - Date.now());
-    var big = el.querySelector('#tdBig');
-    var bar = el.querySelector('#tdBar');
-    var note = el.querySelector('#tdNote');
-    var total = tidy.minutes * 60000;
-    var pct = Math.max(0, Math.min(100, (left / total) * 100));
-    if (big) big.textContent = clockText(left);
-    if (bar) {
-      bar.style.width = pct + '%';
-      bar.className = pct < 20 ? 'soon' : '';
+  /* 화면의 숫자·게이지·응원 문구만 갱신 (화면 전체를 다시 그리지 않아요) */
+  function tidyTick() {
+    if (!tidyActive || !tidy) return;
+    if (tidy.paused) { paintTidyBar(); return; }
+    var left = tidyLeftMs();
+    var pct = tidyPct(left);
+    var box = document.querySelector('.tidy-view');
+    var bLeft = document.getElementById('tvLeft');
+    var fill = document.getElementById('tvFill');
+    var run = document.getElementById('tvRunner');
+    var cheer = document.getElementById('tvCheer');
+    if (bLeft) bLeft.textContent = tidyLeftText(left);
+    if (fill) {
+      fill.style.width = pct + '%';
+      fill.className = 'tv-fill' + (left <= 0 ? ' over' : (pct > 82 ? ' soon' : ''));
     }
-    if (note) {
-      note.textContent = left > 0
-        ? '🎵 노래가 나와요! 신나게 정리해요'
-        : '⏰ 시간이 다 됐어요! 정리를 마무리하고 [정리 끝!]을 눌러요';
+    if (run) run.style.left = Math.max(4, Math.min(96, pct)) + '%';
+    var idx = left <= 0 ? -1 : Math.floor((Date.now() - tidy.startedAt) / 3600) % TIDY_CHEERS.length;
+    if (cheer && tidy.cheerIdx !== idx) {
+      tidy.cheerIdx = idx;
+      cheer.textContent = idx < 0 ? '시간이 다 됐어요! 다 같이 마무리해요 🎉' : TIDY_CHEERS[idx];
+      cheer.className = 'tv-bubble pop';
+      setTimeout(function () { if (cheer) cheer.className = 'tv-bubble'; }, 460);
     }
+    if (left <= 0 && !tidy.rang) { tidy.rang = true; tidyOnZero(); }
+    /* 남은 시간이 끝나면 화면도 살짝 축하 모드 */
+    if (box) box.classList.toggle('over', left <= 0);
+    paintTidyBar();
   }
+  function tidyOnZero() {
+    chime();
+    UI.confetti(24);
+    UI.toast('시간이 다 됐어요! 정리를 마무리하고 [정리 끝! ✓]을 눌러요', { emoji: '🧹', duration: 3600 });
+  }
+  function tidyRepaint() {
+    if (!tidyActive) return;
+    render({ keepScroll: true });
+    tidyTick();
+  }
+
+  /* ---------------- 켜기 / 잠깐 멈추기 / 끄기 ---------------- */
   function startTidy(minutes, childId) {
     minutes = Number(minutes) || 10;
     if (minutes < 1 || minutes > 60) minutes = 10;
+    /* 이미 돌고 있으면 시간을 새로 잡지 않고 정리 화면으로만 데려와요 */
+    if (tidyActive) {
+      if (view === 'routine') window.scrollTo({ top: 0, behavior: 'smooth' });
+      else setView('routine');
+      UI.toast('이미 정리 시간이 돌아가고 있어요', { emoji: '🧹', duration: 1800 });
+      return;
+    }
     if (schoolActive) endSchoolMode(null);
-    tidy = { minutes: minutes, endsAt: Date.now() + minutes * 60000, childId: childId || routineChild || D.children[0].id };
-    var el = tidyLayer();
-    el.hidden = false;
-    document.body.classList.add('modal-open');
-    TM.muted = !(S.tidyCfg && S.tidyCfg.music !== false); TM.paused = false;
-    paintTidy(true);
+    var now = Date.now();
+    var cid = childId && childId !== 'null' && childId !== 'undefined' ? childId : null;
+    tidy = {
+      minutes: minutes,
+      startedAt: now,
+      endsAt: now + minutes * 60000,
+      childId: cid || routineChild || D.children[0].id,
+      paused: false,
+      pausedAt: 0,
+      rang: false,
+      cheerIdx: 0
+    };
+    tidyActive = true;
+    TM.muted = !(S.tidyCfg && S.tidyCfg.music !== false);
+    TM.paused = false;
+    if (view !== 'routine') setView('routine');
+    else render({ scrollTop: true });
+    paintTidyBar();
     tmStart();
     clearInterval(tidyInt);
-    tidyInt = setInterval(function () { paintTidy(false); }, 500);
+    tidyInt = setInterval(tidyTick, 250);
+    tidyTick();
+    UI.toast('🧹 정리 시작! ' + minutes + '분 동안 다 같이 정리해요', { emoji: '🎵', kind: 'good', duration: 3000 });
   }
-  function closeTidyMode() {
+  function tidyPauseToggle() {
+    if (!tidy) return;
+    if (tidy.paused) {
+      /* 멈춰 있던 시간은 빼고 이어서 흘러가요 */
+      tidy.endsAt += Date.now() - (tidy.pausedAt || Date.now());
+      tidy.paused = false;
+      tidy.pausedAt = 0;
+      tmSetPaused(false);
+      UI.toast('이어서 정리해요! ▶️', { emoji: '🧹', duration: 1500 });
+    } else {
+      tidy.paused = true;
+      tidy.pausedAt = Date.now();
+      tmSetPaused(true);
+      UI.toast('잠깐 멈췄어요 · [▶️ 계속하기]로 이어가요', { emoji: '⏸', duration: 2000 });
+    }
+    tidyRepaint();
+  }
+  function closeTidyMode(msg) {
+    var had = tidyActive;
     clearInterval(tidyInt); tidyInt = null;
     tmStop();
     tidy = null;
-    var el = document.getElementById('tidyLayer');
+    tidyActive = false;
+    var el = tidyBarEl();
     if (el) el.hidden = true;
-    if (!document.querySelector('.modal-wrap')) document.body.classList.remove('modal-open');
-  }
-  function onTidyClick(e) {
-    var b = e.target.closest('[data-td]');
-    if (!b || !tidy) return;
-    var act = b.getAttribute('data-td');
-    if (act === 'close') { closeTidyMode(); return; }
-    if (act === 'music') { tmToggleMute(); return; }
-    if (act === 'pause') { tmTogglePause(); return; }
-    if (act === 'who') { tidy.childId = b.getAttribute('data-id') || D.children[0].id; paintTidy(true); return; }
-    if (act === 'finish') { finishTidy(); return; }
+    document.body.classList.remove('tidy-on');
+    if (msg && had) UI.toast(msg, { emoji: '🧹', duration: 2600 });
   }
   function finishTidy() {
     if (!tidy) return;
-    var left = tidy.endsAt - Date.now();
+    var left = tidyLeftMs();
     var inTime = left > 0;
     var who = tidy.childId === 'family' ? '가족 모두' : childById(tidy.childId).name;
-    save();
-    closeTidyMode();
+    closeTidyMode(null);
     render({ keepScroll: true });
-    UI.confetti(inTime ? 52 : 24);
+    UI.confetti(inTime ? 64 : 28);
     chime();
     UI.toast('정리 끝! ' + who + (inTime ? ' · 시간 안에 아주 깔끔하게 정리했어요 ✨' : ' · 끝까지 정리했어요 ✨'),
       { emoji: inTime ? '🎉' : '👏', kind: 'good', duration: 3400 });
     pushToPhones('🧹 정리 끝!', who + (inTime ? ' · 시간 안에 정리를 마쳤어요 ✨' : ' · 정리를 마무리했어요 ✨'));
+  }
+  function tidyStop() {
+    if (!tidy) return;
+    closeTidyMode('정리시간을 그만뒀어요');
+    render({ keepScroll: true });
+  }
+  function tidyWhoPick(id) {
+    if (!tidy) return;
+    tidy.childId = id || D.children[0].id;
+    tidyRepaint();
+  }
+  /* 상단 [🧹 정리] 바로가기 — 몇 분 정리할지 고르고 바로 시작 */
+  function quickTidyTap() {
+    if (tidyActive) {
+      if (view === 'routine') window.scrollTo({ top: 0, behavior: 'smooth' });
+      else setView('routine');
+      UI.toast('정리 시간이 돌아가고 있어요', { emoji: '🧹', duration: 1600 });
+      return;
+    }
+    var mins = (S.tidyCfg && S.tidyCfg.mins && S.tidyCfg.mins.length) ? S.tidyCfg.mins : [5, 10, 15];
+    UI.modal({
+      title: '🧹 정리시간',
+      bodyHTML: '<p class="modal-text">몇 분 동안 정리할까요? 노래가 나오고, 다 정리하면 [정리 끔! ✓]을 눌러요.</p>' +
+        '<div class="qt-grid">' + mins.map(function (m) {
+          return '<button type="button" class="qt-min" data-qt="' + m + '" aria-label="' + m + '분 정리 시작">' +
+            '<b>' + m + '</b><span>분</span></button>';
+        }).join('') + '</div>',
+      actions: [{ label: '닫기', kind: 'ghost' }],
+      onOpen: function (wrap, close) {
+        wrap.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-qt]');
+          if (!b) return;
+          var m = b.getAttribute('data-qt');
+          close(null);
+          startTidy(m);
+        });
+      }
+    });
   }
 
   /* =========================================================
@@ -5423,8 +5655,11 @@
               music: !!(document.getElementById('edTidyMusic') || {}).checked
             };
             saveNow();
-            render({ keepScroll: true });
-            paintTidy(true);
+            if (tidyActive) {
+              TM.muted = !(S.tidyCfg.music !== false);
+              if (TM.master) TM.master.gain.value = TM.muted ? 0 : 0.5;
+            }
+            tidyRepaint();
             UI.toast('정리시간 설정을 저장했어요', { emoji: '🧹', kind: 'good' });
           } },
         { label: '닫기', kind: 'ghost' }
@@ -5606,6 +5841,11 @@
       case 'school-close': endSchoolMode('일반 할 일 목록으로 돌아왔어요'); break;
       case 'school-go': schoolGoHome(); break;
       case 'tidy-start': startTidy(el.getAttribute('data-min'), el.getAttribute('data-id')); break;
+      case 'tidy-finish': finishTidy(); break;
+      case 'tidy-music': tmToggleMute(); break;
+      case 'tidy-pause': tidyPauseToggle(); break;
+      case 'tidy-stop': tidyStop(); break;
+      case 'tidy-who': tidyWhoPick(el.getAttribute('data-id')); break;
       case 'school-settings': schoolSettingsModal(); break;
       case 'tidy-settings': tidySettingsModal(); break;
       case 'pk-settings': pkSettingsModal(); break;
@@ -5817,6 +6057,17 @@
       if (view === 'routine') window.scrollTo({ top: 0, behavior: 'smooth' });
       else setView('routine');
     });
+    /* 🧹 정리시간 남은 시간 바 — 누르면 '할 일'(정리 화면)으로 이동 */
+    var tbBtn = document.getElementById('tidyBarBtn');
+    if (tbBtn) tbBtn.addEventListener('click', function () {
+      if (view === 'routine') window.scrollTo({ top: 0, behavior: 'smooth' });
+      else setView('routine');
+    });
+    /* ✏️ 편지 · 🧹 정리 바로가기 (상단 시계 옆) */
+    var qm = document.getElementById('quickMail');
+    if (qm) qm.addEventListener('click', function () { setView('mailbox'); });
+    var qt = document.getElementById('quickTidy');
+    if (qt) qt.addEventListener('click', quickTidyTap);
     document.addEventListener('change', function (e) {
       if (e.target && e.target.id === 'importFile') onImportFile(e);
       if (e.target && e.target.id === 'deviceName') {
@@ -5964,7 +6215,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 68;             /* index.html 의 ?v=68 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 69;             /* index.html 의 ?v=69 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
