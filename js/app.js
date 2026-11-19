@@ -1760,13 +1760,10 @@
   function kidCompactHTML(c) {
     var today = todayKey();
     var st = routineStats(c.id, today);
-    var pct = st.total ? Math.round(st.done / st.total * 100) : 0;
     var p = pkOf(c.id);
     var sp = p.line ? pkSpecies(p) : null;
     var lvl = pkLevel(p.fed);
-    var per = pkPerLevel() || 100;
-    var prog = Math.max(0, Math.min(per, pkProg(p.fed)));
-    var pkPct = Math.round(prog / per * 100);
+    var pkName = p.line ? ((sp ? sp.ko : '🥚 알') + ' Lv.' + lvl) : '알 고르기';
     return '<button type="button" class="kid-mini ' + c.color + '" data-act="pick-kid" data-id="' + c.id + '" aria-pressed="false"' +
         ' aria-label="' + esc(c.name) + ' 오늘 ' + st.done + '/' + st.total + ' · ' + esc(c.name) + ' 할 일 보기">' +
         '<span class="km-ava">' + Art.kid(c.id) + '</span>' +
@@ -1776,11 +1773,7 @@
             '<span class="km-star">⭐ ' + (S.stars[c.id] || 0) + '</span>' +
             '<span class="km-do">✅ ' + st.done + '/' + st.total + '</span>' +
           '</span>' +
-          '<span class="km-pk">' +
-            '<em>⚡ ' + (p.line ? (sp ? esc(sp.ko) : '🥚 알') + ' <b>Lv.' + lvl + '</b>' : '알 고르기') + '</em>' +
-            '<i class="km-pk-bar" aria-hidden="true"><b style="width:' + pkPct + '%"></b></i>' +
-          '</span>' +
-          '<i class="km-bar" aria-hidden="true"><b style="width:' + pct + '%"></b></i>' +
+          '<span class="km-pk">⚡ ' + esc(pkName) + '</span>' +
         '</span>' +
       '</button>';
   }

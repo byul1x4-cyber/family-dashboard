@@ -2715,3 +2715,39 @@ body.on-home .wx-head { flex: 0 0 auto; margin-left: auto; display: block; }
   .ps-big { font-size: 38px; }
   .ps-name { font-size: 14.5px; }
 }
+
+/* =========================================================
+   8차 — 민국·이준 카드: 회색 게이지 줄 제거, 글씨·배지로 꽉 채우기
+        · 달력·일정·알림장·부모님 카드의 빈 여백 줄이기
+   ========================================================= */
+.km-body { display: grid; align-content: center; gap: 8px; min-width: 0; flex: 1; }
+.km-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.km-name { font-family: var(--font-round); font-weight: 400; font-size: 21px; color: #4B3A2B; line-height: 1.05; }
+.km-star { font-size: 14px; font-weight: 800; color: #A5730E; background: #FFF6DC; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.km-do { margin-left: auto; font-size: 14px; font-weight: 800; color: var(--mint-deep); background: #E7F8EF; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.km-pk {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+  color: #5B4780;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
+}
+.km-bar, .km-pk-bar { display: none !important; }
+
+@media (min-width: 1000px) {
+  /* 달력이 카드 높이를 채우게 */
+  body.on-home .month-card { display: flex; flex-direction: column; }
+  body.on-home .month-card .month-cal { flex: 1; min-height: 0; display: flex; }
+  body.on-home .month-card .mini-cal { flex: 1; grid-auto-rows: 1fr; margin-bottom: 0; }
+  body.on-home .month-card .mini-day { min-height: 0; font-size: 13.5px; }
+  /* 카드 안 여백·회색 선 줄이기 */
+  .card-head { border-bottom: 0; }
+  .notice-card .notice-foot { margin-top: 4px; }
+  .notice-card .notice-msg { margin-bottom: 4px; }
+  .hm-day .day-block { border-color: #FFF3DE; }
+  .parent-sq { border-width: 3px; }
+  .kid-mini { border-width: 3px; }
+}
