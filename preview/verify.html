@@ -5728,6 +5728,15 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   .tabrow .clock.mini .clock-time { font-size: 15px; font-weight: 800; color: #6B4B22; font-family: var(--font-round); }
 }
 
+/* 폰 날씨: 미세먼지 배지가 글자 단위로 쪼개지지 않게 */
+@media (max-width: 999px) {
+  .wx-slot .wx-dust-col { min-width: 66px; padding: 4px 6px; }
+  .wx-slot .wx-dust-col em { white-space: nowrap; font-size: 12px; }
+  .wx-slot .wx-dust-col b { white-space: nowrap; }
+  .wx-slot .wx-h-hr { min-width: 40px; }
+  .wx-slot .wx-h-hr i { white-space: nowrap; }
+}
+
 </style>
 </head>
 <body>
