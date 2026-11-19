@@ -1916,7 +1916,7 @@
 /* 폰: 브랜드·바로가기·시계가 겹치지 않게 조금 더 조입니다 */
 @media (max-width: 719px) {
   .topbar { gap: 5px; }
-  .brand { gap: 6px; }
+  .brand { gap: 6px; flex: 1 1 auto; }
   .brand-mark { width: 32px; height: 32px; font-size: 17px; border-radius: 11px; }
   .brand-text h1 { font-size: 17px; overflow: hidden; text-overflow: ellipsis; }
   .brand-text p { font-size: 10px; }
