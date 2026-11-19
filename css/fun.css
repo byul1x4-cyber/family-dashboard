@@ -931,8 +931,9 @@
   .pk-duo .pk-mystery-egg b { font-size: 15px; }
 
   /* 아래 도감 — 민국·이준 도감을 나란히 두고, 각 20종이 두 줄로 딱 떨어지게 */
-  .pk-dex { margin-top: 8px; padding: 9px 12px 8px; border-radius: 22px; }
-  .pk-dex-head { margin-bottom: 5px; gap: 8px; }
+  .pk-dex { margin-top: 7px; padding: 8px 12px 7px; border-radius: 22px; }
+  /* 넓은 화면에서는 아이별 머리글이 있으니 도감 전체 머리줄은 접어 두 줄 더 확보 */
+  .pk-dex-head { display: none; }
   .pk-dex-ico { width: 28px; height: 28px; font-size: 14px; border-radius: 10px; }
   .pk-dex-title { display: flex; align-items: baseline; gap: 7px; }
   .pk-dex-title b { font-size: 15.5px; }
