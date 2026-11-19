@@ -3064,3 +3064,17 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   body.on-home .hero-quick .st-ico { font-size: 13px; }
   body.on-home .hero-quick .stop-timer .st-label { font-size: 11px; }
 }
+
+/* ---- 낮은 패드(≤740 높이)에서 스크롤 0: 마지막 미세 조정 ---- */
+@media (min-width: 1000px) and (max-height: 740px) {
+  .clock.big .clock-time { font-size: 42px; }
+  .wx-hero { padding: 3px 10px; }
+  .ps-big { font-size: 50px !important; }
+  .notice-card .notice-item { padding: 6px 10px; font-size: 13.5px; }
+  body.on-home .month-card .mini-day { min-height: 18px; }
+  .ps-name { font-size: 14px; }
+  .ps-txt { font-size: 13px; }
+  .parent-sq { padding: 6px 8px 6px; }
+  .kid-mini { padding: 6px 10px; }
+  .km-name { font-size: 19px; }
+}
