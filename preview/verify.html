@@ -5555,6 +5555,14 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   body.on-home .notice-card .notice-msg { margin-bottom: 2px; }
 }
 
+/* ---- 낮은 패드(≤740): 알림장 목록 높이를 묶어 페이지 스크롤 0 ---- */
+@media (min-width: 1000px) and (max-height: 740px) {
+  body.on-home .notice-card .notice-list { max-height: 200px; overflow-y: auto; align-content: start; }
+  body.on-home .ps-big { font-size: 56px !important; }
+  body.on-home .parent-sq { padding: 6px 8px; }
+  body.on-home .month-card .mini-day { min-height: 17px; font-size: 12.5px; }
+}
+
 </style>
 </head>
 <body>
