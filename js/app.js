@@ -4019,9 +4019,11 @@
       ctx.closePath();
       ctx.fill();
     }
+    var dbg = { added: 0, ttl: 0, bottom: 0, shift: 0, maxLife: 0, frames: 0 };
     function add(p) {
-      if (parts.length >= MAX) parts.shift();
+      if (parts.length >= MAX) { parts.shift(); dbg.shift += 1; }
       parts.push(p);
+      dbg.added += 1;
     }
     function kick() {
       if (raf) return;
@@ -4032,6 +4034,7 @@
     function tick(t) {
       raf = 0;
       if (!ctx) return;
+      dbg.frames += 1;
       var dt = lastT ? Math.min(0.06, (t - lastT) / 1000) : 0.016;
       lastT = t;
       ctx.clearRect(0, 0, W, H);
@@ -4047,7 +4050,9 @@
         if (p.x < -24) { p.x = -24; p.vx = Math.abs(p.vx) * 0.55; }
         if (p.x > W + 24) { p.x = W + 24; p.vx = -Math.abs(p.vx) * 0.55; }
         var k = 1 - p.life / p.ttl;
-        if (k <= 0 || p.y > H + 70) { parts.splice(i, 1); continue; }
+        if (p.life > dbg.maxLife) dbg.maxLife = p.life;
+        if (k <= 0) { dbg.ttl += 1; parts.splice(i, 1); continue; }
+        if (p.y > H + 70) { dbg.bottom += 1; parts.splice(i, 1); continue; }
         ctx.globalAlpha = k > 0.55 ? 1 : Math.max(0, k / 0.55);
         ctx.fillStyle = p.color;
         if (p.kind === 'dot') {
@@ -4120,6 +4125,7 @@
       }
       kick();
     }
+    window.__fx = function () { return { parts: parts.length, raf: raf, dbg: dbg, hidden: document.hidden, W: W, H: H }; };
     return { burst: burst, fountain: fountain, rain: rain, resize: resize };
   })();
   /* 별을 먹인 만큼 화면에 별을 마구 뿌립니다 (1개→약 50개, 10개→약 250개)
