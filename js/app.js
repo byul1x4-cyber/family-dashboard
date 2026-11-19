@@ -1676,8 +1676,8 @@
     return '<div class="day-block">' +
       '<div class="day-head"><b>' + label + '</b><span>' + esc(UI.dateKo(key)) + '</span></div>' +
       (evs.length
-        ? evs.slice(0, 3).map(function (e) { return dayEvRowHTML(label, e); }).join('') +
-          (evs.length > 3 ? '<p class="day-more">+' + (evs.length - 3) + '개 더 있어요</p>' : '')
+        ? evs.slice(0, 2).map(function (e) { return dayEvRowHTML(label, e); }).join('') +
+          (evs.length > 2 ? '<p class="day-more">+' + (evs.length - 2) + '개 더 있어요</p>' : '')
         : '<p class="day-none">일정이 없어요' + (label === '오늘' ? ' 🍃' : '') + '</p>') +
     '</div>';
   }
