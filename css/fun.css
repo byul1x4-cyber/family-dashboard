@@ -2587,3 +2587,20 @@
   .parent-sq { padding: 6px 6px 5px; gap: 2px; }
   .ps-txt { font-size: 14px; }
 }
+
+/* ---- ✅ 할 일 탭: 패드에서 두 아이 목록이 한 화면에 더 많이 보이게 ---- */
+@media (min-width: 1000px) {
+  .routine-kid { padding: 10px 12px; border-radius: 22px; }
+  .routine-kid .rk-head { gap: 8px; }
+  .routine-kid .rk-head strong { font-size: 19px; }
+  .routine-kid .rk-head .avatar { width: 36px; height: 36px; }
+  .routine-list { gap: 4px; }
+  .routine-item { padding: 3px 8px 3px 10px; border-radius: 14px; gap: 9px; }
+  .routine-item .r-emoji { width: 27px; height: 27px; font-size: 16px; border-radius: 9px; }
+  .routine-item .r-label { font-size: 14.5px; }
+  .routine-check { width: 29px; height: 29px; border-width: 2px; font-size: 15px; }
+  .routine-group .rg-head { font-size: 13px; padding: 1px 0 4px; }
+  .routine-group { margin-top: 4px; }
+  .routine-kid .progress { margin-top: 6px !important; }
+  .lock-note { margin-top: 8px; font-size: 12px; }
+}
