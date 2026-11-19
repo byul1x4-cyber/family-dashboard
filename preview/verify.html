@@ -5563,6 +5563,15 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   body.on-home .month-card .mini-day { min-height: 17px; font-size: 12.5px; }
 }
 
+/* ---- 낮은 패드: 오른쪽 열 높이를 고정 비율로 묶어 페이지 스크롤 0 ---- */
+@media (min-width: 1000px) and (max-height: 740px) {
+  body.on-home .hm-right { grid-template-rows: minmax(0, 1fr) 86px; }
+  body.on-home .notice-card { height: 100%; min-height: 0; }
+  body.on-home .notice-card .notice-list { flex: 1 1 0; min-height: 0; max-height: none; overflow-y: auto; }
+  body.on-home .parents-grid { height: 86px; }
+  body.on-home .parent-sq { height: 100%; }
+}
+
 </style>
 </head>
 <body>
