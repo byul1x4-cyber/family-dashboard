@@ -1535,29 +1535,33 @@
     var g10 = w.pm10Grade;
     var val = function (v, unit) { return v == null ? '—' : v + (unit || ''); };
     var hours = (w.hours || []).slice(0, 4);
+    /* 2026-11-19 확정: 왼쪽에 미세먼지 세로 풀 배지, 오른쪽 위에 기온·맑음·최저/최고 + 시간대 4칸,
+       그 아래에 👕 옷차림 한 줄. 블록은 오른쪽에 붙박아 컴팩트하게. */
     return '<div class="wx-hero ' + (w.kind || 'cloud') + '">' +
-        '<div class="wx-hero-row">' +
-          (g10
-            ? '<span class="wx-h-dust dust ' + g10.cls + '" aria-label="미세먼지 ' + esc(g10.label) + '">' +
-                '<i aria-hidden="true">🌫</i><b>미세</b><em>' + esc(g10.label) + '</em></span>'
-            : '') +
-          '<span class="wx-h-now">' +
-            '<span class="wx-h-art" aria-hidden="true">' + wxEmoji(w.kind, true, new Date().getHours()) + '</span>' +
-            '<b class="wx-h-temp">' + val(w.temp) + '<small>°</small></b>' +
-            '<span class="wx-h-txt"><b>' + esc(w.label || '') + '</b>' +
-              '<small>최저 ' + val(w.tmin, '°') + ' · 최고 ' + val(w.tmax, '°') + '</small></span>' +
-          '</span>' +
-          (hours.length
-            ? '<span class="wx-h-hours">' + hours.map(function (h) {
-                return '<span class="wx-h-hr' + (h.now ? ' now' : '') + '">' +
-                    '<i>' + (h.now ? '지금' : h.hour + '시') + '</i>' +
-                    '<em aria-hidden="true">' + wxEmoji(h.kind, h.day, h.hour) + '</em>' +
-                    '<b>' + (h.temp == null ? '—' : h.temp + '°') + '</b>' +
-                  '</span>';
-              }).join('') + '</span>'
-            : '') +
+        (g10
+          ? '<div class="wx-dust-col ' + g10.cls + '" aria-label="미세먼지 ' + esc(g10.label) + '">' +
+              '<i aria-hidden="true">🌫</i><b>미세먼지</b><em>' + esc(g10.label) + '</em></div>'
+          : '') +
+        '<div class="wx-hero-main">' +
+          '<div class="wx-hero-row">' +
+            '<span class="wx-h-now">' +
+              '<span class="wx-h-art" aria-hidden="true">' + wxEmoji(w.kind, true, new Date().getHours()) + '</span>' +
+              '<b class="wx-h-temp">' + val(w.temp) + '<small>°</small></b>' +
+              '<span class="wx-h-txt"><b>' + esc(w.label || '') + '</b>' +
+                '<small>최저 ' + val(w.tmin, '°') + ' · 최고 ' + val(w.tmax, '°') + '</small></span>' +
+            '</span>' +
+            (hours.length
+              ? '<span class="wx-h-hours">' + hours.map(function (h) {
+                  return '<span class="wx-h-hr' + (h.now ? ' now' : '') + '">' +
+                      '<i>' + (h.now ? '지금' : h.hour + '시') + '</i>' +
+                      '<em aria-hidden="true">' + wxEmoji(h.kind, h.day, h.hour) + '</em>' +
+                      '<b>' + (h.temp == null ? '—' : h.temp + '°') + '</b>' +
+                    '</span>';
+                }).join('') + '</span>'
+              : '') +
+          '</div>' +
+          (w.tip ? '<div class="wx-hero-tip">👕 ' + esc(w.tip) + '</div>' : '') +
         '</div>' +
-        (w.tip ? '<div class="wx-hero-tip">👕 ' + esc(w.tip) + '</div>' : '') +
       '</div>';
   }
   /* 헤더 날씨 칸(#wxHead)을 채웁니다 — 패드 전용, 다른 탭에서도 계속 보여요 */

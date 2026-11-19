@@ -2616,3 +2616,59 @@
   .routine-kid .rk-head .avatar { width: 32px; height: 32px; }
   .routine-kid .rk-head strong { font-size: 18px; }
 }
+
+/* =========================================================
+   6차 — 탭 크게 · 홈이 아닐 때만 작은 시계 · 오른쪽 컴팩트 날씨 + 미세먼지 세로 배지
+   ========================================================= */
+@media (min-width: 1000px) {
+  /* 탭·모드 버튼을 조금 더 큼직하게 (한 줄 유지) */
+  .tabrow .tab { padding: 5px 10px; font-size: 12.5px; gap: 4px; }
+  .tabrow .tab span { font-size: 14.5px; }
+  .tabrow .mode-btn { padding: 6px 10px; font-size: 12.5px; }
+  .tabrow .stop-timer, .tabrow .banner-btn { padding: 6px 10px; font-size: 12.5px; }
+
+  /* 홈에서는 큰 시계가 아래에 있으니 탭 줄 시계는 다른 탭에서만 */
+  .tabrow .clock.mini { display: none; }
+  body:not(.on-home) .tabrow .clock.mini { display: inline-flex; }
+  .clock.mini .clock-time { font-size: 13.5px; }
+}
+
+/* ---- 날씨: 오른쪽에 컴팩트하게 + 미세먼지 세로 풀 배지 ---- */
+body.on-home .wx-head { flex: 0 0 auto; margin-left: auto; display: block; }
+.wx-hero {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  width: auto;
+  border-radius: 16px;
+}
+.wx-hero-main { display: grid; gap: 4px; padding: 5px 11px; align-content: center; min-width: 0; }
+.wx-hero-row { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.wx-dust-col {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 1px;
+  padding: 3px 9px;
+  border-radius: 0;
+  text-align: center;
+  line-height: 1.12;
+  flex: none;
+  min-width: 58px;
+  border-right: 1.5px solid rgba(255, 255, 255, .75);
+}
+.wx-dust-col i { font-style: normal; font-size: 13px; line-height: 1; }
+.wx-dust-col b { font-size: 9px; font-weight: 800; letter-spacing: 0; opacity: .85; }
+.wx-dust-col em { font-style: normal; font-size: 12px; font-weight: 800; }
+.wx-dust-col.good { background: linear-gradient(160deg, #CFE9FF, #A9D6F7); color: #1B5E88; }
+.wx-dust-col.normal { background: linear-gradient(160deg, #D3F3E2, #A9E4C6); color: #1F7355; }
+.wx-dust-col.bad { background: linear-gradient(160deg, #FFE2C2, #FFC98F); color: #944F10; }
+.wx-dust-col.worst { background: linear-gradient(160deg, #FFD3CB, #FFB1A3); color: #9E2E1D; }
+.wx-h-now { padding: 0; border: 0; }
+.wx-h-hours { margin-left: 0; }
+.wx-hero-tip { align-self: flex-start; }
+@media (max-width: 1199px) {
+  body.on-home .wx-hero-tip { max-width: 260px; }
+}
