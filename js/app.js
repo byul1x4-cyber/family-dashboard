@@ -1382,8 +1382,9 @@
     if (!stopBtn || !tidyBtn || !quick || !bar) return;
     var wide = false;
     try { wide = window.matchMedia('(min-width: 1000px)').matches; } catch (e) {}
-    var homeHost = (view === 'home' && wide) ? quick : bar;
-    var tidyHost = wide ? quick : bar;
+    /* 폰: 정리·그만 버튼은 헤더에 두지 않고 홈 화면 안(히어로 줄)에만 */
+    var homeHost = wide ? ((view === 'home') ? quick : bar) : quick;
+    var tidyHost = wide ? quick : quick;
     if (stopBtn.parentNode !== homeHost) homeHost.appendChild(stopBtn);
     if (tidyBtn.parentNode !== tidyHost) tidyHost.appendChild(tidyBtn);
   }
@@ -1507,7 +1508,7 @@
                      오른쪽: 🏫 민국이 알림장(크게) → 엄마는 지금 · 아빠는 지금 네모 카드
        · 홈 아래 타일·약·장보기는 걷어냈습니다 (각 탭/상단 바로가기/식판·건강에 있음). */
     return '' +
-      '<div class="wx-strip-slot">' + weatherStripHTML() + '</div>' +
+      '<div class="wx-slot" id="wxSlot">' + heroWeatherHTML() + '</div>' +
 
       '<div class="home-main2">' +
         '<div class="hm-col hm-left">' +
