@@ -4143,10 +4143,8 @@
     });
     var winMs = Math.max(60000, (schoolTargetMin() - schoolStartMin()) * 60000);
     var pct = ms <= 0 ? 0 : Math.max(0, Math.min(100, (ms / winMs) * 100));
-    var left = document.getElementById('sbLeft');
-    var kids = document.getElementById('sbKids');
-    var fill = document.getElementById('sbFill');
     var run = document.getElementById('sbRunner');
+    var pkm = document.getElementById('sbPkm');
     if (left) left.textContent = ms > 0 ? clockText(ms) : '00:00';
     if (kids) kids.textContent = counts.join(' · ');
     if (fill) {
@@ -4154,6 +4152,11 @@
       fill.className = 'sb-fill' + (ms <= 0 ? ' over' : (pct < 20 ? ' soon' : ''));
     }
     if (run) run.style.left = Math.max(5, Math.min(96, pct)) + '%';
+    if (pkm) {
+      /* 게이지 위를 달리는 미니 포켓몬 (정리시간과 같은 그림) */
+      var src = pkIcon(pkSpriteId(routineChild));
+      if (pkm.getAttribute('src') !== src) pkm.setAttribute('src', src);
+    }
     el.classList.toggle('over', ms <= 0);
   }
   function schoolGrantBonuses() {
@@ -4236,24 +4239,23 @@
     var locked = morningLocked();
     var lockedOpen = S.mode !== 'parent' && inSchoolAutoWindow();
     var bothDone = schoolBothDone();
+    /* 2026-11-19: 큰 「등교 시작」 배너를 없애고, 탭·타이머 바 바로 아래에
+       ① 안내 한 줄 + 버튼 ② 민국 4장 · 이준 4장 카드가 바로 오게 했습니다. */
     return '<div class="school-view">' +
-      '<div class="sv-head">' +
-        '<div class="sv-h1"><span class="sv-ico" aria-hidden="true">🌅</span>' +
-          '<span class="sv-h1t"><b>등교 시작</b><small>' + esc(deadlineText()) + '까지 준비해요 · 카드를 눌러 완료!' +
-          (locked ? ' · 🔒 마감' : '') + '</small></span></div>' +
+      '<div class="sv-mini">' +
+        '<span class="sv-mini-txt">🌅 ' + esc(deadlineText()) + '까지 준비' +
+          (locked ? ' · 🔒 마감' : '') + ' · 카드를 눌러 완료!' + (bothDone ? ' 🎉 다 했어요!' : '') + '</span>' +
         '<div class="sv-actions">' +
           (S.mode === 'parent' ? '<button type="button" class="btn btn-ghost btn-sm" data-act="school-settings">⚙️ 등교 설정</button>' : '') +
           (lockedOpen ? '' : '<button type="button" class="btn btn-ghost btn-sm" data-act="school-close">일반 목록으로</button>') +
+          (bothDone ? '<button type="button" class="btn btn-primary btn-sm" data-act="school-go">학교 가자! 🎒</button>' : '') +
         '</div>' +
       '</div>' +
       (bothDone ? '<div class="sv-all">🎉 오늘 등교 준비 끝! 정말 잘했어요</div>' : '') +
       D.children.map(function (c) { return schoolRowHTML(c, locked); }).join('') +
-      '<div class="sv-foot">' +
-        '<p class="sv-note">' + (locked
-          ? '🔒 ' + esc(deadlineText()) + '이 지나서 아침 체크는 잠겼어요. 부모님 모드에서는 언제든 체크할 수 있어요.'
-          : '하나 누를 때마다 별 ⭐ 1개! ' + schoolPrepItems(D.children[0].id).length + '개를 다 챙기면 보너스 별 ' + schoolRewardStars() + '개가 더 쌓여요.') + '</p>' +
-        (bothDone ? '<button type="button" class="btn btn-primary" data-act="school-go">학교 가자! 🎒</button>' : '') +
-      '</div>' +
+      (locked
+        ? '<div class="sv-foot"><p class="sv-note">🔒 ' + esc(deadlineText()) + '이 지나서 아침 체크는 잠겼어요. 부모님 모드에서는 언제든 체크할 수 있어요.</p></div>'
+        : '') +
     '</div>';
   }
 
@@ -5018,6 +5020,15 @@
   }
   function pkIcon(id) {
     return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + id + '.png';
+  }
+  /* 그 아이가 지금 키우는 포켓몬의 도감 번호 (알이면 25 피츄 기본) */
+  function pkSpriteId(childId) {
+    var p = pkOf(childId);
+    if (p && p.line) {
+      var sp = pkSpecies(p);
+      if (sp && sp.id) return sp.id;
+    }
+    return 25;
   }
   function pkPerLevel() {
     return clampNum((S && S.pkCfg && S.pkCfg.perLevel), 10, 1000, 100);

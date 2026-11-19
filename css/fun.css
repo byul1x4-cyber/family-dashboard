@@ -2292,3 +2292,83 @@
   .kids-compact { grid-template-columns: 1fr; }
   .km-ava { width: 38px; height: 38px; }
 }
+
+/* =========================================================
+   2026-11-19 밤 2차 — 밀도 조정 · 등교 화면 깔끔화 · 포켓몬 러너
+   ========================================================= */
+
+/* ---- 큰 시계 옆 🧹 정리 하나만 (시계와 같은 높이) ---- */
+.hero-quick { justify-content: stretch; }
+.hero-quick .qb-btn { flex: 1; justify-content: center; gap: 6px; font-size: 13px; padding: 4px 12px; }
+.hero-quick .qb-ico { font-size: 17px; }
+
+/* ---- 상단 줄 조금 더 얇게 (한 줄 고정) ---- */
+@media (min-width: 1000px) {
+  .tabrow { flex-wrap: nowrap; gap: 6px; }
+  .tabrow .tab { padding: 5px 8px; font-size: 11.5px; gap: 3px; }
+  .tabrow .tab span { font-size: 13px; }
+  .tabrow .mode-btn { padding: 5px 8px; font-size: 11.5px; }
+  .tabrow .stop-timer, .tabrow .banner-btn { padding: 5px 9px; font-size: 11.5px; }
+  .tabrow .tabs { flex: 0 1 auto; }
+  .tabrow .mode-bar { margin-left: auto; }
+  .topstack { padding: 4px 7px; }
+  .clock.big { padding: 3px 13px 4px; }
+  .clock.big .clock-time { font-size: 34px; }
+  .clock.big .clock-date { font-size: 12px; }
+  .wx-hero { padding: 4px 11px; }
+  .wx-h-temp { font-size: 25px; }
+}
+
+/* ---- 홈 두 열: 여백만 줄여 한 화면에 (글씨는 키운 그대로) ---- */
+@media (min-width: 1000px) {
+  .home-main2 { gap: 10px; }
+  .hm-col { gap: 8px; }
+  .card-head { margin-bottom: 6px; }
+  .card-head .ico { font-size: 20px; }
+  .month-card .mini-cal { gap: 2px; }
+  .mini-day { min-height: 20px; }
+  .hm-col .day-block { padding: 5px 8px 6px; }
+  .hm-col .day-head { margin-bottom: 3px; }
+  .hm-col .day-head b { font-size: 15.5px; }
+  .hm-col .day-ev { padding: 4px 8px; margin-bottom: 3px; }
+  .hm-col .day-list { gap: 5px; }
+  .notice-card .notice-list { gap: 5px; }
+  .notice-card .notice-item { padding: 7px 10px; }
+  .km-ava { width: 38px; height: 38px; }
+  .kid-mini { padding: 7px 9px; }
+  .ps-ava { width: 44px; height: 44px; font-size: 24px; }
+  .parent-sq { padding: 8px 6px 7px; }
+  .ps-ago { font-size: 9.5px; }
+}
+
+/* ---- 등교 화면: 큰 배너 없이 안내 한 줄 + 카드 4장×2 ---- */
+.sv-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+.sv-mini-txt { font-size: 13px; font-weight: 800; color: #8A6A3C; }
+.sv-mini .sv-actions { margin-left: auto; display: flex; gap: 6px; }
+.sv-all {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #FFFBEA, #FFF3CF);
+  border: 2px solid #FFE9A8;
+  font-size: 14px;
+  font-weight: 800;
+  color: #8A6412;
+  text-align: center;
+}
+.school-view .sc-cards { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.school-view .sc-row { margin-bottom: 10px; }
+.sv-foot { margin-top: 2px; }
+.sv-foot .sv-note { font-size: 12.5px; }
+
+/* ---- 등교 타이머 바: 미니 포켓몬 러너 + 🏫 ---- */
+.sb-runner { line-height: 0; animation: tbarHop .58s ease-in-out infinite; }
+.sb-runner img { width: 26px; height: 26px; display: block; }
+.sb-flag { position: absolute; right: -4px; top: 50%; transform: translateY(-50%); font-size: 15px; line-height: 1; }
