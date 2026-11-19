@@ -1314,8 +1314,10 @@
   }
 
   /* ---- 홈: 오늘 날씨 · 옷차림 · 시간대별 ---- */
-  function wxEmoji(kind, hour) {
-    var night = typeof hour === 'number' && (hour < 7 || hour >= 19);
+  function wxEmoji(kind, isDay, hour) {
+    /* is_day(해가 떠 있는지) 값이 오면 그걸 쓰고, 없으면 시각으로 판단해요 */
+    var night = isDay === true ? false : isDay === false ? true
+      : (typeof hour === 'number' && (hour < 7 || hour >= 18));
     if (kind === 'rain') return '🌧️';
     if (kind === 'snow') return '🌨️';
     if (kind === 'sun') return night ? '🌙' : '☀️';
@@ -1328,7 +1330,7 @@
         return '<div class="wx-hr' + (h.now ? ' now' : '') + '" role="listitem">' +
           '<span class="wx-hr-t">' + (h.now ? '지금' : h.hour + '시') +
             (h.tomorrow ? '<i>내일</i>' : '') + '</span>' +
-          '<span class="wx-hr-i" aria-hidden="true">' + wxEmoji(h.kind, h.hour) + '</span>' +
+          '<span class="wx-hr-i" aria-hidden="true">' + wxEmoji(h.kind, h.day, h.hour) + '</span>' +
           '<b class="wx-hr-tp">' + (h.temp == null ? '—' : h.temp + '°') + '</b>' +
           '<span class="wx-hr-pop">' + (h.pop == null ? '&nbsp;' : '☔ ' + h.pop + '%') + '</span>' +
         '</div>';

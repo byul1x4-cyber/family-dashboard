@@ -13,7 +13,7 @@ window.Weather = (function () {
   var PLACE = '도곡동';
   var URL_NOW = 'https://api.open-meteo.com/v1/forecast?latitude=' + LAT + '&longitude=' + LON +
     '&current=temperature_2m,apparent_temperature,weather_code,relative_humidity_2m' +
-    '&hourly=temperature_2m,weather_code,precipitation_probability' +
+    '&hourly=temperature_2m,weather_code,precipitation_probability,is_day' +
     '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
     '&timezone=Asia%2FSeoul&forecast_days=2';
   var URL_AIR = 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + LAT + '&longitude=' + LON +
@@ -127,6 +127,7 @@ window.Weather = (function () {
     var temps = h.temperature_2m || [];
     var codes = h.weather_code || [];
     var pops = h.precipitation_probability || [];
+    var days = h.is_day || [];
     var nowMs = Date.now();
     var start = 0;
     for (var i = 0; i < times.length; i++) {
@@ -150,6 +151,7 @@ window.Weather = (function () {
         tomorrow: dayKey(dt) !== todayStr,
         temp: typeof temps[idx] === 'number' ? Math.round(temps[idx]) : null,
         pop: pp,
+        day: days[idx] == null ? null : Number(days[idx]) === 1,
         kind: sk.kind,
         label: sk.label
       });

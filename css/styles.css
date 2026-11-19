@@ -1945,7 +1945,7 @@ body.timer-ringing { overflow: hidden; }
   .wx-now { margin-left: 0; width: 100%; justify-content: flex-start; gap: 8px; }
   .wx-art { width: 48px; height: 48px; }
   .wx-temp { font-size: 34px; }
-  .wx-hours { grid-template-columns: repeat(6, minmax(54px, 1fr)); }
+  .wx-hours { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
   .wx-hr { padding: 6px 1px 5px; border-radius: 13px; }
   .wx-tip { font-size: 11.5px; }
   .status-chip { padding: 8px 9px; }
