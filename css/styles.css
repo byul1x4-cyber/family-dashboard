@@ -1353,7 +1353,7 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 }
 
 .mail-compose-foot { display: flex; align-items: center; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
-.mail-compose-foot .counter { font-size: 11.5px; color: var(--ink-faint); flex: 1; }
+.mail-compose-foot .counter { font-size: 11.5px; color: var(--ink-faint); flex: 1; white-space: nowrap; }
 
 /* 가족방 말풍선 */
 .room-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
