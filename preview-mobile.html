@@ -3,15 +3,20 @@
 <style>
   body { margin: 0; background: #2a2a2a; display: flex; gap: 16px; padding: 12px; font-family: sans-serif; }
   .wrap { background: #000; border-radius: 22px; padding: 6px; }
-  iframe { display: block; width: 390px; height: 844px; border: 0; border-radius: 18px; background: #fff; }
-  .cap { color: #ddd; font-size: 12px; }
+  iframe { display: block; width: 390px; border: 0; border-radius: 18px; background: #fff; }
+  .cap { color: #ddd; font-size: 12px; margin-bottom: 4px; }
 </style></head>
 <body>
-  <div><div class="cap">390×844 (아이폰 폭)</div>
-    <div class="wrap"><iframe id="a" src="about:blank"></iframe></div>
+  <div><div class="cap" id="cap">390px</div>
+    <div class="wrap"><iframe id="a" src="about:blank" style="height:844px"></iframe></div>
   </div>
 <script>
-  var q = location.search.replace(/^\?/, '');
-  document.getElementById('a').src = 'preview-pokemon.html?view=pokemon' + (q ? '&' + q : '');
+  var p = new URLSearchParams(location.search);
+  var h = Number(p.get('h')) || 844;
+  p.delete('h');
+  var f = document.getElementById('a');
+  f.style.height = h + 'px';
+  document.getElementById('cap').textContent = '390 × ' + h;
+  f.src = 'preview-pokemon.html?view=pokemon' + (p.toString() ? '&' + p.toString() : '');
 </script>
 </body></html>

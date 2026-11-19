@@ -114,6 +114,18 @@
 /* ===== 임시 미리보기용 저장소 스텁 (확인 후 삭제) =====
    실제 Firestore·localStorage 가족 상태는 건드리지 않고, 주소의 ?fed=·?per=·?mode= 값으로만 화면을 그립니다. */
 (function () {
+  window.__errs = [];
+  window.addEventListener('error', function (e) {
+    if (e && e.target && e.target.tagName === 'IMG') { window.__errs.push('IMGFAIL ' + (e.target.src || '')); return; }
+    window.__errs.push('ERR ' + ((e && e.message) || '') + ' @ ' + ((e && e.filename) || '') + ':' + ((e && e.lineno) || ''));
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    window.__errs.push('REJ ' + ((r && (r.message || r.code)) || r));
+  });
+  var ce = console.error;
+  console.error = function () { window.__errs.push('console.error ' + Array.prototype.join.call(arguments, ' ')); ce.apply(console, arguments); };
+
   var q = new URLSearchParams(location.search);
   var num = function (k, d) { var v = Number(q.get(k)); return isFinite(v) && q.get(k) !== null && q.get(k) !== '' ? v : d; };
   var per = num('per', 100);
@@ -143,7 +155,6 @@
   Object.defineProperty(Storage, 'mode', { get: function () { return 'local'; }, configurable: true });
   Storage.status = { mode: 'local', secure: true, hasGate: true, familyId: 'fam_preview', projectId: 'preview', error: null, lastSyncAt: null };
   document.title = '우리집 다모아 · 미리보기(테스트)';
-  if (q.get('view')) sessionStorage.setItem('preview-view', q.get('view'));
 })();
 </script>
 <script src="js/app.js?v=7"></script>
