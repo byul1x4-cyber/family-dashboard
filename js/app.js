@@ -2482,8 +2482,7 @@
           '</div>' +
         '</div>' +
         '<div class="mail-compose-foot">' +
-          '<span class="counter" id="mailCounter">' + (window.__pictos || []).length + '개 골랐어요</span>' +
-          '<button type="button" class="btn btn-soft btn-sm" data-act="send-hand">✍️ 손글씨 보내기</button>' +
+          '<span class="counter" id="mailCounter">' + mailDraftSummary() + '</span>' +
           '<button type="button" class="btn btn-rose" data-act="send-mail">편지 보내기 💌</button>' +
         '</div>' +
       '</div>' +
@@ -2672,25 +2671,51 @@
     }
   }
 
+  /* 하단 한 줄: 지금 담긴 내용(그림·손글씨·글)을 알려 줍니다 */
+  function mailDraftSummary() {
+    var parts = [];
+    var n = (window.__pictos || []).length;
+    if (n) parts.push('그림 ' + n + '개');
+    if (HW.ink) parts.push('손글씨');
+    var t = ((document.getElementById('mailText') || {}).value || '').trim();
+    if (t) parts.push('짧은 글');
+    if (!parts.length) return '그림·글·손글씨를 한 번에 보내요';
+    return parts.join(' · ') + ' 담았어요';
+  }
+  function refreshMailCounter() {
+    var el = document.getElementById('mailCounter');
+    if (el) el.textContent = mailDraftSummary();
+  }
+
   function sendLetter() {
-    if (!window.__pictos || !window.__pictos.length) {
-      var txt0 = (document.getElementById('mailText') || {}).value || '';
-      if (!txt0.trim()) { UI.toast('보낼 글을 적거나 그림·손글씨를 준비해 주세요', { emoji: '💌', kind: 'warn' }); return; }
-    }
     var pictos = (window.__pictos || []).slice();
     var text = ((document.getElementById('mailText') || {}).value || '').trim();
+    var hw = HW.ink ? hwExport() : '';
+    if (!pictos.length && !text && !hw) {
+      UI.toast('보낼 그림·글·손글씨 중 하나는 있어야 해요', { emoji: '💌', kind: 'warn' }); return;
+    }
     var rec = mailPickList().filter(function (r) { return r.id === mailPickId(); })[0] || mailPickList()[0];
     var sender = mailPerson(mailSenderId());
-    S.messages.unshift({
+    var letter = {
       id: UI.uid('letter'),
       fromId: sender.id, fromName: sender.name,
       toId: rec.id, toName: rec.name,
       pictos: pictos, text: text,
       ts: Date.now(), read: false, replies: []
-    });
-    var newId = S.messages[0].id;
+    };
+    if (hw) letter.hw = hw;                    /* 그려 둔 손글씨도 함께 첨부 */
+    S.messages.unshift(letter);
+    var newId = letter.id;
     window.__pictos = [];
     mailDraft = '';
+    var tIn = document.getElementById('mailText');
+    if (tIn) tIn.value = '';
+    if (hw) {                                  /* 보낸 손글씨는 종이에서 지움 */
+      HW.ink = false;
+      hwEnsure();
+      HW.dctx.fillStyle = '#FFFFFF';
+      HW.dctx.fillRect(0, 0, HW_W, HW_H);
+    }
     lastMsgAt = Date.now();
     save();
     render();
@@ -2698,7 +2723,7 @@
     UI.confetti(18);
     UI.toast(rec.name + '에게 편지를 보냈어요', { emoji: '💌', kind: 'good' });
     /* 📲 가족 폰·패드 잠금화면 알림 */
-    sendMailboxMessage('letter', { fromName: sender.name, toName: rec.name, text: text, count: pictos.length });
+    sendMailboxMessage('letter', { fromName: sender.name, toName: rec.name, text: text, count: pictos.length, hand: !!hw });
   }
 
   function sendReply(id, text, emoji) {
@@ -3895,6 +3920,7 @@
     if (hint) hint.style.display = HW.ink ? 'none' : '';
     var block = document.querySelector('.hw-block');
     if (block) block.classList.toggle('has-ink', !!HW.ink);
+    refreshMailCounter();   /* 하단 안내(손글씨 담김)도 함께 갱신 */
   }
   function hwPaintTools() {
     $$('.hw-swatch').forEach(function (b) {
@@ -3935,7 +3961,7 @@
   }
   function handLetterHTML() {
     return '<div class="hw-block">' +
-      '<div class="hw-head"><b>✍️ 손글씨</b><span>손가락·펜으로 적어요</span></div>' +
+      '<div class="hw-head"><b>✍️ 손글씨</b><span>적으면 편지에 함께 담겨요</span></div>' +
       '<div class="hw-tools">' +
         '<div class="hw-colors">' + HW_COLORS.map(function (c) {
           return '<button type="button" class="hw-swatch' + (!HW.eraser && HW.color === c ? ' active' : '') + '" style="background:' + c + '" data-act="hw-color" data-color="' + c + '" aria-label="연필 색"></button>';
@@ -3951,37 +3977,6 @@
         '<div class="hw-hint" id="hwHint">여기에 손가락으로 써 보세요 ✍️</div>' +
       '</div>' +
     '</div>';
-  }
-  function sendHandLetter() {
-    if (!HW.ink) {
-      UI.toast('먼저 손글씨로 편지를 써 주세요 ✍️', { emoji: '✍️', kind: 'warn' });
-      return;
-    }
-    var url = hwExport();
-    var text = ((document.getElementById('mailText') || {}).value || '').trim();
-    var rec = mailPickList().filter(function (r) { return r.id === mailPickId(); })[0] || mailPickList()[0];
-    var sender = mailPerson(mailSenderId());
-    S.messages.unshift({
-      id: UI.uid('letter'),
-      fromId: sender.id, fromName: sender.name,
-      toId: rec.id, toName: rec.name,
-      pictos: [], text: text, hw: url,
-      ts: Date.now(), read: false, replies: []
-    });
-    var tIn = document.getElementById('mailText');
-    if (tIn) tIn.value = '';
-    mailDraft = '';
-    lastMsgAt = Date.now();
-    HW.ink = false;
-    hwEnsure();
-    HW.dctx.fillStyle = '#FFFFFF';
-    HW.dctx.fillRect(0, 0, HW_W, HW_H);
-    save();
-    render();
-    scrollToMailBubble(S.messages[0].id);
-    UI.confetti(20);
-    UI.toast(rec.name + '에게 손글씨 편지를 보냈어요', { emoji: '✍️', kind: 'good' });
-    sendMailboxMessage('letter', { fromName: sender.name, toName: rec.name, text: text, hand: true });
   }
   function viewHandwriting(id) {
     var m = S.messages.filter(function (x) { return x.id === id; })[0];
@@ -4687,7 +4682,18 @@
 
   /* 화면을 다시 그린 뒤 해야 하는 일 (손글씨 캔버스 붙이기) */
   function afterRender() {
-    if (view === 'mailbox') hwMount();
+    if (view === 'mailbox') { hwMount(); bindMailText(); }
+  }
+
+  /* 글 칸에 적는 대로 하단 안내(짧은 글 담김)를 갱신 */
+  function bindMailText() {
+    var t = document.getElementById('mailText');
+    if (!t || t.__bound) return;
+    t.__bound = true;
+    t.addEventListener('input', function () {
+      mailDraft = t.value;
+      refreshMailCounter();
+    });
   }
 
   /* 두 모드를 여는 버튼 (홈 · 할 일 위쪽) */
@@ -5002,8 +5008,7 @@
         if (i >= 0) window.__pictos.splice(i, 1);
         else window.__pictos.push(pid);
         el.classList.toggle('active');
-        var cnt = document.getElementById('mailCounter');
-        if (cnt) cnt.textContent = (window.__pictos.length) + '개 골랐어요';
+        refreshMailCounter();
         break;
       }
       case 'send-mail': sendLetter(); break;
@@ -5017,7 +5022,6 @@
       case 'hw-size': HW.size = Number(el.getAttribute('data-size')) || 7; HW.eraser = false; hwPaintTools(); break;
       case 'hw-eraser': HW.eraser = !HW.eraser; hwPaintTools(); break;
       case 'hw-clear': hwReset(); UI.toast('종이를 새로 폈어요', { emoji: '📄', duration: 1500 }); break;
-      case 'send-hand': sendHandLetter(); break;
       case 'view-hw': viewHandwriting(el.getAttribute('data-id')); break;
 
       /* 🌅 등교 시작 · 🧹 정리시간 */
@@ -5369,7 +5373,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 41;             /* index.html 의 ?v=41 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 42;             /* index.html 의 ?v=42 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
