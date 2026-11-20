@@ -1353,6 +1353,185 @@
   100% { transform: translateY(-1px) rotate(-9deg); }
 }
 
+/* 🎉 둘 다 마쳤을 때: 길이 꽉 차고 게이지 가운데에 '다 했다! 학교 가자~' 말풍선 */
+.school-bar.done .sb-btn {
+  background: linear-gradient(160deg, #FFFDF2, #FFF6DA 58%, #FFF0F6);
+  border-color: #FFE9A8;
+}
+.sb-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  padding: 3px 12px 4px;
+  border-radius: 999px;
+  border: 2.5px solid #fff;
+  background: #FFF0B8;
+  color: #8A5A10;
+  font-family: var(--font-round);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.22;
+  letter-spacing: -.2px;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(190, 140, 60, .32);
+  animation: sbBadgeIn .44s cubic-bezier(.2, 1.6, .45, 1);
+  pointer-events: none;
+}
+.sb-badge[hidden] { display: none; }
+.sb-badge::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: #FFF0B8;
+  border-bottom: 0;
+}
+@keyframes sbBadgeIn {
+  0%   { transform: translate(-50%, -50%) scale(.35); opacity: 0; }
+  70%  { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* ---- 🎉 등교 준비 미션 성공 화면 ---- */
+.school-win { display: block; }
+.sw-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 60vh;
+  padding: 22px 20px 18px;
+  border-radius: 30px;
+  border: 3px solid #fff;
+  background-color: #FFFDFA;
+  background-image:
+    radial-gradient(rgba(226, 190, 120, .26) 1.5px, transparent 1.6px),
+    radial-gradient(circle at 50% -6%, rgba(255, 235, 175, .7), transparent 46%),
+    radial-gradient(circle at 50% 108%, rgba(178, 236, 210, .55), transparent 52%);
+  background-size: 20px 20px, 100% 100%, 100% 100%;
+  box-shadow: 0 16px 40px rgba(190, 150, 100, .22);
+  text-align: center;
+  animation: swCardIn .38s cubic-bezier(.2, 1.35, .45, 1);
+}
+@keyframes swCardIn {
+  0%   { transform: scale(.965); opacity: .2; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.sw-pika {
+  display: block;
+  height: clamp(120px, 21vh, 182px);
+  width: auto;
+  filter: drop-shadow(0 10px 12px rgba(190, 140, 60, .3));
+  animation: swPikaHop 1.9s ease-in-out infinite;
+}
+@keyframes swPikaHop {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50%      { transform: translateY(-7px) rotate(1.5deg); }
+}
+.sw-title {
+  margin: 4px 0 6px;
+  font-family: var(--font-round);
+  font-weight: 400;
+  font-size: clamp(24px, 3.4vw, 34px);
+  line-height: 1.16;
+  color: #2C9E68;
+  letter-spacing: -.4px;
+  text-shadow: 0 2px 0 #fff;
+  word-break: keep-all;
+}
+.sw-sub {
+  margin: 0 0 16px;
+  font-size: 14.5px;
+  font-weight: 800;
+  line-height: 1.5;
+  color: #7A6A58;
+  word-break: keep-all;
+}
+.sw-sub b { color: #C4741F; font-weight: 900; }
+.sw-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 0 30px;
+  border-radius: 999px;
+  border: 3px solid #fff;
+  background: linear-gradient(180deg, #FFE896, #FFCB43 58%, #F3B41C);
+  color: #6B4A08;
+  font-family: var(--font-round);
+  font-weight: 400;
+  font-size: 23px;
+  letter-spacing: -.2px;
+  box-shadow: 0 7px 0 #E0A318, 0 14px 24px rgba(210, 160, 50, .34);
+  transition: transform .1s, box-shadow .12s;
+}
+.sw-play:hover { transform: translateY(-2px); box-shadow: 0 9px 0 #E0A318, 0 17px 26px rgba(210, 160, 50, .36); }
+.sw-play:active { transform: translateY(4px); box-shadow: 0 2px 0 #E0A318, 0 6px 12px rgba(210, 160, 50, .3); }
+.sw-play i {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: rgba(120, 80, 8, .2);
+  color: #fff;
+  font-style: normal;
+  font-size: 10px;
+  text-shadow: 0 1px 2px rgba(90, 60, 0, .4);
+}
+.sw-list {
+  margin-top: 10px;
+  padding: 4px 10px;
+  border: 0;
+  background: transparent;
+  color: #A08E78;
+  font-size: 12.5px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(160, 142, 120, .5);
+}
+.sw-list:hover { color: #7A6A58; }
+.sw-kids { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
+.sw-kid {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  background: #EAFBF2;
+  color: #2C8563;
+  font-size: 12.5px;
+  font-weight: 800;
+  box-shadow: 0 3px 9px rgba(140, 180, 160, .2);
+}
+.sw-kid.coral { background: #FFF1EC; color: #B9603F; }
+.sw-kid b { font-weight: 900; font-variant-numeric: tabular-nums; }
+.sw-kid i { font-style: normal; color: #2FAE7B; }
+.sw-kid.coral i { color: #E06D45; }
+.sw-settings {
+  margin-top: 10px;
+  border: 0;
+  background: transparent;
+  color: #8C8378;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* 움직임 줄이기를 켠 기기에서는 축하 애니메이션을 멈춰요 */
+@media (prefers-reduced-motion: reduce) {
+  .sw-card, .sw-pika, .sb-badge, .scard.next, .scard-next { animation: none !important; }
+}
+
 /* ---- 할 일 탭 안의 등교 화면 ---- */
 .school-view { animation: scFade .22s ease-out; }
 .sv-head {
@@ -1405,7 +1584,7 @@
 .sc-rowbar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #9BE3BF, #57C795); transition: width .35s; }
 
 /* ---- 10분할 큰 그림 카드 ---- */
-.sc-cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.sc-cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 20px 10px; margin-top: 6px; }
 .scard {
   position: relative;
   display: grid;
@@ -1473,6 +1652,48 @@
 .scard.locked .scard-svg { filter: grayscale(.55); opacity: .7; }
 .scard.locked .scard-cta { background: #EEE9E1; color: #8C8378; }
 
+/* 👉 지금 차례인 카드: 노란 테두리 + '같이 하자!' 말풍선 (+ 미니 피카추) */
+.scard.next {
+  overflow: visible;
+  z-index: 3;
+  border-color: #FFD24A;
+  background: linear-gradient(#FFFDF4, #FFF5D6);
+  box-shadow: 0 9px 22px rgba(230, 170, 40, .28), 0 0 0 4px rgba(255, 214, 102, .34);
+  animation: scNextGlow 2.2s ease-in-out infinite;
+}
+.scard.next .scard-cta { background: #FFE484; color: #6B4A08; }
+.scard.next .scard-num { border-color: #FFC93F; background: #FFE9A8; }
+@keyframes scNextGlow {
+  0%, 100% { box-shadow: 0 9px 22px rgba(230, 170, 40, .24), 0 0 0 4px rgba(255, 214, 102, .32); }
+  50%      { box-shadow: 0 11px 26px rgba(230, 170, 40, .34), 0 0 0 8px rgba(255, 214, 102, .2); }
+}
+.scard-next {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 10px 2px 3px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  background: linear-gradient(180deg, #FFE888, #FFCE4A);
+  color: #6B4A08;
+  font-size: 11.5px;
+  font-weight: 900;
+  line-height: 1.3;
+  white-space: nowrap;
+  box-shadow: 0 3px 8px rgba(200, 150, 50, .38);
+  animation: scNextBob 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+.scard-next img { display: block; height: 18px; width: auto; }
+@keyframes scNextBob {
+  0%, 100% { transform: translate(-50%, 0); }
+  50%      { transform: translate(-50%, -3px); }
+}
+
 .tab.locked { position: relative; }
 .tab.locked::after {
   content: "🔒";
@@ -1490,7 +1711,7 @@
   .sb-big { font-size: 27px; }
 }
 @media (max-width: 619px) {
-  .sc-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .sc-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px 8px; }
   .scard { flex: 0 0 calc(50% - 4px); }
   .scard-title { font-size: 13px; }
   /* 폰: 글자 → 게이지 순서로 위아래로 쌓여도 피카츄가 잘 보이고 잘리지 않게 */
@@ -1505,6 +1726,15 @@
   .sv-head { padding: 8px 10px; }
   .sv-h1t b { font-size: 19px; }
   .sv-actions .btn { font-size: 12px; padding: 7px 10px; }
+  /* 폰: 등교 준비 미션 성공 화면 */
+  .sw-card { padding: 18px 14px 16px; border-radius: 24px; min-height: 56vh; }
+  .sw-pika { height: clamp(108px, 19vh, 150px); }
+  .sw-title { font-size: 26px; }
+  .sw-sub { font-size: 13.5px; margin-bottom: 14px; }
+  .sw-play { min-height: 54px; padding: 0 26px; font-size: 21px; gap: 8px; }
+  .sw-play i { width: 22px; height: 22px; font-size: 9px; }
+  .sw-kids { margin-top: 14px; }
+  .sb-badge { font-size: 12.5px; padding: 2px 10px 3px; }
 }
 
 /* ⭐ 별 없는 체크(알림장 체크) 표시 */
