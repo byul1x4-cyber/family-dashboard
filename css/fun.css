@@ -1319,7 +1319,8 @@
   position: absolute;
   top: 50%;
   left: 0%;
-  z-index: 2;
+  /* v83: 가운데 말풍선(.sb-badge, z=3)을 지날 때도 피카츄가 앞에 보이게 */
+  z-index: 4;
   line-height: 0;
   font-weight: 400;
   transform: translate(-50%, -50%);
@@ -1601,8 +1602,31 @@
 }
 .scard:hover { transform: translateY(-2px); box-shadow: 0 12px 22px rgba(150, 120, 80, .18); }
 .scard:active { transform: scale(.975); }
-.scard-art { display: block; }
+.scard-art { display: block; position: relative; }
 .scard-svg { display: block; width: 100%; height: auto; border-radius: 16px; }
+/* v83: 새 동화풍 일러스트 — 카드 폭에 꽉 차게, 둥근 모서리 */
+.scard-img { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 16px; }
+/* 그림이 안 열릴 때만 예전 SVG 그림이 보여요 (.img-fail) */
+.scard-art .scard-svg-fallback { display: none; }
+.scard-art.img-fail .scard-img { display: none; }
+.scard-art.img-fail .scard-svg-fallback { display: block; }
+/* 카드 오른쪽 위 귀퉁이 미니 포켓몬 */
+.scard-mini {
+  position: absolute;
+  top: 6px; right: 6px;
+  z-index: 2;
+  width: 30px; height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .94);
+  border: 2px solid #fff;
+  box-shadow: 0 3px 8px rgba(120, 90, 50, .26);
+  pointer-events: none;
+}
+.scard-mini img { display: block; width: 26px; height: 26px; }
+/* 다 한 카드는 그 자리에 ✓ 가 뜨므로 미니 포켓몬은 잠깐 숨겨요 */
+.scard.done .scard-mini { display: none; }
 .scard-num {
   position: absolute;
   top: 12px; left: 12px;
@@ -1647,9 +1671,9 @@
 .scard.done { background: linear-gradient(160deg, #EAFBF2, #F8FFFB); border-color: #B7E7CE; }
 .scard.done .scard-title { color: #2C8563; }
 .scard.done .scard-cta { background: #D6F5E5; color: #2C8563; }
-.scard.done .scard-svg { opacity: .92; }
+.scard.done .scard-svg, .scard.done .scard-img { opacity: .92; }
 .scard.locked { background: #FAF7F2; border-color: #E5DED4; border-style: dashed; }
-.scard.locked .scard-svg { filter: grayscale(.55); opacity: .7; }
+.scard.locked .scard-svg, .scard.locked .scard-img { filter: grayscale(.55); opacity: .7; }
 .scard.locked .scard-cta { background: #EEE9E1; color: #8C8378; }
 
 /* 👉 지금 차례인 카드: 노란 테두리 + '같이 하자!' 말풍선 (+ 미니 피카추) */

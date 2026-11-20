@@ -4380,6 +4380,29 @@
     if (/-bag/.test(id) || /가방|물통|챙/.test(label)) return 'bag';
     return ['wake', 'wash', 'dress', 'eat', 'bag'][idx % 5];
   }
+  /* 🎨 v83: 등교 준비 카드 그림을 새 동화풍 일러스트(480px WebP)로.
+     그림이 안 열리면 예전 SVG 그림(Art.schoolArt)으로 조용히 돌아갑니다. */
+  var SCHOOL_IMG = {
+    wash: 'assets/school/wash.webp',
+    dress: 'assets/school/dress.webp',
+    eat: 'assets/school/breakfast.webp',
+    bag: 'assets/school/bag.webp'
+  };
+  /* 카드 오른쪽 위 귀퉁이에 살짝 얹는 미니 포켓몬 */
+  var SCHOOL_MINI = { wash: 'eevee', dress: 'charmander', eat: 'chikorita', bag: 'pikachu' };
+  function schoolArtHTML(kind, childId) {
+    var svg = Art.schoolArt(kind, childId);
+    var src = SCHOOL_IMG[kind];
+    if (!src) return svg;
+    var mini = SCHOOL_MINI[kind];
+    return '<img class="scard-img" src="' + src + '?v=' + APP_ASSET_VERSION + '" alt="" width="480" height="480" decoding="async"' +
+        ' onerror="this.style.display=\'none\';this.parentNode.classList.add(\'img-fail\')">' +
+      '<span class="scard-svg-fallback">' + svg + '</span>' +
+      (mini
+        ? '<span class="scard-mini" aria-hidden="true"><img src="assets/pokemon/' + mini + '.png?v=' + APP_ASSET_VERSION +
+          '" alt="" width="96" height="96"></span>'
+        : '');
+  }
   function schoolCardHTML(c, item, idx, locked, isNext) {
     var today = todayKey();
     var done = isDone(item.id, today);
@@ -4392,7 +4415,7 @@
         (nextNow ? '<span class="scard-next"><img src="assets/pokemon/25.png" alt="">같이 하자!</span>' : '') +
         '<span class="scard-num" aria-hidden="true">' + (idx + 1) + '</span>' +
         (done ? '<span class="scard-check" aria-hidden="true">✓</span>' : '') +
-        '<span class="scard-art" aria-hidden="true">' + Art.schoolArt(prepKind(item, idx), c.id) + '</span>' +
+        '<span class="scard-art" aria-hidden="true">' + schoolArtHTML(prepKind(item, idx), c.id) + '</span>' +
         '<span class="scard-body">' +
           '<b class="scard-title">' + esc(item.label) + '</b>' +
           '<span class="scard-cta">' + (done ? '✓ 다 했어요' : (lockThis ? '🔒 ' + esc(deadlineText()) + ' 마감' : '눌러서 완료')) + '</span>' +
@@ -6721,7 +6744,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 82;             /* index.html 의 ?v=82 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 83;             /* index.html 의 ?v=83 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
