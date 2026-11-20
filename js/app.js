@@ -804,19 +804,25 @@
     return { morning: (r.morning || []).slice(), evening: (r.evening || []).slice() };
   }
 
-  /* ⏰ 아침 별 체크 마감 — 등교 시작 시각(기본 08:30)이 지났는지 */
-  function schoolDeadlinePassed() {
+  /* ⏰ 아이 모드 아침 별 체크 마감 — 오전 09:00(540분)부터 잠깁니다.
+     등교 시작 모드(기본 08:30 타이머·게이지·자동 열림/닫힘)와는 따로 움직입니다. */
+  var MORNING_DEADLINE_TEXT = '09:00';
+  var MORNING_DEADLINE_MIN = 9 * 60;
+  function morningDeadlinePassed() {
     var now = new Date();
     var mins = now.getHours() * 60 + now.getMinutes();
-    return mins >= schoolTargetMin();
+    return mins >= MORNING_DEADLINE_MIN;
   }
   /* 아이 모드에서만 아침 체크를 막습니다 (부모님 모드는 언제든 체크·해제) */
   function morningLocked() {
-    return S.mode !== 'parent' && schoolDeadlinePassed();
+    return S.mode !== 'parent' && morningDeadlinePassed();
   }
+  /* 등교 시작 모드의 안내 시각 (기본 08:30) */
   function deadlineText() { return (S && S.schoolTime) || '08:30'; }
+  /* 아이 모드 아침 체크 마감 안내 시각 (09:00 고정) */
+  function morningDeadlineText() { return MORNING_DEADLINE_TEXT; }
   function morningLockToast() {
-    UI.toast(deadlineText() + '이 지나서 아이 모드에선 체크할 수 없어요. 부모님께 부탁해 보세요!',
+    UI.toast(morningDeadlineText() + '이 지나서 아이 모드에선 체크할 수 없어요. 부모님께 부탁해 보세요!',
       { emoji: '🔒', kind: 'warn', duration: 3800 });
   }
   function morningItemIds(childId) {
@@ -2460,7 +2466,7 @@
     return '<div class="routine-group' + (locked ? ' rg-locked' : '') + '">' +
       '<div class="rg-head"><span class="ico">' + emoji + '</span>' + esc(title) +
         ' <span class="badge mint" style="margin-left:4px">' + doneCnt + '/' + list.length + '</span>' +
-        (locked ? '<span class="badge lock" style="margin-left:4px">🔒 ' + esc(deadlineText()) + ' 마감</span>' : '') +
+        (locked ? '<span class="badge lock" style="margin-left:4px">🔒 ' + esc(morningDeadlineText()) + ' 마감</span>' : '') +
       '</div>' +
       '<div class="routine-list">' + list.map(function (i) {
         var done = isDone(i.id, today);
@@ -4423,7 +4429,7 @@
           (done ? '<span class="scard-check">✓</span>' : '') + '</span>' +
         '<span class="scard-body">' +
           '<b class="scard-title">' + esc(item.label) + '</b>' +
-          '<span class="scard-cta">' + (done ? '✓ 다 했어요' : (lockThis ? '🔒 ' + esc(deadlineText()) + ' 마감' : '눌러서 완료')) + '</span>' +
+          '<span class="scard-cta">' + (done ? '✓ 다 했어요' : (lockThis ? '🔒 ' + esc(morningDeadlineText()) + ' 마감' : '눌러서 완료')) + '</span>' +
         '</span>' +
       '</button>';
   }
@@ -4463,7 +4469,7 @@
     return '<div class="school-view">' +
       '<div class="sv-mini">' +
         '<span class="sv-mini-txt">☀️ ' + esc(deadlineText()) + '까지 준비' +
-          (locked ? ' · 🔒 마감' : '') + ' · 카드를 눌러 완료!' + (bothDone ? ' 🎉 다 했어요!' : '') + '</span>' +
+          (locked ? ' · 🔒 ' + esc(morningDeadlineText()) + ' 마감' : '') + ' · 카드를 눌러 완료!' + (bothDone ? ' 🎉 다 했어요!' : '') + '</span>' +
         '<div class="sv-actions">' +
           (S.mode === 'parent' ? '<button type="button" class="btn btn-ghost btn-sm" data-act="school-settings">⚙️ 등교 설정</button>' : '') +
           (lockedOpen ? '' : '<button type="button" class="btn btn-ghost btn-sm" data-act="school-close">일반 목록으로</button>') +
@@ -4471,7 +4477,7 @@
       '</div>' +
       D.children.map(function (c) { return schoolRowHTML(c, locked); }).join('') +
       (locked
-        ? '<div class="sv-foot"><p class="sv-note">🔒 ' + esc(deadlineText()) + '이 지나서 아침 체크는 잠겼어요. 부모님 모드에서는 언제든 체크할 수 있어요.</p></div>'
+        ? '<div class="sv-foot"><p class="sv-note">🔒 ' + esc(morningDeadlineText()) + '이 지나서 아침 체크는 잠겼어요. 부모님 모드에서는 언제든 체크할 수 있어요.</p></div>'
         : '') +
     '</div>';
   }
@@ -7144,7 +7150,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 88;             /* index.html 의 ?v=88 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 89;             /* index.html 의 ?v=89 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
