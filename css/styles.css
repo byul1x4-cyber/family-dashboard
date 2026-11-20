@@ -441,6 +441,36 @@ img { max-width: 100%; }
 /* 입력 */
 .field { margin-bottom: 10px; }
 .field label { display: block; font-size: 12px; font-weight: 800; color: var(--ink-soft); margin-bottom: 5px; }
+/* ---------------------------------------------------------
+   iOS Safari: 날짜·시간 입력칸(input[type=date/time/datetime-local])은
+   자기 고유 폭(min-width)을 고집해 카드·모달 오른쪽을 뚫고 가로 스크롤을 만듭니다.
+   앱 어디에 있든(모달·설정·일정 추가) 자기 칸 폭을 넘지 않게 잠급니다.
+   --------------------------------------------------------- */
+.field,
+.field-row,
+.field-row > * { min-width: 0; max-width: 100%; box-sizing: border-box; }
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+/* 아이폰·아이패드 사파리에서만 네이티브 휠 표시 폭을 유연하게 (크롬은 시계 아이콘 그대로) */
+@supports (-webkit-touch-callout: none) {
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
 .input, .select, .textarea {
   width: 100%;
   padding: 11px 13px;
@@ -1858,6 +1888,29 @@ details.more > summary { cursor: pointer; font-size: 12.5px; font-weight: 800; c
 .modal-text { font-size: 13.5px; line-height: 1.7; }
 .modal-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
 .modal-actions .btn { flex: 1; min-width: 110px; }
+
+/* ---------------------------------------------------------
+   iOS Safari: input[type="time"](오전 8:30) 같은 입력칸이 자기 고유 폭을
+   고집해 모달 오른쪽 경계를 뚫고 가로 스크롤바를 만드는 문제 방지.
+   모달 안에서는 어떤 입력칸도 자기 칸 폭을 넘지 않게 잠급니다.
+   --------------------------------------------------------- */
+.modal { overflow-x: hidden; }
+.modal-body { overflow-x: hidden; max-width: 100%; }
+.modal-body .field,
+.modal-body .field-row,
+.modal-body .field-row > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.modal-body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not(.ed-emoji),
+.modal-body select,
+.modal-body textarea {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
 
 .toast {
   display: flex; align-items: center; gap: 8px;

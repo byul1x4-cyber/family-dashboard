@@ -98,8 +98,8 @@
       tidyCfg: { mins: [5, 10, 15], reward: 3, rewardLate: 1, music: true },
       /* ⚡ 포켓몬 설정 */
       pkCfg: { perLevel: 100 },
-      /* 🌅 등교 준비 다 끝냈을 때 보너스 별 */
-      schoolReward: 2
+      /* 🌅 등교 준비 다 끝냈을 때 보너스 별 (기본 1개) */
+      schoolReward: 1
     };
   }
 
@@ -2686,9 +2686,17 @@
       if (!isNoStarItem(childId, itemId)) takeStarsNote(childId, 1);   /* 별 없는 항목은 그대로 */
       var key = today + ':' + childId;
       delete S.celebrated[key];
+      /* 🌅 등교 준비 항목을 풀어서 '다 못 한' 상태가 되면 그날 받은 보너스 별도 회수 */
+      var wasPrep = schoolPrepItems(childId).some(function (i) { return i.id === itemId; });
+      var back = wasPrep ? revokeSchoolBonus(childId) : 0;
       save();
       render({ keepScroll: true });
-      UI.toast('완료를 되돌렸어요');
+      if (back > 0) {
+        UI.toast(childById(childId).name + ' 등교 준비가 풀려서 보너스 별 ' + back + '개도 함께 회수했어요',
+          { emoji: '↩️', kind: 'warn', duration: 3200 });
+      } else {
+        UI.toast('완료를 되돌렸어요');
+      }
     }
   }
 
@@ -4225,19 +4233,41 @@
     var t = todayKey();
     return !!(S.schoolBonus && S.schoolBonus[t] && S.schoolBonus[t][childId]);
   }
-  /* 아침 할 일을 다 끝냈으면 하루 한 번 보너스 별 */
+  /* 아침 할 일을 다 끝냈으면 하루 한 번 보너스 별 (기본 1개) */
   function schoolRewardStars() {
-    return clampNum(S.schoolReward, 0, 20, 2);
+    return clampNum(S.schoolReward, 0, 20, 1);
+  }
+  /* 그날 실제로 지급한 보너스 별 개수.
+     v79부터는 { v: 1, amt: n } 으로 적어 두고, v78까지의 flag(숫자 1)는
+     '그때 설정값만큼 줬다'로 보고 지금 설정값으로 되돌려 계산합니다. */
+  function schoolBonusAmount(childId) {
+    var t = todayKey();
+    var v = (S.schoolBonus && S.schoolBonus[t]) ? S.schoolBonus[t][childId] : null;
+    if (v && typeof v === 'object') return clampNum(v.amt, 0, 20, schoolRewardStars());
+    if (v) return schoolRewardStars();   /* v78 이전 flag(1) */
+    return 0;
   }
   function grantSchoolBonus(childId) {
     if (!schoolAllDone(childId) || schoolBonusGiven(childId)) return false;
     var t = todayKey();
+    var amt = schoolRewardStars();
     S.schoolBonus = S.schoolBonus || {};
     S.schoolBonus[t] = S.schoolBonus[t] || {};
-    S.schoolBonus[t][childId] = 1;
-    S.stars[childId] = (S.stars[childId] || 0) + schoolRewardStars();
+    S.schoolBonus[t][childId] = { v: 1, amt: amt };
+    S.stars[childId] = (S.stars[childId] || 0) + amt;
     save();
     return true;
+  }
+  /* 등교 준비를 하나라도 풀어 '다 못 한' 상태가 되면 그날 받은 보너스 별을 그대로 회수.
+     보유 별이 모자라면 spendStars 가 포켓몬에게 먹인 별에서 이어서 뺍니다.
+     돌려준 개수를 반환해요 (0이면 회수할 게 없었음). */
+  function revokeSchoolBonus(childId) {
+    if (!schoolBonusGiven(childId) || schoolAllDone(childId)) return 0;
+    var t = todayKey();
+    var amt = schoolBonusAmount(childId);
+    if (amt > 0) spendStars(childId, amt);
+    delete S.schoolBonus[t][childId];
+    return amt;
   }
 
   /* ---------------- 모든 탭 위 남은 시간 바 ---------------- */
@@ -4266,6 +4296,9 @@
     var pct = ms <= 0 ? 0 : Math.max(0, Math.min(100, (ms / winMs) * 100));
     var run = document.getElementById('sbRunner');
     var pkm = document.getElementById('sbPkm');
+    var left = document.getElementById('sbLeft');
+    var kids = document.getElementById('sbKids');
+    var fill = document.getElementById('sbFill');
     if (left) left.textContent = ms > 0 ? clockText(ms) : '00:00';
     if (kids) kids.textContent = counts.join(' · ');
     if (fill) {
@@ -5925,7 +5958,7 @@
       title: '🌅 등교 시작 설정',
       bodyHTML:
         '<p class="help" style="margin-bottom:8px">등교 시간 30분 전(기본 08:00)이 되면 아이 모드에서 <b>할 일 탭이 등교 준비 화면으로 저절로 바뀌고</b>, ' +
-          '모든 탭 위에 남은 시간 바가 떠요. 등교 시간(기본 08:30)이 되거나 둘 다 5개를 다 챙기면 저절로 일반 목록으로 돌아갑니다. ' +
+          '모든 탭 위에 남은 시간 바가 떠요. 등교 시간(기본 08:30)이 되거나 둘 다 준비를 다 챙기면 저절로 일반 목록으로 돌아갑니다. ' +
           '그날 이미 마쳤거나 [일반 목록으로]로 나가면 그날은 다시 켜지지 않아요.</p>' +
         '<button type="button" class="btn btn-soft btn-sm" id="schoolPeek" style="margin-bottom:12px">👀 등교 화면 미리 보기</button>' +
         '<div class="field-row">' +
@@ -5933,9 +5966,9 @@
           '<div class="field"><label>남은 시간 막대 시작</label><input class="input" id="edSchoolStart" type="time" value="' + esc(S.schoolStart) + '"></div>' +
         '</div>' +
         '<div class="field"><label>등교 준비를 다 했을 때 보너스 별</label><input class="input" id="edSchoolReward" type="number" min="0" max="20" value="' + S.schoolReward + '"></div>' +
-        '<p class="help" style="margin:2px 0 10px">🌅 등교 화면에는 <b>스스로 일어나기</b>를 빼고 나머지 아침 준비만 보여요(보통 4개). 스스로 일어나기는 ✅ 할 일 목록에서 체크해요.</p>' +
+        '<p class="help" style="margin:2px 0 10px">🌅 등교 화면과 이 설정에는 <b>스스로 일어나기</b>를 빼고 나머지 아침 준비만 보여요(보통 4개). 스스로 일어나기 항목은 여기서 빠져도 그대로 보존되고, ✅ 할 일 목록에서 고치고 체크해요.</p>' +
         D.children.map(function (c) {
-          var items = schoolItems(c.id);
+          var items = schoolPrepItems(c.id);
           return '<div class="ed-block">' +
             '<div class="ed-block-head"><b>' + c.emoji + ' ' + esc(c.name) + ' 등교 준비</b><span>' + items.length + '개</span></div>' +
             '<div class="ed-list" data-child="' + c.id + '">' + items.map(editRowHTML).join('') + '</div>' +
@@ -5950,24 +5983,33 @@
             if (!hhmmOk(t)) { UI.toast('등교 시간을 다시 골라 주세요', { kind: 'warn' }); return false; }
             S.schoolTime = t;
             S.schoolStart = hhmmOk(st) && hhmmMin(st, 0) < hhmmMin(t, 0) ? st : minHHMM(hhmmMin(t, 510) - 90);
-            S.schoolReward = clampNum(rw, 0, 20, 2);
+            S.schoolReward = clampNum(rw, 0, 20, 1);
             var changed = 0;
             D.children.forEach(function (c) {
               var list = document.querySelector('.ed-list[data-child="' + c.id + '"]');
               if (!list) return;
               var rows = Array.prototype.slice.call(list.querySelectorAll('.ed-row'));
-              var arr = [];
+              var edited = [];
               rows.forEach(function (r) {
                 var lb = (r.querySelector('.ed-label').value || '').trim();
                 if (!lb) return;
                 var em = (r.querySelector('.ed-emoji').value || '').trim() || '⭐';
                 var rid = r.getAttribute('data-id') || UI.uid('rt');
                 var keepNoStar = (c.id && routineItemById(c.id, rid) && routineItemById(c.id, rid).noStar) ? 1 : 0;
-                arr.push({ id: rid, label: lb.slice(0, 24), emoji: em.slice(0, 4), noStar: !!keepNoStar });
+                edited.push({ id: rid, label: lb.slice(0, 24), emoji: em.slice(0, 4), noStar: !!keepNoStar });
               });
-              if (!arr.length) return;
+              if (!edited.length) return;   /* 실수로 다 지운 경우엔 저장하지 않아 목록을 지켜요 */
               var cur = ensureRoutineCustom(c.id);
-              cur.morning = arr;
+              var prev = (cur.morning || []).slice();
+              /* ⏰ 스스로 일어나기는 이 창에 안 보이므로, 저장할 때 원래 자리 그대로 되살립니다 */
+              var out = [];
+              var ei = 0;
+              prev.forEach(function (it) {
+                if (isWakeItem(it)) { out.push(it); return; }
+                if (ei < edited.length) out.push(edited[ei++]);
+              });
+              while (ei < edited.length) out.push(edited[ei++]);
+              cur.morning = out;
               changed++;
             });
             saveNow();
@@ -6599,7 +6641,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 78;             /* index.html 의 ?v=78 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 79;             /* index.html 의 ?v=79 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
