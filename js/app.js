@@ -1886,7 +1886,7 @@
     var lvl = pkLevel(p.fed);
     var pkName = p.line ? ((sp ? sp.ko : '🥚 알') + ' Lv.' + lvl) : '알 고르기';
     var per = pkPerLevel() || 100;
-    var prog = Math.max(0, Math.min(per, pkProg(p.fed)));
+    var prog = pkComplete(p) ? per : Math.max(0, Math.min(per, pkProg(p.fed)));
     var pkPct = Math.round(prog / per * 100);
     return '<button type="button" class="kid-mini ' + c.color + '" data-act="pick-kid" data-id="' + c.id + '" aria-pressed="false"' +
         ' aria-label="' + esc(c.name) + ' 오늘 ' + st.done + '/' + st.total + ' · ' + esc(c.name) + ' 할 일 보기">' +
@@ -2275,7 +2275,7 @@
     var sp = pkSpecies(p);
     var lvl = pkLevel(p.fed);
     var per = pkPerLevel() || 100;
-    var prog = Math.max(0, Math.min(per, pkProg(p.fed)));
+    var prog = pkComplete(p) ? per : Math.max(0, Math.min(per, pkProg(p.fed)));
     var pct = Math.round(prog / per * 100);
     var partner = Number(p.partner) ? PK.species[Number(p.partner)] : null;
     return '<span class="kc-pk">' +
@@ -5351,30 +5351,24 @@
     if (!p || !p.line) return null;
     return PK.lineByKey[p.line] || null;
   }
-  /* 라인 길이에 맞춘 진화 별 기준 (별 100개 = 그 라인 완성)
-       · 3단계: 알 0~9 → 1단계 10~39 → 2단계 40~79 → 3단계 80~100
-       · 2단계: 알 0~19 → 1단계 20~59 → 2단계 60~100
-       · 1단계: 알 0~29 → 부화 30~100 */
-  var PK_STAGE_FRAC = { 1: [0.30], 2: [0.20, 0.60], 3: [0.10, 0.40, 0.80] };
+  /* 진화 별 기준 — 한 단계당 별 pkPerLevel()(기본 100)개
+       · 1단계 라인: 알 0~99 → 부화 100~ (그대로 최종 완성)
+       · 2단계 라인: 알 0~99 → 1단계 100~199 → 2단계 200~ (최종 완성)
+       · 3단계 라인: 알 0~99 → 1단계 100~199 → 2단계 200~299 → 3단계 300~ (최종 완성)
+     라인 길이를 넘는 단계는 없어요 (maxStage = line.stages.length). */
   function pkThresholds(line) {
-    var n = (line && line.stages) ? line.stages.length : 1;
-    var fr = PK_STAGE_FRAC[n] || PK_STAGE_FRAC[3];
+    var n = Math.max(1, (line && line.stages) ? line.stages.length : 1);
     var per = pkPerLevel();
-    var out = [], prev = 0;
-    fr.forEach(function (f) {
-      var v = Math.max(prev + 1, Math.min(per, Math.round(per * f)));
-      out.push(v);
-      prev = v;
-    });
+    var out = [];
+    for (var i = 1; i <= n; i++) out.push(per * i);
     return out;
   }
-  /* 먹인 별 → Lv.1 ~ Lv.100 (별 100개가 Lv.100 · 라인 완성) */
+  /* 먹인 별 → Lv. (별 10개마다 한 레벨씩) */
   function pkLevel(fed) {
-    var per = pkPerLevel();
-    var v = Math.max(0, Math.min(per, Math.floor(Number(fed) || 0)));
-    return 1 + Math.round(99 * (per ? v / per : 0));
+    return Math.max(1, Math.floor(Math.max(0, Number(fed) || 0) / 10) + 1);
   }
-  function pkProg(fed) { return Math.max(0, Math.min(pkPerLevel(), Math.floor(Number(fed) || 0))); }
+  /* 이번 단계에서 먹인 별 (100개 단위로 다시 0부터) */
+  function pkProg(fed) { return Math.max(0, Math.floor(Number(fed) || 0)) % pkPerLevel(); }
   /* 0 = 알, 1~라인 길이 = 진화 단계 */
   function pkStage(p) {
     var line = pkLine(p);
@@ -5385,8 +5379,12 @@
     while (st < th.length && fed >= th[st]) st++;
     return st;
   }
-  /* 별 100개를 다 모아 그 라인을 완성했는가 */
-  function pkComplete(p) { return !!p && Math.max(0, Math.floor(Number(p.fed) || 0)) >= pkPerLevel(); }
+  /* 라인의 마지막 단계까지 다 키웠는가 (3단계 300개 · 2단계 200개 · 1단계 100개) */
+  function pkComplete(p) {
+    var line = pkLine(p);
+    if (!line) return false;
+    return pkStage(p) >= line.stages.length;
+  }
   /* 다음 진화까지 남은 별 */
   function pkNeed(p) {
     var line = pkLine(p);
@@ -5736,7 +5734,7 @@
     var afterLv = pkLevel(p.fed);
     var afterStage = pkStage(p);
     var line = pkLine(p);
-    /* 거쳐 온 모습을 도감에 등록 (별 100개를 채우면 라인 완성 = 최종 진화 도감 등록) */
+    /* 거쳐 온 모습을 도감에 등록 (라인의 마지막 단계까지 키우면 최종 진화 도감 등록) */
     var newIds = pkSyncDex(p);
     var nowDone = pkComplete(p) && !wasDone;
     var stageUp = afterStage > beforeStage;
@@ -5889,7 +5887,7 @@
       title: '🥚 신비한 알 고르기',
       bodyHTML: '<p class="help" style="margin-bottom:10px">' + esc(c.name) +
         '의 알을 골라요. 어떤 포켓몬이 나올지는 <b>부화하는 순간까지 비밀</b>이에요!<br>' +
-        '별을 모으면(진화 단계에 따라 10~30개) 부화하고, 그때 정체가 짠 하고 나타나요.</p>' +
+        '별 ' + pkPerLevel() + '개를 모으면 부화하고, 그때 정체가 짠 하고 나타나요.</p>' +
         pkEggGridHTML(childId),
       actions: [{ label: '닫기', kind: 'ghost' }]
     });
@@ -5943,8 +5941,8 @@
     var sp = pkSpecies(p);
     var next = pkNextSpecies(p);
     var lvl = pkLevel(p.fed);
-    var prog = pkProg(p.fed);
     var maxed = pkComplete(p);
+    var prog = maxed ? per : pkProg(p.fed);
     var need = pkNeed(p);
     var artInner;
     if (st === 0) {
@@ -5970,7 +5968,7 @@
           '<div class="pk-name">' + (sp ? esc(sp.ko) : '신비한 알') + '<span class="pk-lv">Lv.' + lvl + '</span></div>' +
           '<div class="pk-sub">' + (st === 0 ? '무슨 포켓몬이 나올까? · 알' : esc(line.name) + ' 라인 · ' + pkStageName(st, line.stages.length)) + '</div>' +
           '<div class="pk-bar"><i style="width:' + Math.round(prog / per * 100) + '%"></i></div>' +
-          '<div class="pk-progtxt"><span>' + (maxed ? '라인 완성! 🏅' : (next ? '다음 진화까지 ' + need + '개' : '완성까지 ' + (per - prog) + '개')) + '</span><span>먹인 별 ' + prog + ' / ' + per + ' ⭐</span></div>' +
+          '<div class="pk-progtxt"><span>' + (maxed ? '라인 완성! 🏅' : '다음 진화까지 ' + need + '개') + '</span><span>먹인 별 ' + prog + ' / ' + per + ' ⭐</span></div>' +
         '</div>' +
       '</div>' +
       pkTrackHTML(p) +
@@ -5980,11 +5978,10 @@
           return '<button type="button" class="btn btn-sun btn-sm" data-act="pk-feed" data-child="' + c.id + '" data-n="' + n + '"' + (stars < n ? ' disabled' : '') + '>별 ' + n + '개 먹이기</button>';
         }).join('') +
       '</div>' +
-      '<p class="pk-help">내 별 <b>⭐' + stars + '</b> 중에서 먹여요 · <b>별 ' + per + '개</b>를 다 모으면 이 라인이 완성돼요 🏅 ' +
+      '<p class="pk-help">내 별 <b>⭐' + stars + '</b> 중에서 먹여요 · <b>별 ' + per + '개</b>를 모으면 ' +
         (maxed ? '(완성! 새 알을 골라도 돼요)'
-          : st === 0 ? '(별 ' + need + '개를 먹이면 알이 부화해요 🥚)'
-          : next ? '(' + need + '개 더 먹이면 한 단계 진화 ✨)'
-          : '(완성까지 ' + (per - prog) + '개 남았어요)') + '</p>' +
+          : st === 0 ? '부화해요 🥚'
+          : '한 단계 더 진화해요 ✨') + '</p>' +
       (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
       '</div>';
   }
@@ -6215,12 +6212,12 @@
     /* 다음 진화까지 */
     var nextNote = '';
     if (evo.idx < evo.len - 1) {
-      var n = evo.len, fr = (n === 3 ? [0.10, 0.40, 0.80] : n === 2 ? [0.20, 0.60] : [0.30]);
-      var th = fr.map(function (f) { return Math.round(pkPerLevel() * f); });
+      var th = [];
+      for (var ti = 1; ti <= evo.len; ti++) th.push(pkPerLevel() * ti);
       var goal = th[evo.idx + 1] || pkPerLevel();
-      var have = Math.max(0, Math.min(goal, isCur ? pkProg(p.fed) : 0));
+      var have = isCur ? Math.floor(Number(p.fed) || 0) : 0;
       nextNote = '<div class="pkd-next"><span>다음 진화까지</span><b>' + Math.max(0, goal - have) + '개 ⭐</b>' +
-        '<i class="pkd-nextbar"><b style="width:' + Math.round(have / goal * 100) + '%"></b></i></div>';
+        '<i class="pkd-nextbar"><b style="width:' + Math.max(0, Math.min(100, Math.round(have / goal * 100))) + '%"></b></i></div>';
     } else {
       nextNote = '<div class="pkd-next done"><span>이 라인의 마지막 모습이에요</span><b>🏅 완성</b></div>';
     }
@@ -6319,11 +6316,10 @@
 
   function renderPokemon() {
     var c = childById(routineChild);
-    var total = PK.finals.length;
     return (S.mode === 'parent'
         ? '<div class="card soft-sun pk-rules is-parent">' +
             '<p>할 일 체크 · 등교 준비로 <b>내 별(⭐)</b>을 모아서 포켓몬에게 먹여요. ' +
-            '<b>별 ' + pkPerLevel() + '개 = 한 라인 완성</b> — 진화 단계가 3단계면 알→1단계→2단계→3단계, 2단계면 20·60개, 진화가 없는 포켓몬은 알→부화(30개)로 자라요.<br>' +
+            '<b>별 100개마다 알 부화 & 한 단계 진화!</b> — 알 → 100개 → 1단계 → 200개 → 2단계 → 300개 → 3단계(최종 진화·도감 등록). 진화가 없는 포켓몬은 100개에서 부화하면 바로 완성이에요.<br>' +
             '먹인 별은 포켓몬 안에서만 쌓여요(내 별과는 따로 보여요). 알 속 포켓몬은 <b>부화하는 순간까지 비밀</b>!</p>' +
             '<div class="btn-row pk-rules-btns">' +
               '<button type="button" class="btn btn-soft btn-sm" data-act="pk-settings">⚙️ 포켓몬 관리</button>' +
@@ -6333,9 +6329,9 @@
       /* 좁은 화면: 한 아이씩 골라 보는 칩 (넓은 화면에서는 두 아이가 나란히 다 보여서 숨겨요) */
       '<div class="chip-row pk-pick" role="group" aria-label="누구 포켓몬을 볼까요">' +
         D.children.map(function (k) {
-          var kc = pkVillageAll(k.id).length;
+          var kc = (pkOf(k.id).dex || []).length;
           return '<button type="button" class="chip ' + k.color + (k.id === c.id ? ' active' : '') + '" data-act="pick-pk-child" data-id="' + k.id + '" aria-pressed="' + (k.id === c.id ? 'true' : 'false') + '">' +
-            k.emoji + ' ' + esc(k.name) + '의 포켓몬 <small>🏡 ' + kc + '/' + total + '</small></button>';
+            k.emoji + ' ' + esc(k.name) + '의 포켓몬 <small>🏡 ' + kc + '/1025</small></button>';
         }).join('') +
       '</div>' +
       /* 알·키우기 카드: 좁은 화면은 고른 아이 하나, 넓은 화면(패드·데스크톱)은 두 아이 2분할 */
@@ -6348,7 +6344,7 @@
       '</div>' +
       /* 카드 아래 🏡 포켓몬 마을 — 다 키운 포켓몬이 초원에서 놀아요 (아이마다 따로) */
       '<div class="card pk-village">' +
-        cardHead('🏡', '포켓몬 마을', '다 키운 포켓몬이 초원에서 놀아요 · 최대 ' + PK_VILLE_MAX + '마리') +
+        cardHead('🏡', '포켓몬 마을', '최종 진화된 포켓몬만 놀러 올 수 있어요 · 최대 ' + PK_VILLE_MAX + '마리') +
         '<div class="ville-duo">' + D.children.map(pkVillePaneHTML).join('') + '</div>' +
       '</div>' +
       /* 📦 도감 상자 — 모은 포켓몬을 30마리씩 상자에 담아 둡니다 */
@@ -6587,7 +6583,7 @@
       bodyHTML:
         '<div class="field"><label>진화에 필요한 별 개수 (기본 100개)</label>' +
           '<input class="input" id="edPerLevel" type="number" min="10" max="1000" step="10" value="' + pkPerLevel() + '">' +
-          '<p class="help">별 100개를 다 모으면 그 진화 라인이 완성돼요. 3단계 라인은 알→1단계(10개)→2단계(40개)→3단계(80개)→완성(100개), 2단계는 20·60개, 진화가 없는 포켓몬은 부화 30개예요. 작게 넣으면 빨리 자라요(시험해 볼 때 좋아요).<br>' +
+          '<p class="help">별 ' + pkPerLevel() + '개를 모을 때마다 알 → 1단계 → 2단계 → 3단계로 진화해요(진화가 없는 포켓몬은 알 → 부화 100개). 작게 넣으면 빨리 자라요(시험해 볼 때 좋아요).<br>' +
           '아이 화면에서는 알 단계·아직 진화 전 단계의 정체가 <b>???</b> 로 가려지고, 여기서만 실제 알을 보거나 새로 뽑을 수 있어요.</p></div>' +
         D.children.map(function (c) {
           var p = pkOf(c.id);
@@ -7150,7 +7146,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 85;             /* index.html 의 ?v=85 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 86;             /* index.html 의 ?v=86 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
