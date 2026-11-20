@@ -3882,3 +3882,38 @@ body.on-home .hero > .hero-clock { grid-column: 1; }
   .wx-slot .wx-dust-col i { font-size: 16px; }
   .wx-slot .wx-dust-col em { font-size: 12.5px; }
 }
+
+/* =========================================================
+   v77 (2026-11-20) — 🧪 별 테스트 버튼 제거 · 폰 부모님 모드
+                        상단 헤더가 첫 카드를 덮어 겹쳐 보이던 문제
+   ========================================================= */
+
+@media (max-width: 779px) {
+  /* ---- ① 헤더를 완전히 불투명하게 ----
+     v75 에서 헤더 배경을 아래로 투명해지는 그라데이션으로 바꾼 뒤로,
+     스크롤해서 헤더 밑으로 올라온 카드의 버튼·글씨가 헤더 뒤로 비쳐
+     '헤더가 3줄로 커지고 카드가 겹친' 것처럼 보였습니다.
+     같은 크림색이지만 알파가 없는 색으로 채워 헤더 뒤로는 아무것도 비치지 않게 합니다. */
+  .topstack {
+    background: linear-gradient(180deg, #FFF7E8 0%, #FFF9F1 100%);
+    box-shadow: 0 8px 14px -12px rgba(170, 140, 100, .55);
+    /* 아이폰 상태바(노치) 아래에서 시계 줄이 시작하도록 (일반 브라우저에서는 6px 그대로) */
+    padding-top: max(6px, env(safe-area-inset-top));
+  }
+
+  /* ---- ② 본문 첫 카드는 헤더 아래에서 시작 ----
+     헤더는 흐름 안에 있는 sticky 라서 본문이 이미 그 아래에서 시작하지만,
+     그 위에 --header-h(실제 헤더 높이, JS 가 채움)만큼의 여유를 확실히 두고
+     탭을 바꿔도(scrollTop) 첫 카드가 헤더에 1px도 가리지 않게 합니다. */
+  #view {
+    padding-top: 6px;
+    scroll-margin-top: calc(var(--header-h, 87px) + 12px);
+  }
+  #view > :first-child { scroll-margin-top: calc(var(--header-h, 87px) + 12px); }
+}
+
+/* v77: 스크롤로 무언가를 화면 안으로 끌어올 때도 헤더에 가리지 않게 */
+html {
+  scroll-padding-top: calc(var(--sticky-top, 90px) + 12px);
+  scroll-behavior: auto;
+}

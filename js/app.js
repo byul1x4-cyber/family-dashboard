@@ -1371,6 +1371,8 @@
     if (!bar) return;
     var h = Math.round(bar.getBoundingClientRect().height);
     if (h > 0) document.documentElement.style.setProperty('--sticky-top', h + 'px');
+    /* 폰: 본문 첫 카드가 헤더에 1px도 가리지 않도록 실제 헤더 높이를 그대로 넘겨 줍니다 */
+    if (h > 0) document.documentElement.style.setProperty('--header-h', h + 'px');
   }
 
   /* ---- 🧹 정리 · ⏰ 그만! 알림 버튼 자리 ----
@@ -5535,14 +5537,6 @@
       actions: [{ label: '닫기', kind: 'ghost' }]
     });
   }
-  function pkTestStars(childId) {
-    if (!needParent('별 테스트 지급은 부모님 모드에서만 돼요')) return;
-    var per = pkPerLevel();
-    S.stars[childId] = (S.stars[childId] || 0) + per;
-    saveNow();
-    render({ keepScroll: true });
-    UI.toast('테스트로 별 ' + per + '개를 넣었어요 (레벨업 확인용)', { emoji: '🧪', kind: 'good', duration: 3000 });
-  }
   /* ---------- 카드 ---------- */
   function pkTrackHTML(p) {
     var line = pkLine(p);
@@ -5709,9 +5703,6 @@
             '<b>🥚 알 → 1단계 → 2단계 → 3단계(최종 진화)</b> · 단계마다 먹인 별 ' + pkPerLevel() + '개를 모아야 진화해요.<br>' +
             '먹인 별은 포켓몬 안에서만 쌓여요(내 별과는 따로 보여요). 알 속 포켓몬은 <b>부화하는 순간까지 비밀</b>!</p>' +
             '<div class="btn-row pk-rules-btns">' +
-              D.children.map(function (k) {
-                return '<button type="button" class="btn btn-ghost btn-sm" data-act="pk-test" data-child="' + k.id + '">🧪 ' + esc(k.name) + ' 별 ' + pkPerLevel() + '개</button>';
-              }).join('') +
               '<button type="button" class="btn btn-soft btn-sm" data-act="pk-settings">⚙️ 포켓몬 관리</button>' +
             '</div>' +
           '</div>'
@@ -6117,7 +6108,6 @@
       case 'pk-pick': pkPick(el.getAttribute('data-child'), el.getAttribute('data-id')); break;
       case 'pk-feed': pkFeed(el.getAttribute('data-child'), Number(el.getAttribute('data-n'))); break;
       case 'pk-chooser': pkChooserModal(el.getAttribute('data-child')); break;
-      case 'pk-test': pkTestStars(el.getAttribute('data-child')); break;
 
       case 'pick-dish': pickDishModal(el.getAttribute('data-slot')); break;
       case 'quick-add': addQuickMenuModal(el.getAttribute('data-slot')); break;
@@ -6310,9 +6300,21 @@
     window.addEventListener('resize', syncStickyTop);
     window.addEventListener('orientationchange', function () { setTimeout(syncStickyTop, 120); });
     if (window.ResizeObserver) {
-      try { new ResizeObserver(syncStickyTop).observe(document.querySelector('.topbar')); } catch (e) {}
+      try {
+        var ro = new ResizeObserver(syncStickyTop);
+        ro.observe(document.getElementById('topStack') || document.querySelector('.topstack'));
+        /* 히어로(홈 큰 시계·날씨)가 켜졌다 꺼지면 헤더 높이가 달라져요 */
+        var heroEl = document.getElementById('hero');
+        if (heroEl) ro.observe(heroEl);
+      } catch (e) {}
     }
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncStickyTop);
+    /* 주소창이 접히거나 화면이 살짝 달라져도 다시 맞춥니다 */
+    (function () {
+      var t = null;
+      var again = function () { clearTimeout(t); t = setTimeout(syncStickyTop, 90); };
+      if (window.visualViewport) window.visualViewport.addEventListener('resize', again);
+    })();
     document.getElementById('tabs').addEventListener('click', function (e) {
       var b = e.target.closest('.tab');
       if (b) setView(b.getAttribute('data-view'));
@@ -6484,7 +6486,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 76;             /* index.html 의 ?v=76 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 77;             /* index.html 의 ?v=77 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
