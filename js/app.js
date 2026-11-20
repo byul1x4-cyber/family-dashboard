@@ -934,6 +934,99 @@
       }
     });
   }
+  /* ✏️ 할 일 고치기 — 아이콘·이름·별 지급 방식을 그 자리에서 바꿉니다.
+     기본(data.js) 할 일이든 직접 추가한 할 일이든, id 는 그대로 두고 customRoutines 에만
+     덮어써서 오늘 체크 기록(state.routine[날짜][id])과 별 지급이 끊기지 않습니다. */
+  function updateRoutineItem(childId, itemId, patch) {
+    if (!needParent('할 일은 부모님 모드에서 고칠 수 있어요')) return false;
+    var custom = ensureRoutineCustom(childId);
+    var hit = null;
+    ['morning', 'evening'].forEach(function (k) {
+      (custom[k] || []).forEach(function (it) { if (it.id === itemId) hit = it; });
+    });
+    if (!hit) return false;
+    if (patch.label != null) hit.label = patch.label;
+    if (patch.emoji != null) hit.emoji = patch.emoji;
+    if (patch.noStar != null) hit.noStar = !!patch.noStar;
+    save();
+    render({ keepScroll: true });
+    return true;
+  }
+
+  function editRoutineModal(childId, itemId) {
+    if (!needParent('할 일은 부모님 모드에서 고칠 수 있어요')) return;
+    var c = childById(childId);
+    var item = routineItemById(childId, itemId);
+    if (!item) { UI.toast('할 일을 찾지 못했어요', { emoji: '🔎', kind: 'warn' }); return; }
+    var noStar0 = !!item.noStar;
+    UI.modal({
+      title: '✏️ ' + c.name + ' 할 일 고치기',
+      bodyHTML:
+        '<div class="field"><label>할 일 이름</label>' +
+          '<input class="input rt-edit-input" id="reLabel" maxlength="20" value="' + esc(item.label) + '" placeholder="예: 신발 정리하기" autocomplete="off">' +
+        '</div>' +
+        '<div class="field"><label>아이콘 (골라도 되고 직접 적어도 돼요)</label>' +
+          '<div class="rt-emoji-row">' + ROUTINE_EMOJIS.map(function (e) {
+            return '<button type="button" class="rt-emoji" data-emoji="' + e + '">' + e + '</button>';
+          }).join('') + '</div>' +
+          '<input class="input rt-edit-input" id="reEmoji" maxlength="4" value="' + esc(item.emoji || '⭐') + '" style="margin-top:6px;text-align:center;font-size:20px">' +
+        '</div>' +
+        '<div class="field"><label>별 지급</label>' +
+          '<div class="star-mode" id="reStarMode" data-nostar="' + (noStar0 ? '1' : '0') + '">' +
+            '<button type="button" class="star-pick' + (noStar0 ? '' : ' on') + '" data-nostar="0">⭐ 별 주기</button>' +
+            '<button type="button" class="star-pick' + (noStar0 ? ' on' : '') + '" data-nostar="1">✅ 별 없이 체크만</button>' +
+          '</div>' +
+          '<p class="help" id="reStarHelp">' + (noStar0
+            ? '지금은 완료해도 별 없이 체크만 남겨요.'
+            : '지금은 완료하면 별 ⭐ 1개가 쌓여요.') + '</p>' +
+        '</div>' +
+        '<p class="help">바꿔도 오늘 체크한 기록과 받은 별은 그대로예요.</p>',
+      actions: [
+        {
+          label: '저장', kind: 'primary', onClick: function (close) {
+            var label = ((document.getElementById('reLabel') || {}).value || '').trim().slice(0, 20);
+            var emoji = ((document.getElementById('reEmoji') || {}).value || '').trim() || '⭐';
+            var box = document.getElementById('reStarMode');
+            var noStarNext = !!(box && box.getAttribute('data-nostar') === '1');
+            if (!label) { UI.toast('할 일 이름을 적어 주세요', { emoji: '✏️', kind: 'warn' }); return false; }
+            if (!updateRoutineItem(childId, itemId, { label: label, emoji: emoji, noStar: noStarNext })) return false;
+            UI.toast('할 일을 고쳤어요 · ' + emoji + ' ' + label, { emoji: '✅', kind: 'good' });
+          }
+        },
+        { label: '취소', kind: 'ghost' }
+      ],
+      onOpen: function (wrap) {
+        wrap.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-emoji]');
+          if (b) {
+            e.preventDefault();
+            var inp = document.getElementById('reEmoji');
+            if (inp) inp.value = b.getAttribute('data-emoji');
+            return;
+          }
+          var sp = e.target.closest('.star-pick');
+          if (sp) {
+            e.preventDefault();
+            var pick = sp.getAttribute('data-nostar') === '1';
+            var bx = document.getElementById('reStarMode');
+            if (bx) bx.setAttribute('data-nostar', pick ? '1' : '0');
+            $$('.star-pick', wrap).forEach(function (x) {
+              x.classList.toggle('on', x === sp);
+            });
+            var hp = document.getElementById('reStarHelp');
+            if (hp) hp.textContent = pick
+              ? '완료해도 별 없이 체크만 남겨요.'
+              : '완료하면 별 ⭐ 1개가 쌓여요.';
+          }
+        });
+        setTimeout(function () {
+          var l = document.getElementById('reLabel');
+          if (l) l.focus();
+        }, 120);
+      }
+    });
+  }
+
   function routineStats(childId, date) {
     var items = routineItems(childId);
     var all = items.morning.concat(items.evening);
@@ -2370,6 +2463,10 @@
         var noStar = !!i.noStar;   /* 알림장 체크처럼 별 없는 항목 */
         var noStarTag = noStar ? '<span class="r-nostar">별 없음</span>' : '';
         var ts = done ? S.routine[today][i.id] : null;
+        /* 부모님 모드에서만 카드 아래 구석에 ✏️ 고치기 · 🗑️ 지우기 */
+        var edit = parent
+          ? '<button type="button" class="r-edit" data-act="routine-edit" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="' + esc(i.label) + ' 고치기" title="할 일 고치기">✏️</button>'
+          : '';
         var del = parent
           ? '<button type="button" class="r-del" data-act="routine-del" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="' + esc(i.label) + ' 지우기" title="목록에서 지우기">🗑️</button>'
           : '';
@@ -2381,7 +2478,7 @@
               (parent
                 ? '<button type="button" class="icon-btn" data-act="routine-undo" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="되돌리기">↩</button>' : '') +
               '<span class="routine-check on" aria-label="완료함">✓</span>' +
-              del +
+              edit + del +
             '</div>';
         }
         if (locked) {
@@ -2398,7 +2495,7 @@
                 '<span class="r-label">' + esc(i.label) + noStarTag + '</span>' +
               '</button>' +
               '<button type="button" class="routine-check" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '" aria-label="' + esc(i.label) + ' 완료"></button>' +
-              del +
+              edit + del +
             '</div>';
         }
         return '<button type="button" class="routine-item" data-act="routine-check" data-child="' + c.id + '" data-item="' + i.id + '">' +
@@ -5733,6 +5830,21 @@
   /* 화면을 다시 그린 뒤 해야 하는 일 (손글씨 캔버스 붙이기) */
   function afterRender() {
     if (view === 'mailbox') { hwMount(); bindMailText(); }
+    if (view === 'routine') bindRoutineEdit();
+  }
+
+  /* ✏️ 할 일 카드의 고치기 버튼 — 카드를 눌렀을 때의 '완료'와 이벤트가 겹치지 않도록
+     단추에 직접 걸고 stopPropagation 으로 올라가는 길을 끊습니다. */
+  function bindRoutineEdit() {
+    $$('.r-edit').forEach(function (btn) {
+      if (btn.__bound) return;
+      btn.__bound = true;
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        editRoutineModal(btn.getAttribute('data-child'), btn.getAttribute('data-item'));
+      });
+    });
   }
 
   /* 글 칸에 적는 대로 하단 안내(짧은 글 담김)를 갱신 */
@@ -6053,6 +6165,7 @@
       case 'morning-locked': morningLockToast(); break;
       case 'routine-undo': undoRoutine(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
       case 'add-routine': addRoutineModal(el.getAttribute('data-child')); break;
+      case 'routine-edit': editRoutineModal(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
       case 'routine-del': removeRoutineItem(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
 
       case 'praise': addPraise(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
@@ -6486,7 +6599,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 77;             /* index.html 의 ?v=77 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 78;             /* index.html 의 ?v=78 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 

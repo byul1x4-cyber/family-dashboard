@@ -3917,3 +3917,64 @@ html {
   scroll-padding-top: calc(var(--sticky-top, 90px) + 12px);
   scroll-behavior: auto;
 }
+
+/* =========================================================
+   v78 (2026-11-20) — ✏️ 부모님 모드 할 일 카드에 '고치기' 버튼
+   ---------------------------------------------------------
+   · 🗑️ 와 짝을 이루도록 카드 아래 오른쪽에 나란히 둡니다 (아이 모드에는 없음).
+   · 누르면 뜨는 고치기 창의 입력칸은 iOS 가 화면을 확대하지 않도록 16px 이상입니다.
+   ========================================================= */
+.r-edit {
+  position: absolute;
+  bottom: 1px; right: 20px;
+  width: 17px; height: 17px;
+  padding: 0;
+  border: 0; background: transparent;
+  font-size: 9px; line-height: 1;
+  opacity: .55;
+  touch-action: manipulation;
+}
+.r-edit:hover, .r-edit:active { opacity: 1; }
+/* 아이콘은 작게 보이되 손가락으로 누를 자리는 조금 넓힙니다 (둘 사이는 겹치지 않게) */
+.r-edit::after, .r-del::after {
+  content: '';
+  position: absolute;
+  top: -8px; bottom: -4px;
+}
+.r-edit::after { left: -5px; right: 0; }
+.r-del::after { left: 0; right: -5px; }
+
+/* ✏️ 할 일 고치기 창 */
+.rt-edit-input { font-size: 16px; }          /* iOS 자동 확대 방지 */
+#reEmoji { font-size: 20px !important; }     /* 앱 공통 16px 고정보다 아이콘 칸만 조금 크게 */
+#reStarHelp { margin: 8px 0 0; color: #8A7C68; }
+.star-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+.star-pick {
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px;
+  padding: 11px 6px;
+  border: 2px solid #F1E2CB;
+  border-radius: 14px;
+  background: #FFFDF8;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #9A8B76;
+  word-break: keep-all;
+  touch-action: manipulation;
+}
+.star-pick.on {
+  border-color: var(--mint);
+  background: #EAFBF2;
+  color: #2C8563;
+  box-shadow: 0 0 0 3px rgba(92, 199, 156, .14);
+}
+@media (max-width: 379px) {
+  .star-pick { font-size: 12px; padding: 10px 4px; }
+}
