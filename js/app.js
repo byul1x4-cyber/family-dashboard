@@ -4292,25 +4292,29 @@
       var d = list.filter(function (i) { return isDone(i.id, today); }).length;
       return c.name + ' ' + d + '/' + list.length + (list.length && d >= list.length ? ' ✓' : '');
     });
-    var winMs = Math.max(60000, (schoolTargetMin() - schoolStartMin()) * 60000);
-    var pct = ms <= 0 ? 0 : Math.max(0, Math.min(100, (ms / winMs) * 100));
+    var winMs = Math.max(60000, (schoolTargetMin() - Math.max(schoolStartMin(), schoolTargetMin() - 30)) * 60000);
+    /* 게이지는 왼쪽(출발) → 오른쪽(🏫 학교)으로 차오릅니다. 시간이 줄수록 더 많이 차요. */
+    var prog = ms <= 0 ? 100 : Math.max(0, Math.min(100, (1 - ms / winMs) * 100));
+    /* 10분도 안 남으면 주황, 시간이 되면 빨강 */
+    var soon = ms > 0 && ms <= 10 * 60000;
     var run = document.getElementById('sbRunner');
-    var pkm = document.getElementById('sbPkm');
     var left = document.getElementById('sbLeft');
     var kids = document.getElementById('sbKids');
     var fill = document.getElementById('sbFill');
-    if (left) left.textContent = ms > 0 ? clockText(ms) : '00:00';
+    var btn = document.getElementById('schoolBarBtn');
+    var big = schoolLeftBig(ms);
+    if (left) {
+      left.textContent = big;
+      left.className = 'sb-big' + (ms <= 0 ? ' over' : (soon ? ' soon' : ''));
+    }
+    if (btn) btn.setAttribute('aria-label', '등교 준비 화면 열기 · ' + big);
     if (kids) kids.textContent = counts.join(' · ');
     if (fill) {
-      fill.style.width = pct + '%';
-      fill.className = 'sb-fill' + (ms <= 0 ? ' over' : (pct < 20 ? ' soon' : ''));
+      fill.style.width = prog + '%';
+      fill.className = 'sb-fill' + (ms <= 0 ? ' over' : (soon ? ' soon' : ''));
     }
-    if (run) run.style.left = Math.max(5, Math.min(96, pct)) + '%';
-    if (pkm) {
-      /* 게이지 위를 달리는 미니 포켓몬 (정리시간과 같은 그림) */
-      var src = pkIcon(pkSpriteId(routineChild));
-      if (pkm.getAttribute('src') !== src) pkm.setAttribute('src', src);
-    }
+    /* 피카츄는 지나간 진행률 자리에서 학교를 향해 달려요 (양 끝은 살짝 안쪽으로) */
+    if (run) run.style.left = Math.max(8, Math.min(92, prog)) + '%';
     el.classList.toggle('over', ms <= 0);
   }
   function schoolGrantBonuses() {
@@ -6641,7 +6645,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 80;             /* index.html 의 ?v=80 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 81;             /* index.html 의 ?v=81 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 

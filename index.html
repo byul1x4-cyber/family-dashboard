@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=80">
-<link rel="stylesheet" href="css/fun.css?v=80">
+<link rel="stylesheet" href="css/styles.css?v=81">
+<link rel="stylesheet" href="css/fun.css?v=81">
 </head>
 <body>
 
@@ -128,12 +128,15 @@
   <!-- ☀️ 등교 시작 중에만 보이는 남은 시간 바 (모든 탭 공통) -->
   <div class="school-bar" id="schoolBar" hidden>
     <button type="button" class="sb-btn" id="schoolBarBtn" aria-label="등교 준비 화면 열기">
-      <span class="sb-top">
-        <span class="sb-ico" aria-hidden="true">☀️</span>
-        <span class="sb-time"><b class="sb-left" id="sbLeft">14:52</b><span class="sb-say">남았어요</span></span>
+      <span class="sb-head">
+        <span class="sb-label" aria-hidden="true">☀️ 등교 출발까지</span>
+        <span class="sb-kids" id="sbKids"></span>
+        <b class="sb-big" id="sbLeft">16분 남았어요</b>
       </span>
-      <span class="sb-kids" id="sbKids"></span>
-      <span class="sb-track"><i class="sb-fill" id="sbFill"></i><b class="sb-runner" id="sbRunner" aria-hidden="true"><img id="sbPkm" alt=""></b><span class="sb-flag" aria-hidden="true">🏫</span></span>
+      <span class="sb-goal">
+        <span class="sb-track"><i class="sb-fill" id="sbFill"></i><b class="sb-runner" id="sbRunner" aria-hidden="true"><span class="sb-pika"><img id="sbPkm" src="assets/pokemon/25.png" alt="" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png'"></span></b></span>
+        <span class="sb-flag" aria-hidden="true">🏫</span>
+      </span>
     </button>
   </div>
 
@@ -161,12 +164,12 @@
 <div id="toastRoot"></div>
 <div id="popupRoot"></div>
 
-<script src="js/data.js?v=80"></script>
-<script src="js/storage.js?v=80"></script>
-<script src="js/ui.js?v=80"></script>
-<script src="js/art.js?v=80"></script>
-<script src="js/weather.js?v=80"></script>
-<script src="js/ntfy.js?v=80"></script>
-<script src="js/app.js?v=80"></script>
+<script src="js/data.js?v=81"></script>
+<script src="js/storage.js?v=81"></script>
+<script src="js/ui.js?v=81"></script>
+<script src="js/art.js?v=81"></script>
+<script src="js/weather.js?v=81"></script>
+<script src="js/ntfy.js?v=81"></script>
+<script src="js/app.js?v=81"></script>
 </body>
 </html>
