@@ -87,7 +87,7 @@
          [{ id, name, emoji, slot, ingredients }]  (기본 음식은 data.js 의 foods) */
       mealQuick: [],
 
-      /* 🌅 등교 시작 모드 기준 시각 (부모님 모드 > 설정에서 바꿔요) */
+      /* ☀️ 등교 시작 모드 기준 시각 (부모님 모드 > 설정에서 바꿔요) */
       schoolTime: (D.school && D.school.targetTime) || '08:30',
       schoolStart: (D.school && D.school.windowStart) || '07:00',
       /* 등교 시작 보너스 별을 하루 한 번만 주려고 적어 두는 곳: { '2026-11-19': { minguk: 1 } } */
@@ -98,7 +98,7 @@
       tidyCfg: { mins: [5, 10, 15], reward: 3, rewardLate: 1, music: true },
       /* ⚡ 포켓몬 설정 */
       pkCfg: { perLevel: 100 },
-      /* 🌅 등교 준비 다 끝냈을 때 보너스 별 (기본 1개) */
+      /* ☀️ 등교 준비 다 끝냈을 때 보너스 별 (기본 1개) */
       schoolReward: 1
     };
   }
@@ -187,7 +187,7 @@
     /* 📲 폰·패드 잠금화면 알림 — 값이 없으면 기본 켜짐 */
     s.ntfyPush = raw.ntfyPush === false ? false : true;
 
-    /* 🌅 등교 시작 시각 (HH:MM 형식만 받습니다) */
+    /* ☀️ 등교 시작 시각 (HH:MM 형식만 받습니다) */
     s.schoolTime = hhmmOk(raw.schoolTime) ? raw.schoolTime : base.schoolTime;
     s.schoolStart = hhmmOk(raw.schoolStart) ? raw.schoolStart : base.schoolStart;
     s.schoolBonus = (raw.schoolBonus && typeof raw.schoolBonus === 'object' && !Array.isArray(raw.schoolBonus)) ? raw.schoolBonus : {};
@@ -232,7 +232,7 @@
     var pc = (raw.pkCfg && typeof raw.pkCfg === 'object') ? raw.pkCfg : {};
     s.pkCfg = { perLevel: clampNum(pc.perLevel, 10, 1000, base.pkCfg.perLevel) };
 
-    /* 🌅 등교 준비 보너스 별 */
+    /* ☀️ 등교 준비 보너스 별 */
     s.schoolReward = clampNum(raw.schoolReward, 0, 20, base.schoolReward);
 
     /* 부모님이 고친 할 일 (아침·저녁) */
@@ -893,7 +893,7 @@
             '<option value="both">민국·이준 둘 다</option>' +
           '</select></div>' +
           '<div class="field"><label>언제</label><select class="select" id="rtSlot">' +
-            '<option value="morning">🌅 아침</option>' +
+            '<option value="morning">☀️ 아침</option>' +
             '<option value="evening" selected>🌙 저녁</option>' +
           '</select></div>' +
         '</div>' +
@@ -1403,7 +1403,7 @@
   /* ---------------- 화면 전환 ---------------- */
   function setView(name) {
     if (name === 'settings' && S.mode !== 'parent') name = 'home';   /* ⚙️ 설정 탭은 부모님 모드에서만 */
-    /* 🌅 08:00~08:30 아이 모드: 아침 준비를 다 하기 전엔 포켓몬 탭에 못 들어가요 */
+    /* ☀️ 08:00~08:30 아이 모드: 아침 준비를 다 하기 전엔 포켓몬 탭에 못 들어가요 */
     if (name === 'pokemon' && schoolPokemonLocked()) { schoolPokemonLockToast(); return; }
     view = name;
     render({ scrollTop: true });
@@ -1504,7 +1504,7 @@
     if (setTabBtn) setTabBtn.style.display = S.mode === 'parent' ? '' : 'none';
     var bb = document.getElementById('bannerBtn');
     if (bb) bb.hidden = S.mode !== 'parent';
-    /* 🌅 08:00~08:30 아이 모드: 포켓몬 탭 자물쇠 표시 */
+    /* ☀️ 08:00~08:30 아이 모드: 포켓몬 탭 자물쇠 표시 */
     var pkTab = document.querySelector('.tab[data-view="pokemon"]');
     if (pkTab) {
       var pkLock = schoolPokemonLocked();
@@ -1512,7 +1512,7 @@
       if (pkLock) pkTab.setAttribute('aria-label', '포켓몬 — 할 일을 다 체크하면 들어갈 수 있어요');
       else pkTab.removeAttribute('aria-label');
     }
-    /* 🌅 등교 시작 중이면 모든 탭 위에 남은 시간 바가 늘 보입니다 */
+    /* ☀️ 등교 시작 중이면 모든 탭 위에 남은 시간 바가 늘 보입니다 */
     var sb = schoolBarEl();
     if (sb) { sb.hidden = !schoolActive; if (schoolActive) paintSchoolBar(); }
     document.body.classList.toggle('school-on', !!schoolActive);
@@ -2432,7 +2432,7 @@
   function renderRoutine() {
     /* 🧹 정리시간이 켜져 있으면 '할 일' 탭은 정리 화면으로 동작해요 */
     if (tidyActive) return renderTidyInline();
-    /* 🌅 등교 시작이 켜져 있으면 '할 일' 탭은 등교 화면으로만 동작해요 */
+    /* ☀️ 등교 시작이 켜져 있으면 '할 일' 탭은 등교 화면으로만 동작해요 */
     if (schoolActive) return renderSchoolInline();
     /* 2026-11-19 확정: 시간대 배너 · 정리시간 바 · 전체/아침/저녁 필터를 모두 걷어내고
        민국(왼쪽) · 이준(오른쪽) 카드(아침+저녁 전체)만 바로 보이게 했습니다. */
@@ -2686,7 +2686,7 @@
       if (!isNoStarItem(childId, itemId)) takeStarsNote(childId, 1);   /* 별 없는 항목은 그대로 */
       var key = today + ':' + childId;
       delete S.celebrated[key];
-      /* 🌅 등교 준비 항목을 풀어서 '다 못 한' 상태가 되면 그날 받은 보너스 별도 회수 */
+      /* ☀️ 등교 준비 항목을 풀어서 '다 못 한' 상태가 되면 그날 받은 보너스 별도 회수 */
       var wasPrep = schoolPrepItems(childId).some(function (i) { return i.id === itemId; });
       var back = wasPrep ? revokeSchoolBonus(childId) : 0;
       save();
@@ -3985,7 +3985,7 @@
         '<p class="help">등교 시각과 등교 준비 항목, 정리시간 버튼·노래, 포켓몬 레벨업 별을 여기서 바로 고쳐요.<br>' +
         '저장하면 <b>아이 태블릿에도 새로고침 없이</b> 바로 보여요.</p>' +
         '<div class="admin-grid">' +
-          '<button type="button" class="admin-btn" data-act="school-settings"><span>🌅</span><b>등교 시작 설정</b><small>' + esc(S.schoolTime) + ' · 준비 ' + schoolPrepItems(D.children[0].id).length + '개</small></button>' +
+          '<button type="button" class="admin-btn" data-act="school-settings"><span>☀️</span><b>등교 시작 설정</b><small>' + esc(S.schoolTime) + ' · 준비 ' + schoolPrepItems(D.children[0].id).length + '개</small></button>' +
           '<button type="button" class="admin-btn" data-act="tidy-settings"><span>🧹</span><b>정리시간 설정</b><small>' + ((S.tidyCfg && S.tidyCfg.mins) || [5, 10, 15]).join('·') + '분 · 보상 없이 축하만</small></button>' +
           '<button type="button" class="admin-btn" data-act="pk-settings"><span>⚡</span><b>포켓몬 관리</b><small>별 ' + pkPerLevel() + '개 = 진화 1단계</small></button>' +
           '<button type="button" class="admin-btn" data-act="edit-routines"><span>✅</span><b>아침·저녁 할 일</b><small>할 일 탭에서 바로 고치기</small></button>' +
@@ -4146,7 +4146,7 @@
   }
 
   /* =========================================================
-     🌅 등교 시작 모드 (오전 8:30 기준 남은 시간)
+     ☀️ 등교 시작 모드 (오전 8:30 기준 남은 시간)
      ---------------------------------------------------------
      · '등교 시작' 버튼 → 화면 전체가 등교 준비 모드로 열립니다.
      · 오늘 등교 시간(기본 08:30)까지 남은 시간 + 남은 시간 막대 + 준비 체크리스트.
@@ -4204,7 +4204,7 @@
   }
 
   var schoolInt = null;
-  /* 🌅 등교 시작은 이제 '팝업'이 아니라 '할 일' 탭 안의 화면입니다.
+  /* ☀️ 등교 시작은 이제 '팝업'이 아니라 '할 일' 탭 안의 화면입니다.
      남은 시간 바(#schoolBar)는 탭 바로 아래(전역)에 있어 어느 탭에서도 보여요. */
   var schoolActive = false;
 
@@ -4397,7 +4397,7 @@
        ① 안내 한 줄 + 버튼 ② 민국 4장 · 이준 4장 카드가 바로 오게 했습니다. */
     return '<div class="school-view">' +
       '<div class="sv-mini">' +
-        '<span class="sv-mini-txt">🌅 ' + esc(deadlineText()) + '까지 준비' +
+        '<span class="sv-mini-txt">☀️ ' + esc(deadlineText()) + '까지 준비' +
           (locked ? ' · 🔒 마감' : '') + ' · 카드를 눌러 완료!' + (bothDone ? ' 🎉 다 했어요!' : '') + '</span>' +
         '<div class="sv-actions">' +
           (S.mode === 'parent' ? '<button type="button" class="btn btn-ghost btn-sm" data-act="school-settings">⚙️ 등교 설정</button>' : '') +
@@ -4425,7 +4425,7 @@
     else setView('routine');
     startSchoolTicker();
     if (opts.toast !== false) {
-      UI.toast('🌅 등교 시작! ' + deadlineText() + '까지 준비해요', { emoji: '🎒', kind: 'good', duration: 3000 });
+      UI.toast('☀️ 등교 시작! ' + deadlineText() + '까지 준비해요', { emoji: '🎒', kind: 'good', duration: 3000 });
     }
   }
   function endSchoolMode(msg) {
@@ -4435,7 +4435,7 @@
     var el = schoolBarEl();
     if (el) el.hidden = true;
     render({ keepScroll: true });
-    if (msg) UI.toast(msg, { emoji: '🌅', duration: 3200 });
+    if (msg) UI.toast(msg, { emoji: '☀️', duration: 3200 });
   }
   /* 아이 모드 08:00~08:30: 두 아이 아침 5개를 다 챙기기 전에는 ⚡ 포켓몬 탭에 못 들어가요 */
   function schoolPokemonLocked() {
@@ -4468,7 +4468,7 @@
     UI.confetti(48);
     chime();
     UI.toast('둘 다 등교 준비 끝! 정말 잘했어요 ✨', { emoji: '🎒', kind: 'good', duration: 3600 });
-    pushToPhones('🌅 등교 준비 완료!', '민국·이준 둘 다 아침 준비를 마쳤어요 ✨');
+    pushToPhones('☀️ 등교 준비 완료!', '민국·이준 둘 다 아침 준비를 마쳤어요 ✨');
   }
   /* [학교 가자!] — 둘 다 챙겼을 때만 */
   function schoolGoHome() {
@@ -5892,7 +5892,7 @@
   }
 
   /* 홈 · 할 일 위쪽의 🧹 정리시간 버튼
-     · 🌅 등교 시작은 08:00~08:30 자동 실행이라 평소 화면에는 두지 않습니다
+     · ☀️ 등교 시작은 08:00~08:30 자동 실행이라 평소 화면에는 두지 않습니다
        (부모님은 설정 → 🎛️ 새 기능 관리 → 등교 시작 설정에서 미리 볼 수 있어요). */
   function modeStripHTML(variant) {
     var tidy = '<div class="ms-tidy">' +
@@ -5950,12 +5950,12 @@
     });
   }
 
-  /* 🌅 등교 시작 설정 */
+  /* ☀️ 등교 시작 설정 */
   function schoolSettingsModal() {
     if (!needParent('등교 시작 설정은 부모님 모드에서 바꿀 수 있어요')) return;
     var m = UI.modal({
       size: 'wide',
-      title: '🌅 등교 시작 설정',
+      title: '☀️ 등교 시작 설정',
       bodyHTML:
         '<p class="help" style="margin-bottom:8px">등교 시간 30분 전(기본 08:00)이 되면 아이 모드에서 <b>할 일 탭이 등교 준비 화면으로 저절로 바뀌고</b>, ' +
           '모든 탭 위에 남은 시간 바가 떠요. 등교 시간(기본 08:30)이 되거나 둘 다 준비를 다 챙기면 저절로 일반 목록으로 돌아갑니다. ' +
@@ -5966,7 +5966,7 @@
           '<div class="field"><label>남은 시간 막대 시작</label><input class="input" id="edSchoolStart" type="time" value="' + esc(S.schoolStart) + '"></div>' +
         '</div>' +
         '<div class="field"><label>등교 준비를 다 했을 때 보너스 별</label><input class="input" id="edSchoolReward" type="number" min="0" max="20" value="' + S.schoolReward + '"></div>' +
-        '<p class="help" style="margin:2px 0 10px">🌅 등교 화면과 이 설정에는 <b>스스로 일어나기</b>를 빼고 나머지 아침 준비만 보여요(보통 4개). 스스로 일어나기 항목은 여기서 빠져도 그대로 보존되고, ✅ 할 일 목록에서 고치고 체크해요.</p>' +
+        '<p class="help" style="margin:2px 0 10px">☀️ 등교 화면과 이 설정에는 <b>스스로 일어나기</b>를 빼고 나머지 아침 준비만 보여요(보통 4개). 스스로 일어나기 항목은 여기서 빠져도 그대로 보존되고, ✅ 할 일 목록에서 고치고 체크해요.</p>' +
         D.children.map(function (c) {
           var items = schoolPrepItems(c.id);
           return '<div class="ed-block">' +
@@ -6016,7 +6016,7 @@
             render({ keepScroll: true });
             paintSchoolBar();
             UI.confetti(14);
-            UI.toast('등교 시작 설정을 저장했어요 · 아이 태블릿에도 바로 보여요', { emoji: '🌅', kind: 'good', duration: 3400 });
+            UI.toast('등교 시작 설정을 저장했어요 · 아이 태블릿에도 바로 보여요', { emoji: '☀️', kind: 'good', duration: 3400 });
           } },
         { label: '닫기', kind: 'ghost' }
       ],
@@ -6243,7 +6243,7 @@
       case 'hw-clear': hwReset(); UI.toast('종이를 새로 폈어요', { emoji: '📄', duration: 1500 }); break;
       case 'view-hw': viewHandwriting(el.getAttribute('data-id')); break;
 
-      /* 🌅 등교 시작 · 🧹 정리시간 */
+      /* ☀️ 등교 시작 · 🧹 정리시간 */
       case 'school-open': startSchoolMode(); break;
       case 'school-step': schoolStep(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
       case 'school-close': endSchoolMode('일반 할 일 목록으로 돌아왔어요'); break;
@@ -6477,7 +6477,7 @@
     document.getElementById('modeChild').addEventListener('click', function () { setMode('child'); });
     document.getElementById('modeParent').addEventListener('click', function () { setMode('parent'); });
     document.getElementById('view').addEventListener('click', onViewClick);
-    /* 🌅 모든 탭 위 남은 시간 바 — 누르면 '할 일'(등교 화면)으로 이동 */
+    /* ☀️ 모든 탭 위 남은 시간 바 — 누르면 '할 일'(등교 화면)으로 이동 */
     var sbBtn = document.getElementById('schoolBarBtn');
     if (sbBtn) sbBtn.addEventListener('click', function () {
       if (view === 'routine') window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -6641,7 +6641,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 79;             /* index.html 의 ?v=79 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 80;             /* index.html 의 ?v=80 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
