@@ -5980,9 +5980,6 @@
           return '<button type="button" class="btn btn-sun btn-sm" data-act="pk-feed" data-child="' + c.id + '" data-n="' + n + '"' + (stars < n ? ' disabled' : '') + '>별 ' + n + '개 먹이기</button>';
         }).join('') +
       '</div>' +
-      '<p class="pk-help">내 별 <b>⭐' + stars + '</b> · ' +
-        (maxed ? '라인 완성! 새 알을 골라도 돼요 🏅'
-          : per + '개 모으면 ' + (st === 0 ? '부화해요 🥚' : '다음 단계 진화 ✨')) + '</p>' +
       (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
       '</div>';
   }
@@ -7147,7 +7144,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 87;             /* index.html 의 ?v=87 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 88;             /* index.html 의 ?v=88 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
