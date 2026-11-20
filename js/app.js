@@ -1883,7 +1883,7 @@
     var st = routineStats(c.id, today);
     var p = pkOf(c.id);
     var sp = p.line ? pkSpecies(p) : null;
-    var lvl = pkLevel(p.fed);
+    var lvl = pkLevel(p);
     var pkName = p.line ? ((sp ? sp.ko : '🥚 알') + ' Lv.' + lvl) : '알 고르기';
     var per = pkPerLevel() || 100;
     var prog = pkComplete(p) ? per : Math.max(0, Math.min(per, pkProg(p.fed)));
@@ -2273,7 +2273,7 @@
       return '<span class="kc-pk"><em>⚡ 알을 골라 주세요</em></span>';
     }
     var sp = pkSpecies(p);
-    var lvl = pkLevel(p.fed);
+    var lvl = pkLevel(p);
     var per = pkPerLevel() || 100;
     var prog = pkComplete(p) ? per : Math.max(0, Math.min(per, pkProg(p.fed)));
     var pct = Math.round(prog / per * 100);
@@ -5249,7 +5249,8 @@
      ⚡ 별 모아서 포켓몬 키우기 (알 → 3단계 진화)
      ---------------------------------------------------------
      · 3단계 진화 라인 20가지. 모두 알(🥚)에서 시작해요.
-       Lv.1 알 → (별 100개) → Lv.2 부화 → Lv.3 1차 진화 → Lv.4 최종 진화
+       단계마다 별 1개 = Lv.1 (별 0개 Lv.0) — 별 100개를 먹이면 다음 단계로
+       알 Lv.0~99 → (별 100개) → 1단계 Lv.0~ → 2단계 Lv.0~ → 최종 진화 Lv.100
      · 최종 진화하면 도감에 등록되고 새 알을 고를 수 있어요.
      · 부화·레벨업·진화 순간에는 플래시·꽃가루·효과음과 함께 축하 화면이 떠요.
      ========================================================= */
@@ -5363,9 +5364,15 @@
     for (var i = 1; i <= n; i++) out.push(per * i);
     return out;
   }
-  /* 먹인 별 → Lv. (별 10개마다 한 레벨씩) */
-  function pkLevel(fed) {
-    return Math.max(1, Math.floor(Math.max(0, Number(fed) || 0) / 10) + 1);
+  /* 먹인 별 → Lv. — 그 단계에서 먹인 별 1개가 곧 1레벨!
+       · 단계 안: Lv.(먹인 별 % 100) — 별 0개 Lv.0 … 별 99개 Lv.99
+       · 다음 단계로 부화·진화하면 새 단계 Lv.0부터 다시 올라가요
+       · 라인을 다 키우면(최종 진화·도감 등록) Lv.100 */
+  function pkLevel(p) {
+    if (typeof p === 'number') p = { fed: p };   /* 숫자만 넘어와도 단계 정보 없이 계산 */
+    if (!p) return 0;
+    if (pkComplete(p)) return 100;
+    return Math.max(0, Math.min(99, Math.floor(pkProg(p.fed))));
   }
   /* 이번 단계에서 먹인 별 (100개 단위로 다시 0부터) */
   function pkProg(fed) { return Math.max(0, Math.floor(Number(fed) || 0)) % pkPerLevel(); }
@@ -5422,8 +5429,8 @@
     var sp = pkSpecies(p);
     var stars = S.stars[childId] || 0;
     if (!line) return '아직 알을 안 골랐어요 · 별 ' + stars;
-    if (sp) return sp.ko + ' Lv.' + pkLevel(p.fed) + ' · ' + pkStageName(pkStage(p), line.stages.length) + ' · 별 ' + stars;
-    return '🥚 신비한 알 Lv.' + pkLevel(p.fed) +
+    if (sp) return sp.ko + ' Lv.' + pkLevel(p) + ' · ' + pkStageName(pkStage(p), line.stages.length) + ' · 별 ' + stars;
+    return '🥚 신비한 알 Lv.' + pkLevel(p) +
       (reveal && line ? ' (속: ' + line.name + ' 라인)' : '') + ' · 별 ' + stars;
   }
   function pkRegisterDex(childId, id) {
@@ -5726,12 +5733,12 @@
       UI.toast('별이 모자라요. 지금 별 ' + have + '개 있어요', { emoji: '⭐', kind: 'warn' });
       return;
     }
-    var beforeLv = pkLevel(p.fed);
+    var beforeLv = pkLevel(p);
     var beforeStage = pkStage(p);
     var wasDone = pkComplete(p);
     S.stars[childId] = have - n;
     p.fed += n;
-    var afterLv = pkLevel(p.fed);
+    var afterLv = pkLevel(p);
     var afterStage = pkStage(p);
     var line = pkLine(p);
     /* 거쳐 온 모습을 도감에 등록 (라인의 마지막 단계까지 키우면 최종 진화 도감 등록) */
@@ -5807,7 +5814,7 @@
           '<div class="pk-evo-stage"><img class="pk-evo-big" src="' + pkArt(sp.id) + '" alt="' + esc(sp.ko) + '"></div>' +
           '<p class="pk-evo-name">' + esc(sp.ko) + '</p>' +
           '<div class="pk-evo-chain">' + rows + '</div>' +
-          '<p class="help">Lv.' + pkLevel(p.fed) + ' · ' + pkStageName(afterStage, lineN) + '</p>' +
+          '<p class="help">Lv.' + pkLevel(p) + ' · ' + pkStageName(afterStage, lineN) + '</p>' +
           (justDone ? '<p class="pk-evo-final">🏅 도감 상자에 등록됐어요! 이제 새 알을 골라 다른 친구도 키울 수 있어요.</p>' : '') +
         '</div>',
       actions: [{ label: '좋아! 🎉', kind: 'primary' }]
@@ -5838,7 +5845,7 @@
     var p = pkOf(childId);
     if (p.line && pkStage(p) > 0) {
       UI.confirm('새 신비한 알을 받을까요?', '지금 키우고 있는 ' + (pkSpecies(p) ? pkSpecies(p).ko : '포켓몬') +
-        '(Lv.' + pkLevel(p.fed) + ')가 알로 돌아가요. 새 알은 어떤 포켓몬일지 부화할 때까지 비밀이에요. 지금 별 진행(' +
+        '(Lv.' + pkLevel(p) + ')가 알로 돌아가요. 새 알은 어떤 포켓몬일지 부화할 때까지 비밀이에요. 지금 별 진행(' +
         pkProg(p.fed) + '/' + pkPerLevel() + ')은 처음부터 다시 쌓여요.', '새 알 받기', 'danger')
         .then(function (ok) { if (ok) pkApplyPick(childId, pkRandomLine(childId).key); });
       return;
@@ -5940,7 +5947,7 @@
     var st = pkStage(p);
     var sp = pkSpecies(p);
     var next = pkNextSpecies(p);
-    var lvl = pkLevel(p.fed);
+    var lvl = pkLevel(p);
     var maxed = pkComplete(p);
     var prog = maxed ? per : pkProg(p.fed);
     var need = pkNeed(p);
@@ -5952,13 +5959,8 @@
         'onerror="this.onerror=null;this.src=\'' + pkIcon(sp.id) + '\'">';
     }
     var nextBlock = next
-      ? '<div class="pk-next' + (st === 0 ? ' mystery' : ' lock') + '"><span class="pk-next-label">다음 모습</span>' +
-          (st === 0
-            ? '<span class="pk-next-mystery" aria-hidden="true">❔</span>'
-            : '<img src="' + pkIcon(next.id) + '" alt="" loading="lazy" class="pk-next-img" aria-hidden="true">') +
-          '<b>???</b>' +
-          '<small>' + (st === 0 ? '별 ' + need + '개 더 모으면 부화' : '별 ' + need + '개 더 모으면 진화') + '</small></div>'
-      : '<div class="pk-next done"><span class="pk-next-label">라인 완성</span><b>🏅 도감 등록</b></div>';
+      ? ''
+      : '<div class="pk-next done"><span class="pk-next-label">최종 진화 완료</span><b>🏅 도감 등록</b></div>';
 
     return '<div class="card pk-card ' + c.color + (maxed ? ' maxed' : '') + '">' + head +
       '<div class="pk-hero">' +
@@ -5968,7 +5970,7 @@
           '<div class="pk-name">' + (sp ? esc(sp.ko) : '신비한 알') + '<span class="pk-lv">Lv.' + lvl + '</span></div>' +
           '<div class="pk-sub">' + (st === 0 ? '무슨 포켓몬이 나올까? · 알' : esc(line.name) + ' 라인 · ' + pkStageName(st, line.stages.length)) + '</div>' +
           '<div class="pk-bar"><i style="width:' + Math.round(prog / per * 100) + '%"></i></div>' +
-          '<div class="pk-progtxt"><span>' + (maxed ? '라인 완성! 🏅' : '다음 진화까지 ' + need + '개') + '</span><span>먹인 별 ' + prog + ' / ' + per + ' ⭐</span></div>' +
+          '<div class="pk-progtxt"><span>' + (maxed ? '라인 완성! 🏅' : (st === 0 ? '부화까지 ' + need + '개' : '다음 진화까지 ' + need + '개')) + '</span><span>먹인 별 ' + prog + ' / ' + per + ' ⭐</span></div>' +
         '</div>' +
       '</div>' +
       pkTrackHTML(p) +
@@ -5978,10 +5980,9 @@
           return '<button type="button" class="btn btn-sun btn-sm" data-act="pk-feed" data-child="' + c.id + '" data-n="' + n + '"' + (stars < n ? ' disabled' : '') + '>별 ' + n + '개 먹이기</button>';
         }).join('') +
       '</div>' +
-      '<p class="pk-help">내 별 <b>⭐' + stars + '</b> 중에서 먹여요 · <b>별 ' + per + '개</b>를 모으면 ' +
-        (maxed ? '(완성! 새 알을 골라도 돼요)'
-          : st === 0 ? '부화해요 🥚'
-          : '한 단계 더 진화해요 ✨') + '</p>' +
+      '<p class="pk-help">내 별 <b>⭐' + stars + '</b> · ' +
+        (maxed ? '라인 완성! 새 알을 골라도 돼요 🏅'
+          : per + '개 모으면 ' + (st === 0 ? '부화해요 🥚' : '다음 단계 진화 ✨')) + '</p>' +
       (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
       '</div>';
   }
@@ -6201,7 +6202,7 @@
     var curSt = pkStage(p);
     var curId = (line && curSt >= 1) ? line.stages[curSt - 1][0] : 0;
     var isCur = curId === Number(id);
-    var lvl = pkLevel(p.fed);
+    var lvl = pkLevel(p);
     var evo = pkEvoStageOf(sp);
     var types = sp.types || [];
     var accent = pkTypeColor(types[0] || '노말');
@@ -7146,7 +7147,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 86;             /* index.html 의 ?v=86 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 87;             /* index.html 의 ?v=87 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
