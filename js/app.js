@@ -1947,7 +1947,7 @@
     var p = pkOf(c.id);
     var sp = p.line ? pkSpecies(p) : null;
     var lvl = pkLevel(p);
-    var pkName = p.line ? ((sp ? sp.ko : '🥚 알') + ' Lv.' + lvl) : '알 고르기';
+    var pkName = p.line ? ((sp ? sp.ko : '🥚 알') + ' Lv.' + lvl) : '알 받기';
     var per = pkPerLevel() || 100;
     var prog = pkComplete(p) ? per : Math.max(0, Math.min(per, pkProg(p.fed)));
     var pkPct = Math.round(prog / per * 100);
@@ -2333,7 +2333,7 @@
   function pokemonLineHTML(childId) {
     var p = pkOf(childId);
     if (!p.line) {
-      return '<span class="kc-pk"><em>⚡ 알을 골라 주세요</em></span>';
+      return '<span class="kc-pk"><em>⚡ 알을 받아 주세요</em></span>';
     }
     var sp = pkSpecies(p);
     var lvl = pkLevel(p);
@@ -5788,7 +5788,7 @@
   function pkFeed(childId, n) {
     var p = pkOf(childId);
     if (!p.line) {
-      UI.toast('먼저 알을 골라 주세요 🥚', { emoji: '⚡', kind: 'warn' });
+      UI.toast('먼저 알을 받아 주세요 🥚', { emoji: '⚡', kind: 'warn' });
       return;
     }
     n = Math.max(1, Math.min(50, Math.floor(Number(n) || 1)));
@@ -5837,6 +5837,13 @@
     }
   }
   /* 부화 · 진화 축하 화면 */
+  /* 받침에 맞춰 '이 / 가' */
+  function josaI(word) {
+    var t = String(word || '');
+    var c = t.charCodeAt(t.length - 1);
+    if (c < 0xAC00 || c > 0xD7A3) return '이';
+    return ((c - 0xAC00) % 28) ? '이' : '가';
+  }
   /* 받침에 맞춰 '로 / 으로' */
   function josaRo(word) {
     var t = String(word || '');
@@ -5879,7 +5886,7 @@
           '<p class="pk-evo-name">' + esc(sp.ko) + '</p>' +
           '<div class="pk-evo-chain">' + rows + '</div>' +
           '<p class="help">Lv.' + pkLevel(p) + ' · ' + pkStageName(afterStage, lineN) + '</p>' +
-          (justDone ? '<p class="pk-evo-final">🏅 도감 상자에 등록됐어요! 이제 새 알을 골라 다른 친구도 키울 수 있어요.</p>' : '') +
+          (justDone ? '<p class="pk-evo-final">🏅 도감 상자에 등록됐어요! 이제 새 알을 받아 다른 친구도 키울 수 있어요.</p>' : '') +
         '</div>',
       actions: [{ label: '좋아! 🎉', kind: 'primary' }]
     });
@@ -5980,9 +5987,9 @@
     var c = childById(childId);
     UI.modal({
       size: 'wide',
-      title: '🥚 신비한 알 고르기',
+      title: '🥚 신비한 알 받기',
       bodyHTML: '<p class="help" style="margin-bottom:10px">' + esc(c.name) +
-        '의 알을 골라요. 어떤 포켓몬이 나올지는 <b>부화하는 순간까지 비밀</b>이에요!<br>' +
+        josaI(c.name) + ' 새 신비한 알을 받아요. 어떤 포켓몬이 나올지는 <b>부화하는 순간까지 비밀</b>이에요!<br>' +
         '별 ' + pkPerLevel() + '개를 모으면 부화하고, 그때 정체가 짠 하고 나타나요.</p>' +
         pkEggGridHTML(childId),
       actions: [{ label: '닫기', kind: 'ghost' }],
@@ -6077,7 +6084,7 @@
           return '<button type="button" class="btn btn-sun btn-sm" data-act="pk-feed" data-child="' + c.id + '" data-n="' + n + '"' + (stars < n ? ' disabled' : '') + '>별 ' + n + '개 먹이기</button>';
         }).join('') +
       '</div>' +
-      (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 고르기</button>' : '') +
+      (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 받기</button>' : '') +
       '</div>';
   }
   /* ---------- 🏡 포켓몬 마을 ----------
@@ -7254,7 +7261,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 91;             /* index.html 의 ?v=91 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 92;             /* index.html 의 ?v=92 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
