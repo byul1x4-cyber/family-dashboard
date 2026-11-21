@@ -5916,30 +5916,55 @@
     }
     pkApplyPick(childId, line.key);
   }
-  function pkApplyPick(childId, lineKey) {
+  /* 먹인 별을 그대로 둔 채 라인만 바꿀 때, 새 라인의 지금 단계 모습을 p.cur 에 맞춰 둡니다
+     (별이 100개 이상이라 이미 부화·진화한 단계라면 그 단계 모습부터 이어서 키워요) */
+  function pkCurOfLine(p) {
+    var line = pkLine(p);
+    if (!line) return 0;
+    var st = Math.min(pkStage(p), line.stages.length);
+    return st >= 1 ? line.stages[st - 1][0] : 0;
+  }
+  /* opts.keepFed — 부모님 모드 '🥚 파트너 바꾸기'에서만 씁니다.
+     먹인 별(fed)을 그대로 두고 라인만 바꾸고, 새 라인의 같은 단계 모습부터 이어서 키워요. */
+  function pkApplyPick(childId, lineKey, opts) {
+    var keepFed = !!(opts && opts.keepFed);
     var p = pkOf(childId);
+    var fed0 = p.fed;
     p.line = lineKey;
-    p.cur = 0;
-    p.fed = 0;
+    p.fed = keepFed ? fed0 : 0;
+    p.cur = keepFed ? pkCurOfLine(p) : 0;
+    if (keepFed) pkSyncDex(p);   /* 이미 부화·진화한 단계면 새 라인 도감도 그만큼 등록 */
     saveNow();
     render({ keepScroll: true });
-    UI.confetti(24);
+    UI.confetti(keepFed ? 44 : 24);
     pkSound('level');
-    var hatchNeed = (lineKey && PK.lineByKey[lineKey]) ? pkThresholds(PK.lineByKey[lineKey])[0] : pkPerLevel();
+    var lineN = (lineKey && PK.lineByKey[lineKey]) ? PK.lineByKey[lineKey] : null;
+    if (keepFed) {
+      UI.toast('새 파트너로 바꿨어요! 먹인 별 ' + fed0 + '개는 그대로예요' +
+        (lineN ? ' (부모님만 보임: ' + lineN.name + ' 라인)' : ''), { emoji: '🥚', kind: 'good', duration: 4200 });
+      return;
+    }
+    var hatchNeed = lineN ? pkThresholds(lineN)[0] : pkPerLevel();
     UI.toast(childById(childId).name + '에게 신비한 알이 도착했어요 🥚 별 ' + hatchNeed + '개를 모으면 부화해요!', { emoji: '⚡', kind: 'good', duration: 3600 });
   }
-  /* 부모님 모드: 같은 진행을 두고 다른 알을 다시 뽑기 */
-  function pkReroll(childId) {
-    if (!needParent('알 다시 뽑기는 부모님 모드에서만 돼요')) return;
+  /* 부모님 모드 '🥚 파트너 바꾸기': 먹인 별은 그대로 두고 알 속 포켓몬(라인)만 다른 친구로 */
+  function pkSwapPartner(childId) {
+    if (!needParent('파트너 바꾸기는 부모님 모드에서만 돼요')) return;
     var p = pkOf(childId);
-    UI.confirm('신비한 알을 다시 뽑을까요?', childById(childId).name + '의 지금 알을 내려놓고 다른 신비한 알을 새로 받아요. ' +
-      '별 진행(' + pkProg(p.fed) + '/' + pkPerLevel() + ')은 처음부터 다시 쌓이고, 도감 기록은 그대로 남아요.', '다시 뽑기', 'danger')
+    var fed0 = p.fed;
+    var lv0 = pkLevel(p);
+    var st0 = pkStage(p);
+    UI.confirm('다른 파트너로 바꿀까요?',
+      childById(childId).name + '이 지금까지 먹인 별 ' + fed0 + '개는 그대로 유지돼요! ' +
+      '알 속 포켓몬만 다른 친구로 바뀌고, 별 진행(' + pkProg(fed0) + '/' + pkPerLevel() +
+      (st0 >= 1 ? ' · Lv.' + lv0 : '') + ')은 지금 그대로 이어서 키워요. ' +
+      '어떤 포켓몬이 나올지는 부화하는 순간까지 비밀이고, 도감 기록은 그대로 남아요.',
+      '파트너 바꾸기', 'primary')
       .then(function (ok) {
         if (!ok) return;
         var line = pkRandomLine(childId);
         if (!line) return;
-        pkApplyPick(childId, line.key);
-        UI.toast('새 신비한 알을 뽑았어요 (부모님만 보임: ' + line.name + ' 라인)', { emoji: '🎲', kind: 'good', duration: 3200 });
+        pkApplyPick(childId, line.key, { keepFed: true });
       });
   }
   function pkEggGridHTML(childId) {
@@ -5960,7 +5985,15 @@
         '의 알을 골라요. 어떤 포켓몬이 나올지는 <b>부화하는 순간까지 비밀</b>이에요!<br>' +
         '별 ' + pkPerLevel() + '개를 모으면 부화하고, 그때 정체가 짠 하고 나타나요.</p>' +
         pkEggGridHTML(childId),
-      actions: [{ label: '닫기', kind: 'ghost' }]
+      actions: [{ label: '닫기', kind: 'ghost' }],
+      /* 모달은 #view 밖에 붙어서 data-act 클릭이 위임되지 않아요 — 여기서 직접 받습니다 */
+      onOpen: function (wrap, close) {
+        wrap.addEventListener('click', function (e) {
+          if (!e.target.closest('[data-act="pk-pick"]')) return;
+          close();
+          setTimeout(function () { pkPick(childId); }, 200);
+        });
+      }
     });
   }
   /* ---------- 카드 ---------- */
@@ -6661,7 +6694,8 @@
         '<div class="field"><label>진화에 필요한 별 개수 (기본 100개)</label>' +
           '<input class="input" id="edPerLevel" type="number" min="10" max="1000" step="10" value="' + pkPerLevel() + '">' +
           '<p class="help">별 ' + pkPerLevel() + '개를 모을 때마다 알 → 1단계 → 2단계 → 3단계로 진화해요(진화가 없는 포켓몬은 알 → 부화 100개). 작게 넣으면 빨리 자라요(시험해 볼 때 좋아요).<br>' +
-          '아이 화면에서는 알 단계·아직 진화 전 단계의 정체가 <b>???</b> 로 가려지고, 여기서만 실제 알을 보거나 새로 뽑을 수 있어요.</p></div>' +
+          '아이 화면에서는 알 단계·아직 진화 전 단계의 정체가 <b>???</b> 로 가려지고, 여기서만 실제 알을 볼 수 있어요.<br>' +
+          '<b>🥚 파트너 바꾸기</b>는 지금까지 먹인 별을 <b>그대로 둔 채</b> 알 속 포켓몬만 다른 친구로 바꿔요.</p></div>' +
         D.children.map(function (c) {
           var p = pkOf(c.id);
           var sp = pkSpecies(p);
@@ -6671,8 +6705,7 @@
             '<div class="pk-set-row">' +
               '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="10">별 ＋10</button>' +
               '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="-10">별 －10</button>' +
-              '<button type="button" class="btn btn-soft btn-sm" data-pk="reroll" data-child="' + c.id + '">🎲 알 다시 뽑기</button>' +
-              '<button type="button" class="btn btn-soft btn-sm" data-pk="choose" data-child="' + c.id + '">🥚 파트너 바꾸기</button>' +
+              '<button type="button" class="btn btn-soft btn-sm" data-pk="choose" data-child="' + c.id + '" title="먹인 별은 그대로 두고 알 속 포켓몬만 바뀝니다">🥚 파트너 바꾸기</button>' +
               '<button type="button" class="btn btn-danger btn-sm" data-pk="reset" data-child="' + c.id + '">↺ 처음부터</button>' +
             '</div></div>';
         }).join(''),
@@ -6709,10 +6742,7 @@
             UI.toast(childById(cid).name + ' 별 ' + (S.stars[cid]) + '개', { emoji: '⭐', kind: 'good', duration: 1400 });
           } else if (act === 'choose') {
             close();
-            setTimeout(function () { pkChooserModal(cid); }, 220);
-          } else if (act === 'reroll') {
-            close();
-            setTimeout(function () { pkReroll(cid); }, 220);
+            setTimeout(function () { pkSwapPartner(cid); }, 220);
           } else if (act === 'reset') {
             var px = pkOf(cid);
             var stars0 = S.stars[cid] || 0;
@@ -7224,7 +7254,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 90;             /* index.html 의 ?v=90 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 91;             /* index.html 의 ?v=91 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
