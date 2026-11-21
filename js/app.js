@@ -90,6 +90,10 @@
       /* ☀️ 등교 시작 모드 기준 시각 (부모님 모드 > 설정에서 바꿔요) */
       schoolTime: (D.school && D.school.targetTime) || '08:30',
       schoolStart: (D.school && D.school.windowStart) || '07:00',
+      /* ⏰ 아침 할 일 자동 잠금 (아이 모드 09:00) — 부모님이 설정에서 바꿔요 */
+      morningLockEnabled: true,        /* 평일 09:00 자동 잠금 켜기 */
+      morningUnlockWeekend: true,      /* 주말(토·일)은 잠그지 않기 */
+      morningUnlockDate: '',           /* 'YYYY-MM-DD' — 그날 하루만 잠금 풀기 */
       /* 등교 시작 보너스 별을 하루 한 번만 주려고 적어 두는 곳: { '2026-11-19': { minguk: 1 } } */
       schoolBonus: {},
       /* ⚡ 포켓몬: { minguk: { cur: 4, fed: 0, dex: [] } } — fed는 먹인 별 수(레벨업 별 개수 기준) */
@@ -190,6 +194,11 @@
     /* ☀️ 등교 시작 시각 (HH:MM 형식만 받습니다) */
     s.schoolTime = hhmmOk(raw.schoolTime) ? raw.schoolTime : base.schoolTime;
     s.schoolStart = hhmmOk(raw.schoolStart) ? raw.schoolStart : base.schoolStart;
+
+    /* ⏰ 아침 할 일 자동 잠금 — 예전 가족 문서에는 없는 값이라 없으면 기본값(둘 다 켜짐) */
+    s.morningLockEnabled = raw.morningLockEnabled === false ? false : true;
+    s.morningUnlockWeekend = raw.morningUnlockWeekend === false ? false : true;
+    s.morningUnlockDate = /^\d{4}-\d{2}-\d{2}$/.test(String(raw.morningUnlockDate || '')) ? String(raw.morningUnlockDate) : '';
     s.schoolBonus = (raw.schoolBonus && typeof raw.schoolBonus === 'object' && !Array.isArray(raw.schoolBonus)) ? raw.schoolBonus : {};
 
     /* ⚡ 포켓몬 (예전 문서에는 없는 값이라 없으면 비워 둡니다) */
@@ -813,9 +822,57 @@
     var mins = now.getHours() * 60 + now.getMinutes();
     return mins >= MORNING_DEADLINE_MIN;
   }
-  /* 아이 모드에서만 아침 체크를 막습니다 (부모님 모드는 언제든 체크·해제) */
-  function morningLocked() {
-    return S.mode !== 'parent' && morningDeadlinePassed();
+  /* 토요일·일요일인가 */
+  function isWeekend(now) {
+    var d = now ? now.getDay() : new Date().getDay();
+    return d === 0 || d === 6;
+  }
+  /* 아이 모드에서만 아침 체크를 막습니다 (부모님 모드는 언제든 체크·해제).
+     부모님이 설정에서 자동 잠금을 끄거나, 주말 자동 해제를 켜 두었거나,
+     '오늘 하루 풀기'(morningUnlockDate = 오늘)를 켜 두면 잠기지 않아요. */
+  function isMorningLocked() {
+    if (!S) return false;
+    if (S.mode === 'parent') return false;                 /* 부모님 모드는 언제나 체크 가능 */
+    if (S.morningLockEnabled === false) return false;      /* 자동 잠금 끔 */
+    if (S.morningUnlockWeekend !== false && isWeekend()) return false;  /* 주말은 자동 해제 */
+    if (S.morningUnlockDate && S.morningUnlockDate === todayKey()) return false;  /* 오늘 하루 풀기 */
+    return morningDeadlinePassed();
+  }
+  function morningLocked() { return isMorningLocked(); }
+  /* 지금 아이 화면이 어떤 이유로 잠겨 있는지/풀려 있는지 — 부모님 모드 안내줄에 씁니다 */
+  function morningLockStateText() {
+    if (S.morningLockEnabled === false) return '자동 잠금 꺼짐';
+    if (S.morningUnlockDate && S.morningUnlockDate === todayKey()) return '오늘 하루 풀림';
+    if (S.morningUnlockWeekend !== false && isWeekend()) return '주말이라 안 잠김';
+    return morningDeadlinePassed()
+      ? '지금 잠김 (' + morningDeadlineText() + ' 지남)'
+      : morningDeadlineText() + '부터 잠김';
+  }
+  /* 부모님 모드 할 일 창 맨 위 — '오늘 잠금 풀기' 토글 (아이 화면에 바로 반영) */
+  function morningLockStripHTML() {
+    if (!S || S.mode !== 'parent') return '';
+    var todayOn = !!(S.morningUnlockDate && S.morningUnlockDate === todayKey());
+    return '<div class="mlock-strip' + (todayOn ? ' on' : '') + '">' +
+      '<span class="mlock-ico" aria-hidden="true">' + (todayOn ? '🔓' : '🔒') + '</span>' +
+      '<span class="mlock-txt"><b>아이 화면 아침 잠금</b><small>' + esc(morningLockStateText()) + '</small></span>' +
+      '<button type="button" class="mlock-btn' + (todayOn ? ' on' : '') + '" data-act="morning-unlock-toggle"' +
+        ' aria-pressed="' + (todayOn ? 'true' : 'false') + '">' +
+        (todayOn ? '🔒 다시 잠그기' : '🔓 오늘 잠금 풀기') +
+      '</button>' +
+    '</div>';
+  }
+  /* 오늘 하루만 잠금 풀기 켜고 끄기 */
+  function toggleMorningUnlockToday() {
+    if (!needParent('아침 잠금은 부모님 모드에서 풀 수 있어요')) return;
+    var today = todayKey();
+    var on = !(S.morningUnlockDate && S.morningUnlockDate === today);
+    S.morningUnlockDate = on ? today : '';
+    saveNow();
+    render({ keepScroll: true });
+    paintSchoolBar();
+    UI.toast(on ? '오늘은 아이 모드에서도 아침 할 일을 체크할 수 있어요 🔓'
+                : '오늘 아침 잠금을 다시 켰어요 🔒',
+      { emoji: on ? '🔓' : '🔒', kind: on ? 'good' : 'warn', duration: 2600 });
   }
   /* 등교 시작 모드의 안내 시각 (기본 08:30) */
   function deadlineText() { return (S && S.schoolTime) || '08:30'; }
@@ -2447,7 +2504,8 @@
     /* 2026-11-19 확정: 시간대 배너 · 정리시간 바 · 전체/아침/저녁 필터를 모두 걷어내고
        민국(왼쪽) · 이준(오른쪽) 카드(아침+저녁 전체)만 바로 보이게 했습니다. */
     routineSlot = 'all';
-    return '<div class="duo-grid">' + D.children.map(routineKidCardHTML).join('') + '</div>' +
+    return morningLockStripHTML() +
+      '<div class="duo-grid">' + D.children.map(routineKidCardHTML).join('') + '</div>' +
       '<div class="lock-note">🔒 완료한 일은 부모님 모드에서 되돌릴 수 있어요. 완료할 때마다 별 ⭐ 1개가 쌓여요.</div>';
   }
 
@@ -3999,7 +4057,7 @@
         '<p class="help">등교 시각과 등교 준비 항목, 정리시간 버튼·노래, 포켓몬 레벨업 별을 여기서 바로 고쳐요.<br>' +
         '저장하면 <b>아이 태블릿에도 새로고침 없이</b> 바로 보여요.</p>' +
         '<div class="admin-grid">' +
-          '<button type="button" class="admin-btn" data-act="school-settings"><span>☀️</span><b>등교 시작 설정</b><small>' + esc(S.schoolTime) + ' · 준비 ' + schoolPrepItems(D.children[0].id).length + '개</small></button>' +
+          '<button type="button" class="admin-btn" data-act="school-settings"><span>☀️</span><b>등교 시작 설정</b><small>' + esc(S.schoolTime) + ' · 준비 ' + schoolPrepItems(D.children[0].id).length + '개 · 아침 ' + (S.morningLockEnabled === false ? '잠금 끔' : '잠금 ' + morningDeadlineText()) + '</small></button>' +
           '<button type="button" class="admin-btn" data-act="tidy-settings"><span>🧹</span><b>정리시간 설정</b><small>' + ((S.tidyCfg && S.tidyCfg.mins) || [5, 10, 15]).join('·') + '분 · 보상 없이 축하만</small></button>' +
           '<button type="button" class="admin-btn" data-act="pk-settings"><span>⚡</span><b>포켓몬 관리</b><small>별 ' + pkPerLevel() + '개 = 진화 1단계</small></button>' +
           '<button type="button" class="admin-btn" data-act="edit-routines"><span>✅</span><b>아침·저녁 할 일</b><small>할 일 탭에서 바로 고치기</small></button>' +
@@ -6470,6 +6528,15 @@
           '<div class="field"><label>남은 시간 막대 시작</label><input class="input" id="edSchoolStart" type="time" value="' + esc(S.schoolStart) + '"></div>' +
         '</div>' +
         '<div class="field"><label>등교 준비를 다 했을 때 보너스 별</label><input class="input" id="edSchoolReward" type="number" min="0" max="20" value="' + S.schoolReward + '"></div>' +
+        '<div class="mlock-set">' +
+          '<div class="mlock-set-head"><b>⏰ 아침 할 일 자동 잠금</b><small>아이 모드에서 ' + esc(morningDeadlineText()) + '부터 아침 할 일 체크가 잠겨요</small></div>' +
+          '<label class="sw-row"><input type="checkbox" id="edMorningLock"' + (S.morningLockEnabled !== false ? ' checked' : '') + '>' +
+            '<span class="sw-box" aria-hidden="true"></span><span class="sw-txt">평일 ' + esc(morningDeadlineText()) + ' 아침 할 일 자동 잠금</span></label>' +
+          '<label class="sw-row"><input type="checkbox" id="edMorningWeekend"' + (S.morningUnlockWeekend !== false ? ' checked' : '') + '>' +
+            '<span class="sw-box" aria-hidden="true"></span><span class="sw-txt">주말(토·일)은 잠금 해제</span></label>' +
+          '<label class="sw-row"><input type="checkbox" id="edMorningToday"' + (S.morningUnlockDate === todayKey() ? ' checked' : '') + '>' +
+            '<span class="sw-box" aria-hidden="true"></span><span class="sw-txt">오늘 하루 아이 모드 잠금 풀기</span></label>' +
+        '</div>' +
         '<p class="help" style="margin:2px 0 10px">☀️ 등교 화면과 이 설정에는 <b>스스로 일어나기</b>를 빼고 나머지 아침 준비만 보여요(보통 4개). 스스로 일어나기 항목은 여기서 빠져도 그대로 보존되고, ✅ 할 일 목록에서 고치고 체크해요.</p>' +
         D.children.map(function (c) {
           var items = schoolPrepItems(c.id);
@@ -6488,6 +6555,12 @@
             S.schoolTime = t;
             S.schoolStart = hhmmOk(st) && hhmmMin(st, 0) < hhmmMin(t, 0) ? st : minHHMM(hhmmMin(t, 510) - 90);
             S.schoolReward = clampNum(rw, 0, 20, 1);
+            var lockEl = document.getElementById('edMorningLock');
+            var wkEl = document.getElementById('edMorningWeekend');
+            var todayEl = document.getElementById('edMorningToday');
+            S.morningLockEnabled = lockEl ? !!lockEl.checked : (S.morningLockEnabled !== false);
+            S.morningUnlockWeekend = wkEl ? !!wkEl.checked : (S.morningUnlockWeekend !== false);
+            S.morningUnlockDate = (todayEl && todayEl.checked) ? todayKey() : '';
             var changed = 0;
             D.children.forEach(function (c) {
               var list = document.querySelector('.ed-list[data-child="' + c.id + '"]');
@@ -6760,6 +6833,7 @@
       case 'tidy-stop': tidyStop(); break;
       case 'tidy-who': tidyWhoPick(el.getAttribute('data-id')); break;
       case 'school-settings': schoolSettingsModal(); break;
+      case 'morning-unlock-toggle': toggleMorningUnlockToday(); break;
       case 'tidy-settings': tidySettingsModal(); break;
       case 'pk-settings': pkSettingsModal(); break;
       case 'edit-routines': setView('routine'); UI.toast(S.mode === 'parent' ? '할 일 탭에서 ＋ 할 일 추가 · 🗑️ 로 고쳐요' : '아침·저녁 할 일은 부모님 모드에서 고칠 수 있어요', { emoji: '✅', duration: 2800 }); break;
@@ -7150,7 +7224,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 89;             /* index.html 의 ?v=89 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 90;             /* index.html 의 ?v=90 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
