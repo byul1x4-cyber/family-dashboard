@@ -5558,6 +5558,18 @@
         }
       } else if (kind === 'level') {
         [784, 988, 1175].forEach(function (f, i) { pkTone(f, t0 + i * 0.09, 0.2, 'triangle', 0.11); });
+      } else if (kind === 'poke') {
+        /* 톡톡 — 짧고 귀여운 "뽁" 소리 (연타 때는 조금 쉬어요) */
+        var pnow = Date.now();
+        if (!pkSound.pokeAt || pnow - pkSound.pokeAt > 90) {
+          pkSound.pokeAt = pnow;
+          pkTone(880, t0, 0.07, 'sine', 0.075);
+          pkTone(1320, t0 + 0.045, 0.09, 'sine', 0.05);
+        }
+      } else if (kind === 'nofeed') {
+        /* 별이 없을 때 — 시무룩 내려가는 두 음 */
+        pkTone(622, t0, 0.14, 'sine', 0.075);
+        pkTone(466, t0 + 0.13, 0.22, 'sine', 0.065);
       } else {
         /* 부화·진화 팡파레 */
         [523, 659, 784, 1046, 1318].forEach(function (f, i) {
@@ -5784,6 +5796,113 @@
     document.body.appendChild(f);
     setTimeout(function () { f.remove(); }, 900);
   }
+  /* ---------- 💬 알·캐릭터 말풍선 대사 ----------
+     알 단계와 부화 뒤를 나눠 두고, 톡톡 칠 때마다 다른 말이 나와요. */
+  var PK_EGG_LINES = [
+    '꼬물꼬물… 곧 나올 것 같아!',
+    '따뜻해! 별 더 먹고 싶어 ⭐',
+    '내가 누구일까? 비밀이야 🤫',
+    '간질간질! 기분 좋아 ✨',
+    '톡톡! 누구세요?',
+    '아직 잠이 덜 깼어… 💤',
+    '여기 참 포근하다~ 🥚'
+  ];
+  var PK_MON_LINES = [
+    '안녕! 오늘도 힘내자!',
+    '별 먹으면 쑥쑥 자라나!',
+    '너랑 함께라 신나! ✨',
+    '더 멋진 모습 보여줄게!',
+    '하이파이브! 🖐️',
+    '톡톡 간지럽네~ ㅎㅎ',
+    '오늘도 고마워! 💛'
+  ];
+  /* 별을 먹였을 때 (냠냠) */
+  var PK_FEED_LINES = [
+    '냠냠! 별 맛있다 ⭐',
+    '고마워! 힘이 쑥쑥 ✨',
+    '별이 꿀맛이야! 😋',
+    '더 먹고 싶어! ⭐',
+    '히히, 배불러~ 💛'
+  ];
+  /* 별이 없는데 먹이기 버튼을 눌렀을 때 (배고파) — 별은 먹지 않아요 */
+  var PK_HUNGRY_LINES = [
+    '별이 없어요! 할 일 해서 별 모아줘 ⭐',
+    '배고파… 별 하나만 가져다줘!',
+    '지금은 먹을 별이 없어… ⭐',
+    '별 모아 오면 꼭 먹을게! 🥺'
+  ];
+  function pkPickLine(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+  /* 말풍선 하나 — 알·캐릭터가 있는 칸(.pk-hero) 아래쪽에 퐁 나타나 2.7초 뒤 사라져요.
+     연타하면 앞의 말풍선은 바로 걷어 새 말이 뜨게 합니다. */
+  var pkBubbleTimers = {};
+  function pkBubble(artEl, text, tone) {
+    if (!artEl || !text) return;
+    var childId = artEl.getAttribute('data-child') || '';
+    /* 히어로 칸 안에 띄워야 카드 밖으로 잘리지 않아요 */
+    var host = artEl.closest('.pk-hero') || artEl;
+    Array.prototype.forEach.call(host.querySelectorAll('.pk-bubble-wrap'), function (n) { n.remove(); });
+    var wrap = document.createElement('span');
+    wrap.className = 'pk-bubble-wrap' + (tone === 'hungry' ? ' hungry' : '');
+    var bub = document.createElement('span');
+    bub.className = 'pk-bubble';
+    bub.setAttribute('role', 'status');
+    bub.textContent = text;
+    wrap.appendChild(bub);
+    host.appendChild(wrap);
+    /* 꼬리는 알·캐릭터 가운데를 가리키게 (칸 왼쪽 기준) */
+    var hb = host.getBoundingClientRect();
+    var ab = artEl.getBoundingClientRect();
+    var tail = Math.round(ab.left - hb.left + ab.width / 2 - 6);
+    var w = bub.offsetWidth;
+    if (w) tail = Math.max(20, Math.min(w - 20, tail));
+    bub.style.setProperty('--tail', tail + 'px');
+    clearTimeout(pkBubbleTimers[childId]);
+    pkBubbleTimers[childId] = setTimeout(function () {
+      if (!document.body.contains(wrap)) return;
+      bub.classList.add('out');
+      setTimeout(function () { if (wrap.parentNode) wrap.remove(); }, 320);
+    }, 2700);
+  }
+  /* 알·캐릭터 까딱까딱 + 반짝 — 연타해도 매번 처음부터 다시 재생 */
+  function pkArtReact(artEl, opts) {
+    if (!artEl) return;
+    opts = opts || {};
+    artEl.classList.remove('pk-poking');
+    void artEl.offsetWidth;                 /* 클래스를 뺐다 붙여 애니메이션을 처음부터 */
+    artEl.classList.add('pk-poking');
+    clearTimeout(artEl.__pkPokeT);
+    artEl.__pkPokeT = setTimeout(function () {
+      if (artEl.parentNode) artEl.classList.remove('pk-poking');
+    }, 780);
+    if (opts.sparkle !== false) pkSparkle(artEl, opts.sparkleN || 9);
+  }
+  /* 알·캐릭터를 직접 톡톡 — 별은 그대로, 움직임·반짝·말풍선만 */
+  function pkPoke(childId) {
+    var p = pkOf(childId);
+    var art = document.querySelector('.pk-art[data-child="' + childId + '"]');
+    if (!art) return;
+    var st = p.line ? pkStage(p) : 0;
+    var sp = p.line ? pkSpecies(p) : null;
+    var line;
+    if (st >= 1) {
+      /* 가끔은 자기 이름을 넣어 말해요 */
+      if (sp && Math.random() < 0.3) {
+        line = pkPickLine([
+          '나는 ' + sp.ko + '! 잘 부탁해!',
+          sp.ko + josaGa(sp.ko) + ' 오늘도 씩씩해! ⭐'
+        ]);
+      } else {
+        line = pkPickLine(PK_MON_LINES);
+      }
+    } else {
+      line = pkPickLine(PK_EGG_LINES);
+    }
+    pkArtReact(art, { sparkleN: 10 });
+    pkBubble(art, line);
+    pkSound('poke');
+  }
   /* ---------- 별 먹이기 ---------- */
   function pkFeed(childId, n) {
     var p = pkOf(childId);
@@ -5793,10 +5912,15 @@
     }
     n = Math.max(1, Math.min(50, Math.floor(Number(n) || 1)));
     var have = S.stars[childId] || 0;
-    if (have < n) {
-      UI.toast('별이 모자라요. 지금 별 ' + have + '개 있어요', { emoji: '⭐', kind: 'warn' });
+    if (have < 1) {
+      /* 별이 없을 때 — 별은 먹지 않고, 까딱까딱 + '별 모아줘' 말풍선만 */
+      var emptyArt = document.querySelector('.pk-art[data-child="' + childId + '"]');
+      pkArtReact(emptyArt, { sparkleN: 6 });
+      pkBubble(emptyArt, pkPickLine(PK_HUNGRY_LINES), 'hungry');
+      pkSound('nofeed');
       return;
     }
+    if (have < n) n = have;
     var beforeLv = pkLevel(p);
     var beforeStage = pkStage(p);
     var wasDone = pkComplete(p);
@@ -5821,6 +5945,8 @@
     var art = document.querySelector('.pk-art[data-child="' + childId + '"]');
     /* 누르는 순간 별이 마구 쏟아져요 (진화·부화 순간엔 더 크게) */
     pkStarStorm(art, n, stageUp || nowDone);
+    /* 먹는 반응(까딱까딱)은 어느 경우든 함께 — 반짝임은 아래 갈래에서 따로 */
+    pkArtReact(art, { sparkle: false });
     if (stageUp || nowDone) {
       var ids = newIds.length ? newIds : (focusId ? [focusId] : []);
       pkStageCelebrate(childId, beforeStage, afterStage, ids, nowDone);
@@ -5830,10 +5956,12 @@
       pkSparkle(art, 16);
       UI.confetti(24);
       UI.toast('Lv.' + afterLv + '! 별 ' + pkProg(p.fed) + '/' + pkPerLevel() + ' ⭐', { emoji: '⚡', kind: 'good', duration: 2600 });
+      pkBubble(art, pkPickLine(PK_FEED_LINES));
     } else {
       pkSound('feed', n);
       pkSparkle(art, 7);
       UI.toast('별 ' + n + '개를 먹였어요 · ' + pkProg(p.fed) + '/' + pkPerLevel() + ' ⭐', { emoji: '⭐', kind: 'good', duration: 1500 });
+      pkBubble(art, pkPickLine(PK_FEED_LINES));
     }
   }
   /* 부화 · 진화 축하 화면 */
@@ -5842,6 +5970,13 @@
     var t = String(word || '');
     var c = t.charCodeAt(t.length - 1);
     if (c < 0xAC00 || c > 0xD7A3) return '이';
+    return ((c - 0xAC00) % 28) ? '이' : '가';
+  }
+  /* 받침에 맞춰 '이 / 가' (주어) */
+  function josaGa(word) {
+    var t = String(word || '');
+    var c = t.charCodeAt(t.length - 1);
+    if (c < 0xAC00 || c > 0xD7A3) return '가';
     return ((c - 0xAC00) % 28) ? '이' : '가';
   }
   /* 받침에 맞춰 '로 / 으로' */
@@ -6035,10 +6170,18 @@
     var p = pkOf(c.id);
     var stars = S.stars[c.id] || 0;
     var per = pkPerLevel();
+    /* 머리줄: 아이 + 이름 + ⭐ 보유 별 + (알이 있으면) 오른쪽에 큰 '별 먹이기' 버튼 1개
+       · 별이 없어도 버튼은 살아 있어요 — 누르면 별은 안 줄고 '별 모아줘' 반응만 보여 줍니다 */
     var head = '<div class="rk-head">' +
       kidAvaHTML(c) + '<strong>' + esc(c.name) + '</strong>' +
       '<span class="rk-spacer"></span>' +
-      '<span class="badge sun">⭐ ' + stars + '</span>' +
+      '<span class="badge sun pk-star-badge">⭐ ' + stars + '</span>' +
+      (p.line
+        ? '<button type="button" class="pk-feed-one' + (stars > 0 ? '' : ' empty') + '" data-act="pk-feed" data-child="' + c.id + '" data-n="1" ' +
+            'aria-label="' + esc(c.name) + ' 포켓몬에게 별 1개 먹이기">' +
+            '<span class="pk-feed-one-ico" aria-hidden="true">⭐</span><span class="pk-feed-one-txt">별 먹이기</span>' +
+          '</button>'
+        : '') +
       '</div>';
 
     if (!p.line) {
@@ -6069,7 +6212,8 @@
     return '<div class="card pk-card ' + c.color + (maxed ? ' maxed' : '') + '">' + head +
       '<div class="pk-hero">' +
         '<div class="pk-aura" aria-hidden="true"></div>' +
-        '<div class="pk-art" data-child="' + c.id + '">' + artInner + '</div>' +
+        '<div class="pk-art" data-child="' + c.id + '" data-act="pk-poke" role="button" tabindex="0" ' +
+          'aria-label="' + esc(c.name) + ' 포켓몬 톡톡 치기">' + artInner + '</div>' +
         '<div class="pk-hero-info">' +
           '<div class="pk-name">' + (sp ? esc(sp.ko) : '신비한 알') + '<span class="pk-lv">Lv.' + lvl + '</span></div>' +
           '<div class="pk-sub">' + (st === 0 ? '무슨 포켓몬이 나올까? · 알' : esc(line.name) + ' 라인 · ' + pkStageName(st, line.stages.length)) + '</div>' +
@@ -6079,11 +6223,6 @@
       '</div>' +
       pkTrackHTML(p) +
       nextBlock +
-      '<div class="pk-feed">' +
-        [1, 5, 10].map(function (n) {
-          return '<button type="button" class="btn btn-sun btn-sm" data-act="pk-feed" data-child="' + c.id + '" data-n="' + n + '"' + (stars < n ? ' disabled' : '') + '>별 ' + n + '개 먹이기</button>';
-        }).join('') +
-      '</div>' +
       (maxed ? '<button type="button" class="btn btn-soft btn-sm pk-new" data-act="pk-chooser" data-child="' + c.id + '">🥚 새 알 받기</button>' : '') +
       '</div>';
   }
@@ -6878,6 +7017,7 @@
       /* ⚡ 포켓몬 */
       case 'pk-pick': pkPick(el.getAttribute('data-child'), el.getAttribute('data-id')); break;
       case 'pk-feed': pkFeed(el.getAttribute('data-child'), Number(el.getAttribute('data-n'))); break;
+      case 'pk-poke': pkPoke(el.getAttribute('data-child')); break;
       case 'pk-box-prev': pkBoxNav(el.getAttribute('data-child'), -1); break;
       case 'pk-box-next': pkBoxNav(el.getAttribute('data-child'), 1); break;
       case 'pk-box-sort': pkBoxSortToggle(el.getAttribute('data-child')); break;
@@ -7122,7 +7262,15 @@
       }
     });
     document.getElementById('view').addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter' || !e.target) return;
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (!e.target) return;
+      /* 알·캐릭터는 버튼처럼 — 엔터·스페이스로도 톡톡 */
+      if (e.target.closest && e.target.closest('.pk-art[data-act="pk-poke"]')) {
+        e.preventDefault();
+        pkPoke(e.target.closest('.pk-art').getAttribute('data-child'));
+        return;
+      }
+      if (e.key !== 'Enter') return;
       if (e.target.id === 'shopInput') { e.preventDefault(); addShoppingFromInput(); }
       else if (e.target.id === 'bannerInput') { e.preventDefault(); sendBannerFromCompose(); }
     });
@@ -7261,7 +7409,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 92;             /* index.html 의 ?v=92 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 93;             /* index.html 의 ?v=93 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 

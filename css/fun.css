@@ -676,6 +676,122 @@
   display: grid;
   place-items: center;
   z-index: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.pk-art:focus-visible {
+  outline: 3px solid #8DBCFF;
+  outline-offset: -3px;
+  border-radius: 50%;
+}
+/* 톡톡 치면 알·캐릭터 뒤로 노란 빛이 퍼져요 */
+.pk-art::before {
+  content: "";
+  position: absolute;
+  inset: 2%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 226, 150, .95), rgba(255, 226, 150, 0) 68%);
+  opacity: 0;
+  transform: scale(.6);
+  pointer-events: none;
+  z-index: 0;
+}
+.pk-art.pk-poking::before { animation: pkPokeGlow .74s ease-out both; }
+@keyframes pkPokeGlow {
+  0% { opacity: 0; transform: scale(.55); }
+  35% { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+.pk-art.pk-poking .pk-mon { animation: pkPokeMon .72s cubic-bezier(.3, 1.5, .4, 1) both; }
+@keyframes pkPokeMon {
+  0% { transform: translateY(0) scale(1, 1) rotate(0deg); }
+  18% { transform: translateY(2px) scale(1.16, .84) rotate(-4deg); }
+  42% { transform: translateY(-14px) scale(.9, 1.14) rotate(5deg); }
+  64% { transform: translateY(1px) scale(1.1, .9) rotate(-3deg); }
+  82% { transform: translateY(-4px) scale(.97, 1.04) rotate(2deg); }
+  100% { transform: translateY(0) scale(1, 1) rotate(0deg); }
+}
+.pk-art.pk-poking .pk-egg-emoji { animation: pkPokeEgg .72s cubic-bezier(.3, 1.5, .4, 1) both; }
+@keyframes pkPokeEgg {
+  0% { transform: rotate(0deg) translateY(0) scale(1, 1); }
+  15% { transform: rotate(-14deg) translateY(0) scale(1.06, .94); }
+  40% { transform: rotate(12deg) translateY(-12px) scale(.94, 1.08); }
+  62% { transform: rotate(-9deg) translateY(1px) scale(1.05, .95); }
+  80% { transform: rotate(7deg) translateY(-4px) scale(.98, 1.02); }
+  100% { transform: rotate(0deg) translateY(0) scale(1, 1); }
+}
+/* 반짝 스파클 — 알·캐릭터 둘레에 잠깐 반짝이 (연타하면 클래스가 다시 붙어 재생) */
+.pk-art.pk-poking::after {
+  content: "✨";
+  position: absolute;
+  right: 2%;
+  top: 4%;
+  font-size: 17px;
+  line-height: 1;
+  pointer-events: none;
+  animation: pkPokeSpark .72s ease-out both;
+  z-index: 2;
+}
+@keyframes pkPokeSpark {
+  0% { opacity: 0; transform: scale(.4) rotate(-20deg); }
+  40% { opacity: 1; transform: scale(1.25) rotate(8deg); }
+  100% { opacity: 0; transform: scale(.9) rotate(20deg); }
+}
+/* 💬 대화 구름 말풍선 — 알·캐릭터가 있는 히어로 칸 아래쪽에 퐁
+   · 칸 폭 전체를 쓰는 구름이라 뒤에 글자가 잘려 보이지 않아요 (진행 숫자 한 줄만 잠깐 가림)
+   · 꼬리는 알/캐릭터 가운데를 가리킵니다 */
+.pk-bubble-wrap {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 3px;
+  z-index: 3;
+  pointer-events: none;
+}
+.pk-bubble {
+  position: relative;
+  display: block;
+  padding: 6px 12px 7px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #FFFFFF, #FFFBF1);
+  border: 2px solid #F3BE55;
+  box-shadow: 0 8px 18px rgba(170, 115, 30, .22);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.3;
+  color: #5A4632;
+  text-align: center;
+  word-break: keep-all;
+  transform-origin: var(--tail, 24px) 100%;
+  animation: pkBubbleIn .44s cubic-bezier(.2, 1.6, .35, 1) both;
+}
+/* 꼬리 — 카드 위로 살짝 솟은 동글동글한 삼각형 */
+.pk-bubble::after {
+  content: "";
+  position: absolute;
+  left: var(--tail, 24px);
+  top: -5px;
+  width: 11px;
+  height: 11px;
+  background: #FFFFFF;
+  border-left: 2px solid #F3BE55;
+  border-top: 2px solid #F3BE55;
+  border-top-left-radius: 3px;
+  transform: translateX(-50%) rotate(45deg);
+}
+.pk-bubble-wrap.hungry .pk-bubble { border-color: #DCCDB4; }
+.pk-bubble-wrap.hungry .pk-bubble::after { border-color: #DCCDB4; border-right: none; border-bottom: none; }
+@keyframes pkBubbleIn {
+  0% { opacity: 0; transform: scale(.35) translateY(10px); }
+  60% { opacity: 1; transform: scale(1.06) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.pk-bubble.out { animation: pkBubbleOut .3s ease-in both; }
+@keyframes pkBubbleOut {
+  0% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(.82) translateY(6px); }
 }
 .pk-mon {
   width: 122px; height: 122px;
@@ -825,6 +941,45 @@
 
 .pk-feed { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
 .pk-feed .btn { flex: 1; min-width: 96px; }
+/* ⭐ 머리줄 오른쪽 큰 '별 먹이기' 버튼 — 별 1개씩 먹여요.
+   · 별이 있을 때: 쨍한 금색, 누르면 별이 와르르
+   · 별이 없을 때(.empty): 흐리게 보이지만 눌러서 '별 모아줘' 반응을 볼 수 있어요 */
+.pk-feed-one {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: none;
+  min-height: 38px;
+  padding: 6px 14px 7px;
+  border: 2px solid #F0A82E;
+  border-radius: 999px;
+  background: linear-gradient(160deg, #FFE07A, #FFB23A 62%, #FF9F2E);
+  color: #5A3803;
+  font-family: var(--font);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: -.2px;
+  line-height: 1.1;
+  white-space: nowrap;
+  box-shadow: 0 5px 12px rgba(240, 150, 30, .35), inset 0 -2px 0 rgba(180, 110, 10, .18);
+  transition: transform .12s, box-shadow .16s, filter .16s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+.pk-feed-one-ico { font-size: 16px; line-height: 1; filter: drop-shadow(0 1px 1px rgba(120, 70, 0, .3)); }
+.pk-feed-one:hover { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(240, 150, 30, .42), inset 0 -2px 0 rgba(180, 110, 10, .18); }
+.pk-feed-one:active { transform: scale(.955); }
+.pk-feed-one:focus-visible { outline: 3px solid #8DBCFF; outline-offset: 2px; }
+.pk-feed-one.empty {
+  background: linear-gradient(160deg, #FFFDF6, #FFF3DC);
+  border: 2px dashed #F2CE8C;
+  color: #A98A57;
+  box-shadow: none;
+  filter: saturate(.65);
+}
+.pk-feed-one.empty:hover { box-shadow: 0 4px 10px rgba(210, 170, 110, .25); }
 .pk-help { font-size: 11.5px; color: var(--ink-faint); margin-top: 8px; line-height: 1.5; }
 .pk-new { margin-top: 10px; }
 .pk-choose-help { font-size: 12.5px; color: var(--ink-soft); font-weight: 700; margin: 6px 0 10px; }
@@ -1132,6 +1287,10 @@
   .pk-duo .rk-head { gap: 6px; }
   .pk-duo .rk-head strong { font-size: 16px; }
   .pk-duo .rk-head .avatar { width: 30px; height: 30px; font-size: 16px; }
+  .pk-duo .pk-feed-one { min-height: 32px; padding: 4px 11px 5px; font-size: 12.5px; gap: 4px; }
+  .pk-duo .pk-feed-one-ico { font-size: 14px; }
+  .pk-duo .pk-bubble-wrap { left: 4px; right: 4px; bottom: 2px; }
+  .pk-duo .pk-bubble { font-size: 10px; padding: 2px 9px 3px; line-height: 1.2; border-radius: 11px; }
   .pk-duo .pk-hero { gap: 7px; margin-top: 4px; padding: 5px 8px; border-radius: 16px; }
   .pk-duo .pk-art { width: 76px; height: 76px; }
   .pk-duo .pk-mon { width: 72px; height: 72px; }
@@ -1150,8 +1309,6 @@
   .pk-duo .pk-next-mystery { width: 22px; height: 22px; font-size: 12px; }
   .pk-duo .pk-next b { font-size: 11.5px; }
   .pk-duo .pk-next small { font-size: 9.5px; }
-  .pk-duo .pk-feed { margin-top: 7px; gap: 5px; flex-wrap: nowrap; }
-  .pk-duo .pk-feed .btn { min-width: 0; padding: 5px 3px; font-size: 11px; }
   .pk-duo .pk-help { margin-top: 5px; font-size: 10px; line-height: 1.35; }
   .pk-duo .pk-new { margin-top: 7px; }
   .pk-duo .pk-choose-help { margin: 4px 0 6px; font-size: 11px; }
@@ -1209,7 +1366,9 @@
   .pk-mystery-emoji { font-size: 54px; }
   .pk-mystery-egg { padding: 13px 10px 12px; }
   .pk-mystery-egg b { font-size: 16px; }
-  .pk-feed .btn { min-width: 0; font-size: 11.5px; padding: 7px 6px; }
+  .pk-feed-one { min-height: 36px; padding: 5px 11px 6px; font-size: 13px; }
+  .pk-feed-one-ico { font-size: 15px; }
+  .pk-bubble { font-size: 11.5px; }
 }
 
 /* =========================================================
