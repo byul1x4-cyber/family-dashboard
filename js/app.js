@@ -5807,6 +5807,119 @@
     '아직 잠이 덜 깼어… 💤',
     '여기 참 포근하다~ 🥚'
   ];
+  /* 타입별 전용 대사 — data/pokedex.json 의 types 값(한국어) 18가지 전부.
+     2타입 포켓몬은 두 타입 대사를 모두 후보에 넣어요. */
+  var PK_TYPE_LINES = {
+    '풀': [
+      '새잎 채취! 냠냠~ 🌱',
+      '햇빛 받으면 힘이 솟아! ☀️',
+      '내 몸에서 새잎이 돋아! 🍃',
+      '풀밭에서 뒹굴고 싶어~ 🌿'
+    ],
+    '불꽃': [
+      '후~ 불면 불꽃이 나와! 🔥',
+      '추운 날엔 내가 난로야! 🔥',
+      '꼬리 끝이 파앗 타올라! ✨',
+      '뜨거우니까 살짝 멀리서 봐 줘! 🔥'
+    ],
+    '물': [
+      '물 뿜어 볼까? 풍덩! 💧',
+      '비 오는 날이 제일 신나! ☔',
+      '물웅덩이에서 첨벙첨벙! 💦',
+      '나랑 물놀이할래? 💙'
+    ],
+    '전기': [
+      '지릿지릿! 만지면 찌릿! ⚡',
+      '볼이 노랗게 반짝반짝! ⚡',
+      '번개보다 빨리 달려! ⚡',
+      '파직! 하고 빛났지? ✨'
+    ],
+    '노말': [
+      '평범해 보여도 제일 든든해! 💪',
+      '아무 데나 잘 어울려! 🌈',
+      '튼튼하고 성실한 게 내 장점! ⭐',
+      '몸으로 부딪치면 내가 최고! 💥'
+    ],
+    '얼음': [
+      '손 시려워? 내가 불어 줄게! ❄️',
+      '뽁뽁 얼음 조각 만든다! 🧊',
+      '눈 오면 제일 신나! ⛄',
+      '차가워도 마음은 따뜻해! ❄️'
+    ],
+    '격투': [
+      '하압! 펀치 한 방! 👊',
+      '매일 아침 운동 중이야! 💪',
+      '힘 대결 해 볼래? 💪',
+      '발차기 연습 중! 🦵'
+    ],
+    '독': [
+      '몸에서 보라 연기가 나와! 💜',
+      '보라색이 내 매력이야! 💜',
+      '만지면 조금 따끔해! 💜',
+      '따끔해도 미안~ 히히 💜'
+    ],
+    '땅': [
+      '땅속을 쑥쑥 잘 파! 🕳️',
+      '모래바람 일으키기! 🌪️',
+      '흙 냄새가 너무 좋아! 🌍',
+      '발밑이 둔둔해? 내가 그랬어! 🕳️'
+    ],
+    '비행': [
+      '하늘 한 바퀴 돌고 올게! 🕊️',
+      '날개가 커서 바람이 솔솔! 🍃',
+      '구름 위에서 자고 싶어! ☁️',
+      '높이높이 날아 볼래? ✈️'
+    ],
+    '에스퍼': [
+      '네 마음이 살짝 들려! 🔮',
+      '눈 감으면 어디든 가! ✨',
+      '숟가락을 구부려 볼게! 🥄',
+      '앞일이 살짝 보여… ✨'
+    ],
+    '벌레': [
+      '실을 뿜어 집을 지어! 🕸️',
+      '잎 위에서 낮잠 잘래~ 🍃',
+      '더듬이가 간질간질! 🐛',
+      '작아도 용감해! 🐞'
+    ],
+    '바위': [
+      '단단해서 안 부서져! 🪨',
+      '구르면 멈출 수가 없어! 🪨',
+      '바위산에서 태어났어! ⛰️',
+      '돌멩이보다 내가 더 튼튼! 🪨'
+    ],
+    '고스트': [
+      '히히, 뒤에서 딱! 👻',
+      '그림자 속에 숨어 있을게! 🌑',
+      '있어도 없는 것 같지? 👻',
+      '요리조리 사라진다! ✨'
+    ],
+    '드래곤': [
+      '크아아! 나는 드래곤! 🐉',
+      '용의 숨결 한번 볼래? 🐲',
+      '하늘도 다 내 땅이야! 🐉',
+      '동글동글 비늘 반짝! ✨'
+    ],
+    '악': [
+      '하하! 나쁜 척은 재밌어! 🌙',
+      '밤이 되면 신나! 🌚',
+      '이빨 한번 보여 줄까? 😁',
+      '그림자에서 까꿍! 🌚'
+    ],
+    '강철': [
+      '철커덕! 나는 강철 몸! ⚙️',
+      '자석이 나를 따라와! 🧲',
+      '단단해서 안 아파! 🛡️',
+      '반짝반짝 광나는 몸! ✨'
+    ],
+    '페어리': [
+      '요정 마법 보여 줄까? 🍬',
+      '반짝가루 팡! ✨',
+      '달님한테 인사했어! 🌙',
+      '사랑스러운 게 최고야! 💕'
+    ]
+  };
+  /* 타입 정보가 없을 때만 쓰는 공통 대사 */
   var PK_MON_LINES = [
     '안녕! 오늘도 힘내자!',
     '별 먹으면 쑥쑥 자라나!',
@@ -5833,6 +5946,81 @@
   ];
   function pkPickLine(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
+  }
+  /* 직전에 한 말은 다시 하지 않아요 (아이별로 기억) */
+  var pkLastLine = {};
+  function pkPickOnce(childId, pool) {
+    var list = (pool || []).filter(function (s) { return !!s; });
+    if (!list.length) return '';
+    var last = pkLastLine[childId] || '';
+    var fresh = list.filter(function (s) { return s !== last; });
+    if (!fresh.length) fresh = list;
+    var line = fresh[Math.floor(Math.random() * fresh.length)];
+    pkLastLine[childId] = line;
+    return line;
+  }
+  /* 대사에 쓰면 무섭거나 어색한 기술 이름은 뺍니다 */
+  var PK_MOVE_SKIP = ['자폭', '죽', '멸망', '절대영도', '사슬', '저주', '원한', '복수', '지옥', '분노'];
+  var pkMoveCache = {};
+  /* 그 포켓몬이 자랑할 기술 하나 — 도감 mv(기술 목록)에서 실제 기술 이름으로 */
+  function pkPickMove(sp) {
+    if (!sp || !sp.id) return '';
+    if (Object.prototype.hasOwnProperty.call(pkMoveCache, sp.id)) return pkMoveCache[sp.id];
+    var cand = [];
+    var loose = [];
+    (sp.mv || []).forEach(function (m) {
+      var mv = PK.moves[m[0]];
+      if (!mv || !mv.ko) return;
+      var ko = String(mv.ko);
+      if (ko.length > 9) return;
+      if (PK_MOVE_SKIP.some(function (w) { return ko.indexOf(w) >= 0; })) return;
+      loose.push(ko);
+      if (mv.cls !== '물리' && mv.cls !== '특수') return;   /* 변화 기술은 자랑 대사로 어색해요 */
+      if (Number(mv.pow) < 35) return;
+      cand.push(ko);
+    });
+    /* 뒤에 배우는 기술일수록 그 포켓몬다워서 뒤쪽 3개 중에서 고릅니다 */
+    var top = cand.length ? cand.slice(-3) : loose.slice(-3);
+    var pick = top.length ? top[Math.floor(Math.random() * top.length)] : '';
+    pkMoveCache[sp.id] = pick;
+    return pick;
+  }
+  /* 부화한 그 포켓몬만의 대사 후보 — 타입 · 분류(genus) · 기술 · 이름 */
+  function pkMonLines(sp) {
+    if (!sp) return PK_MON_LINES.slice();
+    var out = [];
+    (sp.types || []).forEach(function (t) {
+      (PK_TYPE_LINES[t] || []).forEach(function (s) { out.push(s); });
+    });
+    if (sp.genus) {
+      var g = String(sp.genus).replace(/포켓몬몬$/, '포켓몬');   /* 도감 오타 보정 */
+      out.push('나는 ' + g + josaYa(g) + '!');
+      out.push('나는 ' + g + ' ' + sp.ko + '!');
+    }
+    var mv = pkPickMove(sp);
+    if (mv) {
+      out.push('내 기술은 ' + mv + '! ✨');
+      out.push('지금 ' + mv + ' 연습 중이야!');
+      out.push('한번 ' + mv + josaEul(mv) + ' 써 볼까?');
+    }
+    out.push('나는 ' + sp.ko + josaYa(sp.ko) + '!');
+    out.push(sp.ko + josaGa(sp.ko) + ' 나타났다! ⭐');
+    out.push(sp.ko + '! 오늘도 톡톡!');
+    if (!out.length) return PK_MON_LINES.slice();
+    return out;
+  }
+  /* 별을 먹였을 때 — 가끔 자기 이름을 넣어 말해요 */
+  function pkFeedLine(childId) {
+    var p = pkOf(childId);
+    var sp = p.line ? pkSpecies(p) : null;
+    if (sp && Math.random() < 0.3) {
+      return pkPickOnce(childId, [
+        sp.ko + ' 냠냠! 별 맛있다 ⭐',
+        '별 먹고 ' + sp.ko + ' 힘났다! ✨',
+        '와! ' + sp.ko + ' 기분 최고! 💛'
+      ]);
+    }
+    return pkPickOnce(childId, PK_FEED_LINES);
   }
   /* 말풍선 하나 — 알·캐릭터가 있는 칸(.pk-hero) 아래쪽에 퐁 나타나 2.7초 뒤 사라져요.
      연타하면 앞의 말풍선은 바로 걷어 새 말이 뜨게 합니다. */
@@ -5884,21 +6072,10 @@
     var art = document.querySelector('.pk-art[data-child="' + childId + '"]');
     if (!art) return;
     var st = p.line ? pkStage(p) : 0;
-    var sp = p.line ? pkSpecies(p) : null;
-    var line;
-    if (st >= 1) {
-      /* 가끔은 자기 이름을 넣어 말해요 */
-      if (sp && Math.random() < 0.3) {
-        line = pkPickLine([
-          '나는 ' + sp.ko + '! 잘 부탁해!',
-          sp.ko + josaGa(sp.ko) + ' 오늘도 씩씩해! ⭐'
-        ]);
-      } else {
-        line = pkPickLine(PK_MON_LINES);
-      }
-    } else {
-      line = pkPickLine(PK_EGG_LINES);
-    }
+    var sp = st >= 1 && p.line ? pkSpecies(p) : null;
+    /* 부화 뒤에는 그 포켓몬의 타입·분류·기술·이름으로 말해요.
+       알 단계 대사는 그대로 — 어떤 포켓몬인지 미리 알려 주지 않습니다. */
+    var line = (st >= 1) ? pkPickOnce(childId, pkMonLines(sp)) : pkPickOnce(childId, PK_EGG_LINES);
     pkArtReact(art, { sparkleN: 10 });
     pkBubble(art, line);
     pkSound('poke');
@@ -5956,12 +6133,12 @@
       pkSparkle(art, 16);
       UI.confetti(24);
       UI.toast('Lv.' + afterLv + '! 별 ' + pkProg(p.fed) + '/' + pkPerLevel() + ' ⭐', { emoji: '⚡', kind: 'good', duration: 2600 });
-      pkBubble(art, pkPickLine(PK_FEED_LINES));
+      pkBubble(art, pkFeedLine(childId));
     } else {
       pkSound('feed', n);
       pkSparkle(art, 7);
       UI.toast('별 ' + n + '개를 먹였어요 · ' + pkProg(p.fed) + '/' + pkPerLevel() + ' ⭐', { emoji: '⭐', kind: 'good', duration: 1500 });
-      pkBubble(art, pkPickLine(PK_FEED_LINES));
+      pkBubble(art, pkFeedLine(childId));
     }
   }
   /* 부화 · 진화 축하 화면 */
@@ -5978,6 +6155,20 @@
     var c = t.charCodeAt(t.length - 1);
     if (c < 0xAC00 || c > 0xD7A3) return '가';
     return ((c - 0xAC00) % 28) ? '이' : '가';
+  }
+  /* 받침에 맞춰 '이야 / 야' */
+  function josaYa(word) {
+    var t = String(word || '');
+    var c = t.charCodeAt(t.length - 1);
+    if (c < 0xAC00 || c > 0xD7A3) return '야';
+    return ((c - 0xAC00) % 28) ? '이야' : '야';
+  }
+  /* 받침에 맞춰 '을 / 를' */
+  function josaEul(word) {
+    var t = String(word || '');
+    var c = t.charCodeAt(t.length - 1);
+    if (c < 0xAC00 || c > 0xD7A3) return '를';
+    return ((c - 0xAC00) % 28) ? '을' : '를';
   }
   /* 받침에 맞춰 '로 / 으로' */
   function josaRo(word) {
@@ -7409,7 +7600,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 93;             /* index.html 의 ?v=93 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 94;             /* index.html 의 ?v=94 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
