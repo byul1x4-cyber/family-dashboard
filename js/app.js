@@ -6957,6 +6957,18 @@
     });
   }
 
+  /* ⚡ 포켓몬 관리 — 별 ＋1 / －1 을 연달아 눌러도 알림이 화면을 덮지 않게
+     바로 전의 '별 N개' 알림은 지우고 하나만 남깁니다(1개씩 누르는 버튼이라 자주 누르게 돼요) */
+  function pkStarToast(msg) {
+    var root = document.getElementById('toastRoot');
+    if (root) {
+      var old = root.querySelector('.toast.pk-star');
+      if (old) old.remove();
+    }
+    UI.toast(msg, { emoji: '⭐', kind: 'good', duration: 1400 });
+    if (root && root.lastElementChild) root.lastElementChild.classList.add('pk-star');
+  }
+
   /* ⚡ 포켓몬 관리 */
   function pkSettingsModal() {
     if (!needParent('포켓몬 관리는 부모님 모드에서 바꿀 수 있어요')) return;
@@ -6977,8 +6989,8 @@
             '<div class="ed-block-head"><b>' + c.emoji + ' ' + esc(c.name) + '</b>' +
               '<span id="pkSetState-' + c.id + '">' + pkStateText(c.id, true) + '</span></div>' +
             '<div class="pk-set-row">' +
-              '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="10">별 ＋10</button>' +
-              '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="-10">별 －10</button>' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="1">별 ＋1</button>' +
+              '<button type="button" class="btn btn-ghost btn-sm" data-pk="stars" data-child="' + c.id + '" data-n="-1">별 －1</button>' +
               (hatched
                 ? '<button type="button" class="btn btn-ghost btn-sm" disabled title="부화 전 알일 때만 파트너를 바꿀 수 있어요">🔒 파트너 바꾸기</button>'
                 : '<button type="button" class="btn btn-soft btn-sm" data-pk="choose" data-child="' + c.id + '" title="먹인 별은 그대로 두고 알 속 포켓몬만 바뀝니다">🥚 파트너 바꾸기</button>') +
@@ -7018,7 +7030,7 @@
             saveNow();
             render({ keepScroll: true });
             refreshState(cid);
-            UI.toast(childById(cid).name + ' 별 ' + (S.stars[cid]) + '개', { emoji: '⭐', kind: 'good', duration: 1400 });
+            pkStarToast(childById(cid).name + ' 별 ' + (S.stars[cid]) + '개');
           } else if (act === 'choose') {
             close();
             setTimeout(function () { pkSwapPartner(cid); }, 220);
@@ -7542,7 +7554,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 96;             /* index.html 의 ?v=96 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 97;             /* index.html 의 ?v=97 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
