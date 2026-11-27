@@ -2891,41 +2891,67 @@
   function renderPraise() {
     var total = 0;
     D.children.forEach(function (k) { total += (S.praiseCount[k.id] || 0); });
+    if (S.mode !== 'parent') { praiseEdit.plus = false; praiseEdit.minus = false; }
     return '<div class="duo-grid">' + D.children.map(praiseKidCardHTML).join('') + '</div>' +
       (S.mode === 'parent' ? '' : '<div class="lock-note">🔒 칭찬과 별 빼기는 부모님 모드에서 할 수 있어요.</div>') +
-      praiseManageHTML() +
       '<div class="card" style="margin-top:12px">' +
         cardHead('🧾', '최근 칭찬 기록', total ? '지금까지 ' + total + '번 칭찬했어요' : '칭찬한 만큼 차곡차곡') +
         recentLogsHTML(20) +
       '</div>';
   }
 
+  /* ---------------- 부모님이 주고 빼는 자리에서 바로 고치기 (v102) ----------------
+     섹션 헤더의 '✏️ 수정' 을 켜면 그 자리의 버튼들이 고치기 버튼으로 바뀝니다.
+     화면 상태일 뿐이라 저장하지 않고, 부모님 모드에서만 켜집니다. */
+  var praiseEdit = { plus: false, minus: false };
+
+  function praiseSectionHeadHTML(kind) {
+    var isMinus = kind === 'minus';
+    var parent = S.mode === 'parent';
+    var editing = parent && !!praiseEdit[kind];
+    return '<div class="pm-head ' + (isMinus ? 'minus' : 'plus') + (editing ? ' editing' : '') + '">' +
+      '<span aria-hidden="true">' + (isMinus ? '➖' : '⭐') + '</span> ' + (isMinus ? '별 빼기' : '칭찬') +
+      (parent
+        ? '<span class="rk-spacer"></span>' +
+          '<button type="button" class="pm-head-btn" data-act="praise-item-add" data-kind="' + kind + '">＋ 추가</button>' +
+          '<button type="button" class="pm-head-btn edit' + (editing ? ' on' : '') + '" data-act="praise-edit-toggle"' +
+            ' data-kind="' + kind + '" aria-pressed="' + (editing ? 'true' : 'false') + '">' +
+            (editing ? '✓ 완료' : '✏️ 수정') + '</button>'
+        : '') +
+    '</div>';
+  }
+
+  function praiseItemBtnHTML(c, kind, it) {
+    var isMinus = kind === 'minus';
+    var editing = S.mode === 'parent' && !!praiseEdit[kind];
+    var n = praiseItemStar(it);
+    var act = editing ? 'praise-item-edit' : (isMinus ? 'praise-minus' : 'praise');
+    return '<button type="button" class="praise-item' + (isMinus ? ' minus' : '') + (editing ? ' edit' : '') + '"' +
+      ' data-act="' + act + '" data-child="' + c.id + '" data-item="' + esc(it.id) + '"' +
+      (editing ? ' data-kind="' + kind + '"' : '') +
+      ' aria-label="' + esc(praiseLabel(it, c.id)) + ' ' + (editing ? '고치기' : (isMinus ? '별 빼기' : '칭찬하기')) + '">' +
+      '<span aria-hidden="true">' + esc(it.emoji) + '</span>' +
+      '<span class="pi-label">' + esc(praiseLabel(it, c.id)) + '</span>' +
+      (editing
+        ? '<i class="pi-edit" aria-hidden="true">✏️</i>'
+        : (isMinus ? '<i class="pi-cut">-' + n + '</i>' : (n > 1 ? '<i class="pi-gain">+' + n + '</i>' : ''))) +
+      '</button>';
+  }
+
   function praiseKidCardHTML(c) {
     var plusItems = praiseList('plus');
     var minusItems = praiseList('minus');
-    var plusHTML = plusItems.length
-      ? '<div class="praise-items" style="margin-top:10px">' + plusItems.map(function (p) {
-          var n = praiseItemStar(p);
-          return '<button type="button" class="praise-item" data-act="praise" data-child="' + c.id + '" data-item="' + esc(p.id) + '">' +
-            '<span>' + esc(p.emoji) + '</span><span class="pi-label">' + esc(praiseLabel(p, c.id)) + '</span>' +
-            (n > 1 ? '<i class="pi-gain">+' + n + '</i>' : '') + '</button>';
-        }).join('') + '</div>'
-      : '<div class="pm-empty" style="margin-top:10px">칭찬 항목이 없어요.' +
-          (S.mode === 'parent' ? ' 아래 <b>칭찬·별 빼기 항목 고치기</b>에서 넣을 수 있어요.' : '') + '</div>';
-    var minusHTML = minusItems.length
-      ? '<div class="praise-minus">' +
-          '<div class="pm-head"><span aria-hidden="true">➖</span> 별 빼기</div>' +
-          '<div class="praise-items minus">' + minusItems.map(function (m) {
-            var n = praiseItemStar(m);
-            return '<button type="button" class="praise-item minus" data-act="praise-minus" data-child="' + c.id + '" data-item="' + esc(m.id) + '">' +
-              '<span>' + esc(m.emoji) + '</span><span class="pi-label">' + esc(praiseLabel(m, c.id)) + '</span>' +
-              '<i class="pi-cut">-' + n + '</i></button>';
-          }).join('') + '</div>' +
-        '</div>'
-      : (S.mode === 'parent'
-          ? '<div class="praise-minus"><div class="pm-head"><span aria-hidden="true">➖</span> 별 빼기</div>' +
-            '<div class="pm-empty">별 빼기 항목이 없어요. 아래 <b>칭찬·별 빼기 항목 고치기</b>에서 넣을 수 있어요.</div></div>'
-          : '');
+    var parent = S.mode === 'parent';
+    var plusHTML = '<div class="praise-plus">' + praiseSectionHeadHTML('plus') +
+      (plusItems.length
+        ? '<div class="praise-items">' + plusItems.map(function (p) { return praiseItemBtnHTML(c, 'plus', p); }).join('') + '</div>'
+        : '<div class="pm-empty">' + (parent ? '칭찬 항목이 없어요. 옆의 <b>＋ 추가</b>로 넣어 보세요.' : '칭찬 항목이 없어요.') + '</div>') +
+      '</div>';
+    var minusHTML = '<div class="praise-minus">' + praiseSectionHeadHTML('minus') +
+      (minusItems.length
+        ? '<div class="praise-items minus">' + minusItems.map(function (m) { return praiseItemBtnHTML(c, 'minus', m); }).join('') + '</div>'
+        : '<div class="pm-empty">' + (parent ? '별 빼기 항목이 없어요. 옆의 <b>＋ 추가</b>로 넣어 보세요.' : '별 빼기 항목이 없어요.') + '</div>') +
+      '</div>';
     return '<div class="card praise-kid ' + c.color + '">' +
       '<div class="rk-head">' +
         kidAvaHTML(c) +
@@ -2938,41 +2964,16 @@
     '</div>';
   }
 
-  /* ---------------- 부모님 모드: 칭찬 · 별 빼기 항목 고치기 ---------------- */
-  function praiseManageHTML() {
-    if (S.mode !== 'parent') return '';
-    return '<div class="card praise-manage" style="margin-top:12px">' +
-      cardHead('🧩', '칭찬·별 빼기 항목 고치기', '문구·이모지·별 개수를 바꾸고, 넣고 뺄 수 있어요') +
-      '<div class="pm-grid">' +
-        praiseManageListHTML('plus', '⭐ 칭찬 항목', '누르면 주는 별') +
-        praiseManageListHTML('minus', '➖ 별 빼기 항목', '누르면 빼는 별') +
-      '</div>' +
-      '<p class="help">여기서 고친 항목은 태블릿·폰에도 바로 함께 보여요. 이미 남은 기록과 별은 그대로예요.</p>' +
-    '</div>';
-  }
-
-  function praiseManageListHTML(kind, title, sub) {
-    var isMinus = kind === 'minus';
-    var list = praiseList(kind);
-    return '<div class="pm-block' + (isMinus ? ' minus' : '') + '">' +
-      '<div class="pm-block-head">' +
-        '<b>' + title + '</b><span class="pm-sub">' + esc(sub) + '</span>' +
-        '<span class="rk-spacer"></span>' +
-        '<button type="button" class="btn btn-soft btn-sm pm-add" data-act="praise-item-add" data-kind="' + kind + '">＋ 추가</button>' +
-      '</div>' +
-      (list.length
-        ? '<div class="pm-list">' + list.map(function (it) {
-            var n = praiseItemStar(it);
-            return '<div class="pm-row">' +
-              '<span class="pm-emoji" aria-hidden="true">' + esc(it.emoji) + '</span>' +
-              '<span class="pm-label">' + esc(it.label) + '</span>' +
-              '<span class="pm-stars ' + (isMinus ? 'cut' : 'gain') + '">' + (isMinus ? '-' : '+') + n + '</span>' +
-              '<button type="button" class="pm-btn" data-act="praise-item-edit" data-kind="' + kind + '" data-item="' + esc(it.id) + '" aria-label="' + esc(it.label) + ' 고치기" title="고치기">✏️</button>' +
-              '<button type="button" class="pm-btn" data-act="praise-item-del" data-kind="' + kind + '" data-item="' + esc(it.id) + '" aria-label="' + esc(it.label) + ' 빼기" title="목록에서 빼기">🗑️</button>' +
-            '</div>';
-          }).join('') + '</div>'
-        : '<div class="pm-empty" style="padding:6px 2px">아직 항목이 없어요. <b>＋ 추가</b>로 넣어 보세요.</div>') +
-    '</div>';
+  /* ✏️ 수정 ↔ ✓ 완료 */
+  function togglePraiseEdit(kind) {
+    if (!needParent('항목 고치기는 부모님 모드에서 할 수 있어요')) return;
+    var key = kind === 'minus' ? 'minus' : 'plus';
+    praiseEdit[key] = !praiseEdit[key];
+    render({ keepScroll: true });
+    UI.toast(praiseEdit[key]
+        ? '고칠 항목을 눌러 주세요 · 다 고치면 ✓ 완료'
+        : '다 고쳤어요 · 이제 눌러서 별을 주고 뺄 수 있어요',
+      { emoji: praiseEdit[key] ? '✏️' : '✅', duration: 2400 });
   }
 
   function addPraise(childId, itemId) {
@@ -3150,12 +3151,45 @@
     for (var n = 1; n <= 10; n++) {
       starOpts += '<option value="' + n + '"' + (n === star0 ? ' selected' : '') + '>' + n + '개</option>';
     }
+    /* 민국·이준은 같은 항목 목록을 함께 쓰므로, 문구를 바꾸면 두 아이 화면에 같이 바뀝니다 */
+    var labelNote = '';
+    if (cur && cur.labels) {
+      var otherNames = Object.keys(cur.labels).map(function (cid) {
+        var k = childById(cid);
+        return (k ? k.name : cid) + '에게는 “' + cur.labels[cid] + '”';
+      }).join(' · ');
+      labelNote = '바꾼 문구는 민국·이준 화면에 함께 보여요. (' + esc(otherNames) + '로 보이던 항목이에요)';
+    } else {
+      labelNote = '바꾼 문구는 민국·이준 두 아이 화면에 함께 보여요.';
+    }
+    var actions = [];
+    if (cur) {
+      actions.push({
+        label: '🗑️ 빼기', kind: 'danger', onClick: function (close) {
+          close(null);
+          /* 이 창을 닫은 뒤 기존 확인 창으로 한 번 더 물어봅니다 */
+          setTimeout(function () { removePraiseItem(kind, itemId); }, 240);
+        }
+      });
+    }
+    actions.push({
+      label: cur ? '저장' : '추가하기', kind: 'primary', onClick: function (close) {
+        var label = (document.getElementById('piLabel') || {}).value || '';
+        var emoji = (document.getElementById('piEmoji') || {}).value || '';
+        var star = Number((document.getElementById('piStar') || {}).value || 1);
+        if (!savePraiseItem(kind, itemId, { label: label, emoji: emoji, star: star })) return false;
+        UI.toast((isMinus ? '별 빼기' : '칭찬') + ' 항목을 ' + (cur ? '고쳤어요' : '넣었어요') + ' · ' + emoji + ' ' + label.trim(),
+          { emoji: '✅', kind: 'good' });
+      }
+    });
+    actions.push({ label: '취소', kind: 'ghost' });
     UI.modal({
       title: (cur ? '✏️ ' : '＋ ') + (isMinus ? '별 빼기' : '칭찬') + ' 항목',
       bodyHTML:
         '<div class="field"><label>문구 (아이 화면에 그대로 보여요)</label>' +
           '<input class="input pi-input" id="piLabel" maxlength="16" value="' + esc(label0) + '" placeholder="' +
             (isMinus ? '예: 욕을 했어요' : '예: 동생을 도와줬어요') + '" autocomplete="off">' +
+          '<p class="help">' + labelNote + '</p>' +
         '</div>' +
         '<div class="field"><label>이모지 (골라도 되고 직접 적어도 돼요)</label>' +
           '<div class="rt-emoji-row pm-emoji-row">' + emojis.map(function (e) {
@@ -3169,19 +3203,7 @@
             ? '누르면 이만큼 별을 뺏어요. 보유 별이 모자라면 0개까지만 줄고, 그만큼만 기록에 남아요.'
             : '누르면 이만큼 별이 쌓여요.') + '</p>' +
         '</div>',
-      actions: [
-        {
-          label: cur ? '저장' : '추가하기', kind: 'primary', onClick: function (close) {
-            var label = (document.getElementById('piLabel') || {}).value || '';
-            var emoji = (document.getElementById('piEmoji') || {}).value || '';
-            var star = Number((document.getElementById('piStar') || {}).value || 1);
-            if (!savePraiseItem(kind, itemId, { label: label, emoji: emoji, star: star })) return false;
-            UI.toast((isMinus ? '별 빼기' : '칭찬') + ' 항목을 ' + (cur ? '고쳤어요' : '넣었어요') + ' · ' + emoji + ' ' + label.trim(),
-              { emoji: '✅', kind: 'good' });
-          }
-        },
-        { label: '취소', kind: 'ghost' }
-      ],
+      actions: actions,
       onOpen: function (wrap) {
         wrap.addEventListener('click', function (e) {
           var b = e.target.closest('[data-emoji]');
@@ -7449,6 +7471,7 @@
       case 'praise-item-add': praiseItemModal(el.getAttribute('data-kind') || 'plus', null); break;
       case 'praise-item-edit': praiseItemModal(el.getAttribute('data-kind') || 'plus', el.getAttribute('data-item')); break;
       case 'praise-item-del': removePraiseItem(el.getAttribute('data-kind') || 'plus', el.getAttribute('data-item')); break;
+      case 'praise-edit-toggle': togglePraiseEdit(el.getAttribute('data-kind') || 'plus'); break;
       case 'cancel-praise': cancelPraise(el.getAttribute('data-id')); break;
 
       case 'cal-prev': calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1); render({ keepScroll: true }); break;
@@ -7897,7 +7920,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 101;            /* index.html 의 ?v=101 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 102;            /* index.html 의 ?v=102 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
