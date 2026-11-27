@@ -191,7 +191,13 @@
         return { id: it.id || UI.uid('nt'), text: String(it.text || ''), done: it.done || 0 };
       })
       .filter(function (it) { return it && it.text; });
-    if (s.mode !== 'parent') s.mode = 'child';
+    /* 🧒 화면 모드(아이 / 부모님)는 저장된 기록이 아니라 '지금 열려 있는 화면'의 상태입니다.
+       예전에는 부모님 모드를 기기·가족 클라우드에 저장해서, 새로 열거나 새로고침하면
+       부모님 모드로 시작해 아이들이 관리 화면을 보게 됐습니다.
+       이제 저장된 mode 는 무시하고 언제나 아이 모드로 시작하며, 부모님 모드는
+       지금 열려 있는 화면의 메모리(S.mode)에서만 유지합니다(applyState 의 keepMode). */
+    s.mode = 'child';
+    s.actor = null;
 
     /* 📢 빵! 메시지 */
     var b = raw.bannerPopup;
@@ -364,7 +370,27 @@
 
   function save() {
     pruneHandwriting();          // 손글씨 편지 그림이 문서를 너무 무겁게 하지 않게 정리
-    Storage.save(S);
+    Storage.save(stateForSave(S));
+  }
+
+  /* 저장할 때는 화면 모드·들어온 사람을 빼고 저장합니다.
+     (아이 / 부모님 모드는 이 화면에서만 쓰는 값이라 기기·가족 클라우드 기록에 남기지 않아요.
+      그래서 어느 기기에서 무엇이 저장돼 있어도, 앱을 새로 열면 언제나 아이 모드로 시작합니다.) */
+  function stateForSave(state) {
+    var copy = Object.assign({}, state || S);
+    copy.mode = 'child';
+    copy.actor = null;
+    return copy;
+  }
+
+  /* 저장된 기록을 화면 상태로 옮깁니다.
+     opts.keepMode 가 참이면 지금 열려 있는 화면에서 고른 모드(아이 / 부모님)를
+     그대로 유지합니다 — 실시간 동기화·다른 탭 저장으로 모드가 바뀌지 않게 할 때 씁니다. */
+  function applyState(raw, opts) {
+    var keep = (opts && opts.keepMode && S) ? { mode: S.mode, actor: S.actor } : null;
+    S = normalize(raw);
+    if (keep) { S.mode = keep.mode; S.actor = keep.actor; }
+    return S;
   }
 
   function needParent(message) {
@@ -1484,34 +1510,22 @@
   }
 
   function showIntro() {
+    /* 처음 열었을 때도 아이 모드로 시작합니다.
+       부모님 모드는 위쪽 🔒 부모님 버튼에서 곱셈 문제를 풀고 들어가요. */
     UI.modal({
       title: '🏡 우리집 다모아',
-      bodyHTML: '<p class="modal-text">루틴 체크, 칭찬하기, 가족 일정, 우체통, 식판·약·성장 기록을 한 곳에 모았어요.<br>누구로 시작할까요?</p>' +
-        '<div class="pick-child" style="margin-top:14px;flex-wrap:wrap">' +
-        D.parents.map(function (p) {
-          return '<button type="button" data-start="' + p.id + '"><span class="avatar sm ' + p.color + '">' + p.emoji + '</span>' + esc(p.name) + '</button>';
-        }).join('') +
-        '<button type="button" data-start="child"><span class="avatar sm sun">🧒</span>아이</button>' +
-        '</div>' +
-        '<p class="help" style="margin-top:12px">부모님으로 시작하면 관리 기능이 열려요. 언제든 위쪽에서 모드를 바꿀 수 있어요.</p>',
-      onOpen: function (wrap, close) {
-        wrap.addEventListener('click', function (e) {
-          var b = e.target.closest('[data-start]');
-          if (!b) return;
-          var who = b.getAttribute('data-start');
-          if (who === 'child') { S.mode = 'child'; S.actor = null; }
-          else {
-            var p = D.parents.filter(function (x) { return x.id === who; })[0];
-            S.mode = 'parent'; S.actor = p ? p.name : '부모님';
-            mailParentPick = null;
-          }
+      bodyHTML: '<p class="modal-text">루틴 체크, 칭찬하기, 가족 일정, 우체통, 식판·약·성장 기록을 한 곳에 모았어요.<br>먼저 <b>아이 모드</b>로 시작할게요.</p>' +
+        '<p class="help" style="margin-top:12px">부모님은 위쪽 <b>🔒 부모님</b> 버튼을 눌러 곱셈 문제를 맞히면 관리 기능이 열려요. 앱을 새로 열거나 새로고침하면 언제든 다시 아이 모드로 시작해요.</p>',
+      actions: [{
+        label: '아이 모드로 시작', kind: 'primary', onClick: function () {
+          S.mode = 'child';
+          S.actor = null;
           S.introSeen = true;
           save();
-          close();
           render();
           UI.toast('시작해 볼까요?', { emoji: '💛' });
-        });
-      }
+        }
+      }]
     });
   }
 
@@ -4486,11 +4500,11 @@
     UI.toast('새 열쇠로 연결하는 중...', { emoji: '🔄', duration: 2200 });
     Storage.changeCode(code).then(function () {
       if (migrate) {
-        Storage.save(S, { immediate: true });
+        Storage.save(stateForSave(S), { immediate: true });
       } else {
-        S = defaultState();
+        applyState(defaultState(), { keepMode: true });
         S.introSeen = true;
-        Storage.save(S, { immediate: true });
+        Storage.save(stateForSave(S), { immediate: true });
       }
       setSyncBanner(null);
       render({ keepScroll: true });
@@ -4521,7 +4535,7 @@
     Storage.init(onRemoteState).then(function (res) {
       if (res.mode === 'firebase') {
         setSyncBanner(null);
-        S = normalize(res.state);
+        applyState(res.state, { keepMode: true });
         render({ keepScroll: true });
         UI.toast('가족 클라우드에 연결됐어요', { emoji: '☁️', kind: 'good', duration: 3000 });
       } else {
@@ -4565,7 +4579,7 @@
   /* 부모님이 바꾼 설정은 바로 클라우드에 올려 아이 태블릿에도 바로 보이게 */
   function saveNow() {
     pruneHandwriting();
-    Storage.save(S, { immediate: true });
+    Storage.save(stateForSave(S), { immediate: true });
   }
   function hhmmMin(v, fallback) {
     if (!hhmmOk(v)) return fallback;
@@ -7588,7 +7602,7 @@
         UI.confirm('전체 초기화', '칭찬·일정·편지·식판·성장 기록이 모두 지워집니다. 되돌릴 수 없어요. 계속할까요?', '초기화', 'danger')
           .then(function (ok) {
             if (!ok) return;
-            S = defaultState();
+            applyState(defaultState(), { keepMode: true });
             S.introSeen = false;
             save();
             render();
@@ -7621,7 +7635,7 @@
           actions: [
             {
               label: '저장된 데이터 가져오기', kind: 'primary', onClick: function (close) {
-                S = normalize(res.remote);
+                applyState(res.remote, { keepMode: true });
                 save();
                 close();
                 render();
@@ -7630,7 +7644,7 @@
             },
             {
               label: '이 기기 데이터로 덮어쓰기', kind: 'ghost', onClick: function (close) {
-                Storage.save(S, { immediate: true });
+                Storage.save(stateForSave(S), { immediate: true });
                 close();
                 render();
                 UI.toast('이 기기 데이터를 올렸어요', { emoji: '☁️', kind: 'good' });
@@ -7639,7 +7653,7 @@
           ]
         });
       } else {
-        Storage.save(S, { immediate: true });
+        Storage.save(stateForSave(S), { immediate: true });
         render({ keepScroll: true });
         UI.confetti(18);
         UI.toast('Firebase 실시간 동기화가 연결됐어요', { emoji: '☁️', kind: 'good', duration: 3400 });
@@ -7668,7 +7682,7 @@
     reader.onload = function () {
       try {
         var data = JSON.parse(String(reader.result));
-        S = normalize(data.state || data);
+        applyState(data.state || data, { keepMode: true });
         save();
         render();
         UI.toast('데이터를 가져왔어요', { emoji: '📤', kind: 'good' });
@@ -7775,13 +7789,11 @@
   };
   window.__VIEWS = VIEWS;
 
-  /* 다른 기기에서 바뀐 가족 데이터가 도착했을 때 */
+  /* 다른 기기에서 바뀐 가족 데이터가 도착했을 때 — 지금 화면의 모드는 그대로 둡니다 */
   function onRemoteState(state, err) {
     if (err) { setSyncBanner(err); return; }
     if (!state) return;
-    var keep = S ? { mode: S.mode, actor: S.actor } : null;
-    S = normalize(state);
-    if (keep) { S.mode = keep.mode; S.actor = keep.actor; }
+    applyState(state, { keepMode: true });
     render({ keepScroll: true });
     maybeShowBanner();
     checkNewMessages();
@@ -7790,7 +7802,11 @@
   /* 잠금을 풀었거나 열쇠가 있는 기기에서 대시보드를 엽니다 */
   async function startApp() {
     var res = await Storage.init(onRemoteState);
-    S = normalize(res.state);
+    /* 🧒 새로 열기 · 새로고침 · 버전 업데이트 리로드 · 입장 코드 입력 후 진입 —
+       이 기기나 가족 클라우드에 부모님 모드가 저장돼 있어도 언제나 아이 모드로 시작합니다. */
+    applyState(res.state);
+    S.mode = 'child';
+    S.actor = null;
     var bootEv = newestMessageEvent();
     lastMsgAt = bootEv ? bootEv.ts : Date.now();
     if (res.error) {
@@ -7800,7 +7816,8 @@
       setSyncBanner(null);
     }
     Storage.watchLocal(function (state) {
-      S = normalize(state);
+      /* 같은 브라우저의 다른 탭이 저장한 내용 — 지금 화면의 모드는 그대로 둡니다 */
+      applyState(state, { keepMode: true });
       render({ keepScroll: true });
     });
     /* ?view=health 처럼 탭으로 바로 열기 */
@@ -7880,7 +7897,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 99;             /* index.html 의 ?v=99 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 100;            /* index.html 의 ?v=100 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
