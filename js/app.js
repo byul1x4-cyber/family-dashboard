@@ -2496,12 +2496,20 @@
     return '<div class="log-list">' + list.slice(0, limit).map(function (l) {
       var kid = childById(l.childId);
       var isMinus = l && l.kind === 'minus';
-      var cut = Math.max(0, Math.floor(Number(isMinus ? (l.taken != null ? l.taken : l.star) : l.star) || 0));
+      /* v98 기록은 taken 하나만 있으므로 보유 별에서 뺀 것으로 봅니다 */
+      var cutStars = isMinus
+        ? Math.max(0, Math.floor(Number(l.takenStars != null ? l.takenStars : (l.taken != null ? l.taken : 0)) || 0))
+        : 0;
+      var cutFed = isMinus ? Math.max(0, Math.floor(Number(l.takenFed) || 0)) : 0;
+      var cut = isMinus ? cutStars + cutFed : Math.max(0, Math.floor(Number(l.star) || 0));
       return logItemHTML({
         emoji: l.emoji || (isMinus ? '➖' : '⭐'),
         main: '<b>' + esc(kid ? kid.name : '아이') + '</b> ' + (isMinus ? '별 빼기 · ' : '칭찬 · ') + esc(praiseLogLabel(l)) +
           (isMinus
-            ? ' <span class="l-cut">별 -' + cut + '</span>'
+            ? (cut
+                ? ' <span class="l-cut">별 -' + cut + '</span>' +
+                  (cutFed ? ' <span class="l-where">(가진 별 ' + cutStars + ' · 포켓몬 ' + cutFed + ')</span>' : '')
+                : ' <span class="l-where">뺀 별이 없어요</span>')
             : (cut > 1 ? ' <span class="l-gain">별 +' + cut + '</span>' : '')),
         by: l.by ? ' · ' + esc(l.by) : '',
         ts: l.ts,
@@ -2970,8 +2978,9 @@
     UI.toast(childById(childId).name + '이를 칭찬했어요! 별 ⭐ ' + n + '개', { emoji: item.emoji, kind: 'good' });
   }
 
-  /* ➖ 별 빼기 — 보유 별에서만 빼고 0개 아래로는 내려가지 않아요.
-     실제로 뺀 별은 기록에 남겨 두어, 취소하면 똑같이 돌려줍니다. */
+  /* ➖ 별 빼기 — 보유 별에서 먼저 빼고, 모자라면 키우는 포켓몬에게 먹인 별에서 이어서 뺍니다.
+     0개 아래로는 내려가지 않고, 실제로 뺀 별은 보유 별(takenStars)·먹인 별(takenFed)로 나눠
+     기록에 남겨 두어 취소하면 그 자리 그대로 돌려줍니다(v99). */
   function addPraiseMinus(childId, itemId) {
     if (!needParent('별 빼기는 부모님 모드에서 할 수 있어요')) return;
     var item = praiseItemById('minus', itemId);
@@ -2979,21 +2988,28 @@
     var kid = childById(childId);
     if (!kid) return;
     var want = praiseItemStar(item);
-    var have = Math.max(0, Math.floor(Number(S.stars[childId]) || 0));
-    var take = Math.min(have, want);
-    S.stars[childId] = have - take;
+    var r = spendStars(childId, want);   /* 보유 별에서 → 모자라면 포켓몬 먹인 별에서 */
+    var takenStars = r.held, takenFed = r.pokemon;
+    var taken = takenStars + takenFed;
     S.praiseLog.unshift({
       id: UI.uid('praise'), childId: childId, kind: 'minus', item: praiseLabel(item, childId),
-      emoji: item.emoji, star: want, taken: take, by: S.actor || '부모님', ts: Date.now()
+      emoji: item.emoji, star: want, taken: taken, takenStars: takenStars, takenFed: takenFed,
+      by: S.actor || '부모님', ts: Date.now()
     });
     save();
     render({ keepScroll: true });
-    if (!take) {
+    if (!taken) {
       UI.toast(kid.name + '은(는) 뺄 별이 없어 기록만 남겼어요 · ' + item.label, { emoji: '➖', kind: 'warn', duration: 3000 });
-    } else {
-      UI.toast(kid.name + ' 별 ' + take + '개를 뺐어요 · ' + item.label +
-        (take < want ? ' (보유 별이 모자라 ' + take + '개만)' : ''), { emoji: '➖', kind: 'warn', duration: 3000 });
+      return;
     }
+    var where = takenFed
+      ? (takenStars
+          ? '가진 별 ' + takenStars + '개 + 포켓몬에게 먹인 별 ' + takenFed + '개'
+          : '포켓몬에게 먹인 별에서 ' + takenFed + '개')
+      : '가진 별에서 ' + takenStars + '개';
+    UI.toast(kid.name + ' 별 ' + taken + '개를 뺐어요 · ' + item.label + ' (' + where +
+      (taken < want ? ' · 뺄 별이 ' + (want - taken) + '개 모자라요' : '') + ')',
+      { emoji: takenFed ? '⚡' : '➖', kind: 'warn', duration: 3600 });
   }
 
   /* 칭찬 취소 — 잘못 누른 칭찬 · 별 빼기를 되돌립니다.
@@ -3017,13 +3033,28 @@
 
     if (log.kind === 'minus') {
       S.praiseLog.splice(idx, 1);
-      var back = Math.max(0, Math.floor(Number(log.taken) || 0));
-      S.stars[childId] = Math.max(0, Math.floor(Number(S.stars[childId]) || 0)) + back;
+      /* v98 기록은 taken 하나만 있으므로 그 값을 보유 별에서 뺀 것으로 봅니다 */
+      var backStars = Math.max(0, Math.floor(Number(
+        log.takenStars != null ? log.takenStars : (log.taken != null ? log.taken : 0)) || 0));
+      var backFed = Math.max(0, Math.floor(Number(log.takenFed) || 0));
+      S.stars[childId] = Math.max(0, Math.floor(Number(S.stars[childId]) || 0)) + backStars;
+      if (backFed > 0) {
+        var p = pkOf(childId);
+        p.fed = Math.max(0, Math.floor(Number(p.fed) || 0)) + backFed;
+      }
       save();
       render({ keepScroll: true });
-      UI.toast(back
-          ? name + ' 별 빼기를 취소했어요 · 별 ' + back + '개를 돌려줬어요'
-          : name + ' 별 빼기를 취소했어요 · 뺀 별은 없어 기록만 지웠어요',
+      var backMsg;
+      if (backFed > 0) {
+        backMsg = backStars
+          ? '가진 별 ' + backStars + '개 + 포켓몬에게 먹인 별 ' + backFed + '개를 돌려줬어요'
+          : '포켓몬에게 먹인 별 ' + backFed + '개를 돌려줬어요';
+      } else if (backStars > 0) {
+        backMsg = '별 ' + backStars + '개를 돌려줬어요';
+      } else {
+        backMsg = '뺀 별은 없어 기록만 지웠어요';
+      }
+      UI.toast(name + ' 별 빼기를 취소했어요 · ' + backMsg,
         { emoji: '↩️', kind: 'warn', duration: 2800 });
       return;
     }
@@ -7849,7 +7880,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 98;             /* index.html 의 ?v=98 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 99;             /* index.html 의 ?v=99 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 

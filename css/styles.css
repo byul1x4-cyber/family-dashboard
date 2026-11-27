@@ -1233,6 +1233,8 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 .pm-emoji-row { gap: 4px; }
 .l-cut { color: #B4463C; font-weight: 900; font-size: 11px; }
 .l-gain { color: #A2761A; font-weight: 900; font-size: 11px; }
+/* 별 빼기 기록에서 어디서 빠졌는지 — 가진 별 / 포켓몬에게 먹인 별 */
+.l-where { color: var(--ink-faint); font-weight: 700; font-size: 11px; }
 
 .log-list { display: grid; gap: 6px; }
 .log-item {
