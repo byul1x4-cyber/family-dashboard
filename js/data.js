@@ -76,6 +76,14 @@ window.APP_DATA = {
     { id: 'p-awesome', label: '오늘 아주 멋졌어요', emoji: '✨' }
   ],
 
+  /* ➖ 별 빼기(감점) 기본 항목 — 부모님이 칭찬하기 탭에서 문구·이모지·별 개수를 고치고
+     넣고 뺄 수 있어요. star = 누를 때 빼는 별 개수(기본 1개) */
+  praiseMinusItems: [
+    { id: 'm-badword', label: '나쁜 말을 했어요', emoji: '🙊', star: 1 },
+    { id: 'm-hit',     label: '형제를 때렸어요', emoji: '✋', star: 1 },
+    { id: 'm-shout',   label: '소리질렀어요',   emoji: '📢', star: 1 }
+  ],
+
   /* 우체통 그림 말 */
   pictograms: [
     { id: 'g-night',  label: '잘 잤어요',        emoji: '🌙' },

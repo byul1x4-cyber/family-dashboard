@@ -64,6 +64,10 @@
       money: { minguk: 0, ijun: 0 },
       moneyLog: [],
       praiseLog: [],
+      /* ⭐ 칭찬 · 별 빼기 항목 목록 — 부모님이 칭찬하기 탭에서 고치면 여기에 저장합니다.
+         null 이면 data.js 의 기본 목록을 그대로 씁니다(예전 가족 문서 호환).
+         { plus: [{ id, label, emoji, star }], minus: [{ id, label, emoji, star }] } */
+      praiseCfg: null,
       events: [],
       messages: [],
       meals: {},
@@ -119,6 +123,46 @@
     ['moneyLog', 'praiseLog', 'messages', 'meds'].forEach(function (k) {
       s[k] = Array.isArray(raw[k]) ? raw[k] : [];
     });
+
+    /* ⭐ 칭찬 · 별 빼기 항목
+       예전 가족 문서에는 이 값이 없으므로, 없으면 null 로 두고 화면에서
+       data.js 기본 목록(칭찬 11개 · 별 빼기 3개)을 그대로 보여 줍니다. */
+    s.praiseCfg = null;
+    if (raw.praiseCfg && typeof raw.praiseCfg === 'object') {
+      var praiseListNorm = function (arr, isMinus) {
+        var seen = {};
+        return (Array.isArray(arr) ? arr : []).map(function (it) {
+          if (!it || typeof it !== 'object') return null;
+          var label = String(it.label || '').replace(/\s+/g, ' ').trim().slice(0, 16);
+          if (!label) return null;
+          var id = String(it.id || '').trim();
+          if (!id || seen[id]) id = UI.uid(isMinus ? 'pm' : 'pp');
+          seen[id] = true;
+          var out = {
+            id: id,
+            label: label,
+            emoji: String(it.emoji || '').trim().slice(0, 8) || (isMinus ? '➖' : '⭐'),
+            star: clampNum(it.star, 1, 10, 1)
+          };
+          /* 아이마다 다른 문구(이준은 '형을 도와줬어요')는 살려 둡니다 */
+          if (it.labels && typeof it.labels === 'object') {
+            var lb = {};
+            D.children.forEach(function (c) {
+              var v = String(it.labels[c.id] || '').replace(/\s+/g, ' ').trim().slice(0, 16);
+              if (v) lb[c.id] = v;
+            });
+            if (Object.keys(lb).length) out.labels = lb;
+          }
+          return out;
+        }).filter(Boolean).slice(0, 30);
+      };
+      if (Array.isArray(raw.praiseCfg.plus) || Array.isArray(raw.praiseCfg.minus)) {
+        s.praiseCfg = {
+          plus: praiseListNorm(raw.praiseCfg.plus, false),
+          minus: praiseListNorm(raw.praiseCfg.minus, true)
+        };
+      }
+    }
 
     /* 일정: 종류(type)와 준비물(items)을 함께 보관합니다 */
     s.events = (Array.isArray(raw.events) ? raw.events : []).map(function (e) {
@@ -2447,18 +2491,24 @@
   function recentLogsHTML(limit) {
     var list = S.praiseLog.slice().sort(function (a, b) { return b.ts - a.ts; });
     if (!list.length) {
-      return '<div class="empty"><span class="big">🌱</span>아직 칭찬 기록이 없어요.<br>칭찬을 하면 여기에 차곡차곡 쌓여요.</div>';
+      return '<div class="empty"><span class="big">🌱</span>아직 칭찬 기록이 없어요.<br>칭찬·별 빼기를 하면 여기에 차곡차곡 쌓여요.</div>';
     }
     return '<div class="log-list">' + list.slice(0, limit).map(function (l) {
+      var kid = childById(l.childId);
+      var isMinus = l && l.kind === 'minus';
+      var cut = Math.max(0, Math.floor(Number(isMinus ? (l.taken != null ? l.taken : l.star) : l.star) || 0));
       return logItemHTML({
-        emoji: l.emoji || '⭐',
-        main: '<b>' + esc(childById(l.childId).name) + '</b> 칭찬 · ' + esc(praiseLogLabel(l)),
+        emoji: l.emoji || (isMinus ? '➖' : '⭐'),
+        main: '<b>' + esc(kid ? kid.name : '아이') + '</b> ' + (isMinus ? '별 빼기 · ' : '칭찬 · ') + esc(praiseLogLabel(l)) +
+          (isMinus
+            ? ' <span class="l-cut">별 -' + cut + '</span>'
+            : (cut > 1 ? ' <span class="l-gain">별 +' + cut + '</span>' : '')),
         by: l.by ? ' · ' + esc(l.by) : '',
         ts: l.ts,
-        /* 칭찬 취소는 부모님 모드에서만 보여요 (아이 모드에는 없음) */
+        /* 칭찬·별 빼기 취소는 부모님 모드에서만 보여요 (아이 모드에는 없음) */
         trail: S.mode === 'parent'
           ? '<button type="button" class="log-cancel" data-act="cancel-praise" data-id="' + esc(l.id) + '" aria-label="' +
-            esc(childById(l.childId).name) + ' 칭찬 취소">취소</button>'
+            esc(kid ? kid.name : '아이') + ' ' + (isMinus ? '별 빼기' : '칭찬') + ' 취소">취소</button>'
           : ''
       });
     }).join('') + '</div>';
@@ -2784,12 +2834,44 @@
     return item ? item.label : '';
   }
 
+  /* ---------------- ⭐ 칭찬 · 별 빼기 항목 목록 ----------------
+     부모님이 고친 목록은 state.praiseCfg 에 저장되어 Firestore 로 함께 동기화됩니다.
+     저장된 목록이 없으면(null) data.js 기본값을 그대로 씁니다 — 예전 가족 문서도 그대로 열려요. */
+  function praiseItemStar(it) {
+    var n = Math.floor(Number(it && it.star));
+    if (!isFinite(n) || n < 1) n = 1;
+    return Math.min(10, n);
+  }
+  function praiseListCopy(it) {
+    var o = { id: it.id, label: it.label, emoji: it.emoji, star: praiseItemStar(it) };
+    if (it.labels) o.labels = Object.assign({}, it.labels);
+    return o;
+  }
+  function praiseList(kind) {
+    var isMinus = kind === 'minus';
+    var cfg = S && S.praiseCfg;
+    var key = isMinus ? 'minus' : 'plus';
+    if (cfg && Array.isArray(cfg[key])) return cfg[key];
+    var defs = isMinus ? (D.praiseMinusItems || []) : (D.praiseItems || []);
+    return defs.map(function (it) { return praiseListCopy(it); });
+  }
+  function ensurePraiseCfg() {
+    if (!S.praiseCfg || typeof S.praiseCfg !== 'object') S.praiseCfg = {};
+    if (!Array.isArray(S.praiseCfg.plus)) S.praiseCfg.plus = praiseList('plus').map(praiseListCopy);
+    if (!Array.isArray(S.praiseCfg.minus)) S.praiseCfg.minus = praiseList('minus').map(praiseListCopy);
+    return S.praiseCfg;
+  }
+  function praiseItemById(kind, itemId) {
+    return praiseList(kind).filter(function (i) { return i.id === itemId; })[0] || null;
+  }
+
   /* ================= 칭찬 ================= */
   function renderPraise() {
     var total = 0;
     D.children.forEach(function (k) { total += (S.praiseCount[k.id] || 0); });
     return '<div class="duo-grid">' + D.children.map(praiseKidCardHTML).join('') + '</div>' +
-      (S.mode === 'parent' ? '' : '<div class="lock-note">🔒 칭찬은 부모님 모드에서 할 수 있어요.</div>') +
+      (S.mode === 'parent' ? '' : '<div class="lock-note">🔒 칭찬과 별 빼기는 부모님 모드에서 할 수 있어요.</div>') +
+      praiseManageHTML() +
       '<div class="card" style="margin-top:12px">' +
         cardHead('🧾', '최근 칭찬 기록', total ? '지금까지 ' + total + '번 칭찬했어요' : '칭찬한 만큼 차곡차곡') +
         recentLogsHTML(20) +
@@ -2797,6 +2879,31 @@
   }
 
   function praiseKidCardHTML(c) {
+    var plusItems = praiseList('plus');
+    var minusItems = praiseList('minus');
+    var plusHTML = plusItems.length
+      ? '<div class="praise-items" style="margin-top:10px">' + plusItems.map(function (p) {
+          var n = praiseItemStar(p);
+          return '<button type="button" class="praise-item" data-act="praise" data-child="' + c.id + '" data-item="' + esc(p.id) + '">' +
+            '<span>' + esc(p.emoji) + '</span>' + esc(praiseLabel(p, c.id)) +
+            (n > 1 ? '<i class="pi-gain">+' + n + '</i>' : '') + '</button>';
+        }).join('') + '</div>'
+      : '<div class="pm-empty" style="margin-top:10px">칭찬 항목이 없어요.' +
+          (S.mode === 'parent' ? ' 아래 <b>칭찬·별 빼기 항목 고치기</b>에서 넣을 수 있어요.' : '') + '</div>';
+    var minusHTML = minusItems.length
+      ? '<div class="praise-minus">' +
+          '<div class="pm-head"><span aria-hidden="true">➖</span> 별 빼기</div>' +
+          '<div class="praise-items minus">' + minusItems.map(function (m) {
+            var n = praiseItemStar(m);
+            return '<button type="button" class="praise-item minus" data-act="praise-minus" data-child="' + c.id + '" data-item="' + esc(m.id) + '">' +
+              '<span>' + esc(m.emoji) + '</span>' + esc(praiseLabel(m, c.id)) +
+              '<i class="pi-cut">-' + n + '</i></button>';
+          }).join('') + '</div>' +
+        '</div>'
+      : (S.mode === 'parent'
+          ? '<div class="praise-minus"><div class="pm-head"><span aria-hidden="true">➖</span> 별 빼기</div>' +
+            '<div class="pm-empty">별 빼기 항목이 없어요. 아래 <b>칭찬·별 빼기 항목 고치기</b>에서 넣을 수 있어요.</div></div>'
+          : '');
     return '<div class="card praise-kid ' + c.color + '">' +
       '<div class="rk-head">' +
         kidAvaHTML(c) +
@@ -2805,31 +2912,93 @@
         '<span class="rk-spacer"></span>' +
         '<span class="badge rose">🏅 ' + (S.praiseCount[c.id] || 0) + '</span>' +
       '</div>' +
-      '<div class="praise-items" style="margin-top:10px">' + D.praiseItems.map(function (p) {
-        return '<button type="button" class="praise-item" data-act="praise" data-child="' + c.id + '" data-item="' + p.id + '">' +
-          '<span>' + p.emoji + '</span>' + esc(praiseLabel(p, c.id)) + '</button>';
-      }).join('') + '</div>' +
+      plusHTML + minusHTML +
+    '</div>';
+  }
+
+  /* ---------------- 부모님 모드: 칭찬 · 별 빼기 항목 고치기 ---------------- */
+  function praiseManageHTML() {
+    if (S.mode !== 'parent') return '';
+    return '<div class="card praise-manage" style="margin-top:12px">' +
+      cardHead('🧩', '칭찬·별 빼기 항목 고치기', '문구·이모지·별 개수를 바꾸고, 넣고 뺄 수 있어요') +
+      '<div class="pm-grid">' +
+        praiseManageListHTML('plus', '⭐ 칭찬 항목', '누르면 주는 별') +
+        praiseManageListHTML('minus', '➖ 별 빼기 항목', '누르면 빼는 별') +
+      '</div>' +
+      '<p class="help">여기서 고친 항목은 태블릿·폰에도 바로 함께 보여요. 이미 남은 기록과 별은 그대로예요.</p>' +
+    '</div>';
+  }
+
+  function praiseManageListHTML(kind, title, sub) {
+    var isMinus = kind === 'minus';
+    var list = praiseList(kind);
+    return '<div class="pm-block' + (isMinus ? ' minus' : '') + '">' +
+      '<div class="pm-block-head">' +
+        '<b>' + title + '</b><span class="pm-sub">' + esc(sub) + '</span>' +
+        '<span class="rk-spacer"></span>' +
+        '<button type="button" class="btn btn-soft btn-sm pm-add" data-act="praise-item-add" data-kind="' + kind + '">＋ 추가</button>' +
+      '</div>' +
+      (list.length
+        ? '<div class="pm-list">' + list.map(function (it) {
+            var n = praiseItemStar(it);
+            return '<div class="pm-row">' +
+              '<span class="pm-emoji" aria-hidden="true">' + esc(it.emoji) + '</span>' +
+              '<span class="pm-label">' + esc(it.label) + '</span>' +
+              '<span class="pm-stars ' + (isMinus ? 'cut' : 'gain') + '">' + (isMinus ? '-' : '+') + n + '</span>' +
+              '<button type="button" class="pm-btn" data-act="praise-item-edit" data-kind="' + kind + '" data-item="' + esc(it.id) + '" aria-label="' + esc(it.label) + ' 고치기" title="고치기">✏️</button>' +
+              '<button type="button" class="pm-btn" data-act="praise-item-del" data-kind="' + kind + '" data-item="' + esc(it.id) + '" aria-label="' + esc(it.label) + ' 빼기" title="목록에서 빼기">🗑️</button>' +
+            '</div>';
+          }).join('') + '</div>'
+        : '<div class="pm-empty" style="padding:6px 2px">아직 항목이 없어요. <b>＋ 추가</b>로 넣어 보세요.</div>') +
     '</div>';
   }
 
   function addPraise(childId, itemId) {
     if (!needParent('칭찬은 부모님 모드에서 할 수 있어요')) return;
-    var item = D.praiseItems.filter(function (p) { return p.id === itemId; })[0];
+    var item = praiseItemById('plus', itemId);
     if (!item) return;
+    var n = praiseItemStar(item);
     S.praiseLog.unshift({
-      id: UI.uid('praise'), childId: childId, item: praiseLabel(item, childId), emoji: item.emoji, by: S.actor || '부모님', ts: Date.now()
+      id: UI.uid('praise'), childId: childId, kind: 'plus', item: praiseLabel(item, childId),
+      emoji: item.emoji, star: n, by: S.actor || '부모님', ts: Date.now()
     });
-    S.stars[childId] = (S.stars[childId] || 0) + 1;
+    S.stars[childId] = Math.max(0, Math.floor(S.stars[childId] || 0)) + n;
     S.praiseCount[childId] = (S.praiseCount[childId] || 0) + 1;
     save();
     render({ keepScroll: true });
     UI.confetti(14);
-    UI.toast(childById(childId).name + '이를 칭찬했어요! 별 ⭐ 1개', { emoji: item.emoji, kind: 'good' });
+    UI.toast(childById(childId).name + '이를 칭찬했어요! 별 ⭐ ' + n + '개', { emoji: item.emoji, kind: 'good' });
   }
 
-  /* 칭찬 취소 — 잘못 누른 칭찬을 되돌립니다.
-     기록·칭찬 수를 되돌리고, 그때 준 별 1개도 함께 뺍니다.
-     보유 별이 0개면 spendStars 가 포켓몬에게 먹인 별에서 이어서 빼요. */
+  /* ➖ 별 빼기 — 보유 별에서만 빼고 0개 아래로는 내려가지 않아요.
+     실제로 뺀 별은 기록에 남겨 두어, 취소하면 똑같이 돌려줍니다. */
+  function addPraiseMinus(childId, itemId) {
+    if (!needParent('별 빼기는 부모님 모드에서 할 수 있어요')) return;
+    var item = praiseItemById('minus', itemId);
+    if (!item) return;
+    var kid = childById(childId);
+    if (!kid) return;
+    var want = praiseItemStar(item);
+    var have = Math.max(0, Math.floor(Number(S.stars[childId]) || 0));
+    var take = Math.min(have, want);
+    S.stars[childId] = have - take;
+    S.praiseLog.unshift({
+      id: UI.uid('praise'), childId: childId, kind: 'minus', item: praiseLabel(item, childId),
+      emoji: item.emoji, star: want, taken: take, by: S.actor || '부모님', ts: Date.now()
+    });
+    save();
+    render({ keepScroll: true });
+    if (!take) {
+      UI.toast(kid.name + '은(는) 뺄 별이 없어 기록만 남겼어요 · ' + item.label, { emoji: '➖', kind: 'warn', duration: 3000 });
+    } else {
+      UI.toast(kid.name + ' 별 ' + take + '개를 뺐어요 · ' + item.label +
+        (take < want ? ' (보유 별이 모자라 ' + take + '개만)' : ''), { emoji: '➖', kind: 'warn', duration: 3000 });
+    }
+  }
+
+  /* 칭찬 취소 — 잘못 누른 칭찬 · 별 빼기를 되돌립니다.
+     · 칭찬: 기록·칭찬 수를 되돌리고 그때 준 별도 함께 뺍니다(보유 별이 모자라면 먹인 별에서).
+     · 별 빼기: 기록을 지우고 그때 실제로 뺐던 별을 그대로 돌려줍니다. */
   function cancelPraise(logId) {
     if (!needParent('칭찬 취소는 부모님 모드에서 할 수 있어요')) return;
     var idx = -1, i;
@@ -2837,7 +3006,7 @@
       if (S.praiseLog[i] && S.praiseLog[i].id === logId) { idx = i; break; }
     }
     if (idx < 0) {
-      UI.toast('이미 지운 칭찬이에요', { emoji: '🧾', duration: 1800 });
+      UI.toast('이미 지운 기록이에요', { emoji: '🧾', duration: 1800 });
       render({ keepScroll: true });
       return;
     }
@@ -2845,21 +3014,143 @@
     var childId = log.childId;
     var kid = childById(childId);
     var name = kid ? kid.name : '아이';
+
+    if (log.kind === 'minus') {
+      S.praiseLog.splice(idx, 1);
+      var back = Math.max(0, Math.floor(Number(log.taken) || 0));
+      S.stars[childId] = Math.max(0, Math.floor(Number(S.stars[childId]) || 0)) + back;
+      save();
+      render({ keepScroll: true });
+      UI.toast(back
+          ? name + ' 별 빼기를 취소했어요 · 별 ' + back + '개를 돌려줬어요'
+          : name + ' 별 빼기를 취소했어요 · 뺀 별은 없어 기록만 지웠어요',
+        { emoji: '↩️', kind: 'warn', duration: 2800 });
+      return;
+    }
+
+    var n = praiseItemStar({ star: log.star });
     S.praiseLog.splice(idx, 1);
     S.praiseCount[childId] = Math.max(0, (S.praiseCount[childId] || 0) - 1);
-    var r = spendStars(childId, 1);   /* 보유 별 1개 → 모자라면 포켓몬 먹인 별에서 */
+    var r = spendStars(childId, n);   /* 보유 별에서 → 모자라면 포켓몬 먹인 별에서 */
     save();
     render({ keepScroll: true });
     if (r.pokemon > 0) {
       UI.toast(name + ' 칭찬을 취소했어요 · 보유 별이 없어 포켓몬에게 먹인 별에서 ' + r.pokemon + '개 뺐어요',
         { emoji: '⚡', kind: 'warn', duration: 3600 });
     } else if (r.held > 0) {
-      UI.toast(name + ' 칭찬을 취소했어요 · 별 1개도 함께 뺐어요',
+      UI.toast(name + ' 칭찬을 취소했어요 · 별 ' + r.held + '개도 함께 뺐어요',
         { emoji: '↩️', kind: 'warn', duration: 2600 });
     } else {
       UI.toast(name + ' 칭찬을 취소했어요 · 뺄 별이 없어 기록만 지웠어요',
         { emoji: '↩️', kind: 'warn', duration: 2600 });
     }
+  }
+
+  /* ---------------- 항목 추가 · 고치기 · 빼기 ---------------- */
+  var PRAISE_EMOJIS = ['🙌', '🙇', '💬', '🤝', '📚', '🧺', '🥗', '🤙', '📖', '💛', '✨', '🎉', '🏆', '🫶'];
+  var PRAISE_MINUS_EMOJIS = ['🙊', '✋', '📢', '😠', '😭', '🙅', '💢', '🚫', '😤', '👊'];
+
+  function savePraiseItem(kind, itemId, data) {
+    if (!needParent('칭찬·별 빼기 항목은 부모님 모드에서 고칠 수 있어요')) return false;
+    var isMinus = kind === 'minus';
+    var label = String((data && data.label) || '').replace(/\s+/g, ' ').trim().slice(0, 16);
+    if (!label) { UI.toast('문구를 적어 주세요', { emoji: '✏️', kind: 'warn' }); return false; }
+    var emoji = String((data && data.emoji) || '').trim().slice(0, 8) || (isMinus ? '🙊' : '✨');
+    var star = clampNum(data && data.star, 1, 10, 1);
+    var cfg = ensurePraiseCfg();
+    var list = isMinus ? cfg.minus : cfg.plus;
+    if (itemId) {
+      var hit = list.filter(function (i) { return i.id === itemId; })[0];
+      if (!hit) { UI.toast('항목을 찾지 못했어요', { emoji: '🔎', kind: 'warn' }); return false; }
+      if (hit.label !== label) { hit.label = label; delete hit.labels; }
+      hit.emoji = emoji;
+      hit.star = star;
+    } else {
+      if (list.length >= 30) { UI.toast('항목은 30개까지 넣을 수 있어요', { emoji: '🧩', kind: 'warn' }); return false; }
+      list.push({ id: UI.uid(isMinus ? 'pm' : 'pp'), label: label, emoji: emoji, star: star });
+    }
+    save();
+    render({ keepScroll: true });
+    return true;
+  }
+
+  function removePraiseItem(kind, itemId) {
+    if (!needParent('칭찬·별 빼기 항목은 부모님 모드에서 고칠 수 있어요')) return;
+    var isMinus = kind === 'minus';
+    var item = praiseItemById(kind, itemId);
+    if (!item) return;
+    UI.confirm((isMinus ? '별 빼기' : '칭찬') + ' 항목을 뺄까요?',
+        '“' + item.label + '”을(를) 목록에서 뺍니다.\n이미 남은 기록과 별은 그대로예요.', '빼기', 'danger')
+      .then(function (ok) {
+        if (!ok) return;
+        var cfg = ensurePraiseCfg();
+        if (isMinus) cfg.minus = cfg.minus.filter(function (i) { return i.id !== itemId; });
+        else cfg.plus = cfg.plus.filter(function (i) { return i.id !== itemId; });
+        save();
+        render({ keepScroll: true });
+        UI.toast('항목을 뺐어요', { emoji: '🗑️' });
+      });
+  }
+
+  function praiseItemModal(kind, itemId) {
+    if (!needParent('칭찬·별 빼기 항목은 부모님 모드에서 고칠 수 있어요')) return;
+    var isMinus = kind === 'minus';
+    var cur = itemId ? praiseItemById(kind, itemId) : null;
+    if (itemId && !cur) { UI.toast('항목을 찾지 못했어요', { emoji: '🔎', kind: 'warn' }); return; }
+    var label0 = cur ? cur.label : '';
+    var emoji0 = cur ? cur.emoji : (isMinus ? '🙊' : '✨');
+    var star0 = praiseItemStar(cur || { star: 1 });
+    var emojis = isMinus ? PRAISE_MINUS_EMOJIS : PRAISE_EMOJIS;
+    var starOpts = '';
+    for (var n = 1; n <= 10; n++) {
+      starOpts += '<option value="' + n + '"' + (n === star0 ? ' selected' : '') + '>' + n + '개</option>';
+    }
+    UI.modal({
+      title: (cur ? '✏️ ' : '＋ ') + (isMinus ? '별 빼기' : '칭찬') + ' 항목',
+      bodyHTML:
+        '<div class="field"><label>문구 (아이 화면에 그대로 보여요)</label>' +
+          '<input class="input pi-input" id="piLabel" maxlength="16" value="' + esc(label0) + '" placeholder="' +
+            (isMinus ? '예: 욕을 했어요' : '예: 동생을 도와줬어요') + '" autocomplete="off">' +
+        '</div>' +
+        '<div class="field"><label>이모지 (골라도 되고 직접 적어도 돼요)</label>' +
+          '<div class="rt-emoji-row pm-emoji-row">' + emojis.map(function (e) {
+            return '<button type="button" class="rt-emoji" data-emoji="' + e + '">' + e + '</button>';
+          }).join('') + '</div>' +
+          '<input class="input pi-input" id="piEmoji" maxlength="4" value="' + esc(emoji0) + '" style="margin-top:6px;text-align:center;font-size:20px">' +
+        '</div>' +
+        '<div class="field"><label>' + (isMinus ? '뺄 별 개수' : '줄 별 개수') + '</label>' +
+          '<select class="select" id="piStar">' + starOpts + '</select>' +
+          '<p class="help">' + (isMinus
+            ? '누르면 이만큼 별을 뺏어요. 보유 별이 모자라면 0개까지만 줄고, 그만큼만 기록에 남아요.'
+            : '누르면 이만큼 별이 쌓여요.') + '</p>' +
+        '</div>',
+      actions: [
+        {
+          label: cur ? '저장' : '추가하기', kind: 'primary', onClick: function (close) {
+            var label = (document.getElementById('piLabel') || {}).value || '';
+            var emoji = (document.getElementById('piEmoji') || {}).value || '';
+            var star = Number((document.getElementById('piStar') || {}).value || 1);
+            if (!savePraiseItem(kind, itemId, { label: label, emoji: emoji, star: star })) return false;
+            UI.toast((isMinus ? '별 빼기' : '칭찬') + ' 항목을 ' + (cur ? '고쳤어요' : '넣었어요') + ' · ' + emoji + ' ' + label.trim(),
+              { emoji: '✅', kind: 'good' });
+          }
+        },
+        { label: '취소', kind: 'ghost' }
+      ],
+      onOpen: function (wrap) {
+        wrap.addEventListener('click', function (e) {
+          var b = e.target.closest('[data-emoji]');
+          if (!b) return;
+          e.preventDefault();
+          var inp = document.getElementById('piEmoji');
+          if (inp) inp.value = b.getAttribute('data-emoji');
+        });
+        setTimeout(function () {
+          var l = document.getElementById('piLabel');
+          if (l) l.focus();
+        }, 120);
+      }
+    });
   }
 
   /* ================= 일정 ================= */
@@ -7109,6 +7400,10 @@
       case 'routine-del': removeRoutineItem(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
 
       case 'praise': addPraise(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
+      case 'praise-minus': addPraiseMinus(el.getAttribute('data-child'), el.getAttribute('data-item')); break;
+      case 'praise-item-add': praiseItemModal(el.getAttribute('data-kind') || 'plus', null); break;
+      case 'praise-item-edit': praiseItemModal(el.getAttribute('data-kind') || 'plus', el.getAttribute('data-item')); break;
+      case 'praise-item-del': removePraiseItem(el.getAttribute('data-kind') || 'plus', el.getAttribute('data-item')); break;
       case 'cancel-praise': cancelPraise(el.getAttribute('data-id')); break;
 
       case 'cal-prev': calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1); render({ keepScroll: true }); break;
@@ -7554,7 +7849,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 97;             /* index.html 의 ?v=97 와 같아야 합니다 */
+  var APP_ASSET_VERSION = 98;             /* index.html 의 ?v=98 와 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 

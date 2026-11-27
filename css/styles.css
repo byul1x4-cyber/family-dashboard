@@ -1168,9 +1168,71 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
   text-align: left;
   transition: transform .12s, background .18s, border-color .18s;
 }
-.praise-item span { font-size: 18px; }
+.praise-item span { font-size: 18px; flex: none; }
 .praise-item:hover { background: #FFF9EA; border-color: #F3DFB9; transform: translateY(-1px); }
 .praise-item:active { transform: scale(.98); }
+
+/* ➖ 별 빼기(감점) — 칭찬 아래에 따로 묶어 보여 줍니다 */
+.praise-minus { margin-top: 13px; padding-top: 11px; border-top: 2px dashed #F3E2CC; }
+.pm-head {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 8px;
+  font-size: 12px; font-weight: 900; color: #B4574E;
+}
+.pm-head > span { font-size: 14px; }
+/* 별 빼기는 '-1' 배지까지 한 줄에 읽히도록 한 줄에 하나씩 */
+.praise-items.minus { grid-template-columns: 1fr; }
+.praise-items.minus .praise-item { border-color: #F8D8D0; background: #FFF8F6; color: #8C3F38; }
+.praise-items.minus .praise-item:hover { background: #FFEFEB; border-color: #F0BFB4; }
+.pi-cut, .pi-gain {
+  margin-left: auto; flex: none;
+  padding: 4px 6px;
+  border-radius: 999px;
+  font-style: normal; font-weight: 900; font-size: 11px; line-height: 1;
+}
+.pi-cut { background: #FCE3DE; color: #B4463C; }
+.pi-gain { background: #FFF1CC; color: #A2761A; }
+.pm-empty { font-size: 12px; color: var(--ink-faint); line-height: 1.65; }
+
+/* 🧩 부모님 모드 — 칭찬·별 빼기 항목 고치기 */
+.praise-manage .card-head { margin-bottom: 2px; }
+/* 패드·데스크톱처럼 넓으면 칭찬/별 빼기를 나란히 */
+@media (min-width: 900px) {
+  .pm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+}
+.pm-block {
+  margin-top: 12px; padding: 11px 12px;
+  border: 2px solid #F5EAD8; border-radius: 16px;
+  background: #FFFCF4;
+}
+.pm-block.minus { border-color: #F7E0D9; background: #FFF9F7; }
+.pm-block-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pm-block-head b { font-size: 13px; }
+.pm-block-head .pm-sub { font-size: 11px; font-weight: 700; color: var(--ink-faint); }
+.pm-add { margin-left: auto; }
+.pm-list { display: grid; gap: 6px; margin-top: 9px; }
+.pm-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto auto auto;
+  align-items: center; gap: 7px;
+  padding: 6px 8px;
+  border: 1.5px solid #F3E7D5; border-radius: 12px;
+  background: #fff;
+}
+.pm-row .pm-emoji { font-size: 16px; text-align: center; }
+.pm-row .pm-label { font-size: 12.5px; font-weight: 800; min-width: 0; overflow-wrap: anywhere; }
+.pm-stars { padding: 3px 7px; border-radius: 999px; font-size: 11px; font-weight: 900; white-space: nowrap; }
+.pm-stars.gain { background: #FFF1CC; color: #A2761A; }
+.pm-stars.cut { background: #FCE3DE; color: #B4463C; }
+.pm-btn {
+  width: 30px; height: 30px; flex: none;
+  border: 1.5px solid #F0E2CE; border-radius: 10px;
+  background: #fff; font-size: 14px; line-height: 1;
+}
+.pm-btn:hover { background: #FFF6E8; }
+.pm-emoji-row { gap: 4px; }
+.l-cut { color: #B4463C; font-weight: 900; font-size: 11px; }
+.l-gain { color: #A2761A; font-weight: 900; font-size: 11px; }
 
 .log-list { display: grid; gap: 6px; }
 .log-item {
@@ -2263,6 +2325,9 @@ select {
   .time-banner .tb-right { display: none; }
   .settings-grid { grid-template-columns: 1fr; }
   .field-row { grid-template-columns: 1fr; }
+  .pm-block { padding: 10px; }
+  .pm-row { grid-template-columns: 22px minmax(0, 1fr) auto auto auto; gap: 5px; padding: 6px; }
+  .pm-btn { width: 28px; height: 28px; font-size: 13px; }
   .modal { padding: 17px; border-radius: 26px; }
   .bigpop { padding: 26px 18px 20px; border-radius: 32px; }
   .bp-ico { width: 78px; height: 78px; font-size: 42px; }
