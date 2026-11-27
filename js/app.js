@@ -2907,7 +2907,7 @@
       ? '<div class="praise-items" style="margin-top:10px">' + plusItems.map(function (p) {
           var n = praiseItemStar(p);
           return '<button type="button" class="praise-item" data-act="praise" data-child="' + c.id + '" data-item="' + esc(p.id) + '">' +
-            '<span>' + esc(p.emoji) + '</span>' + esc(praiseLabel(p, c.id)) +
+            '<span>' + esc(p.emoji) + '</span><span class="pi-label">' + esc(praiseLabel(p, c.id)) + '</span>' +
             (n > 1 ? '<i class="pi-gain">+' + n + '</i>' : '') + '</button>';
         }).join('') + '</div>'
       : '<div class="pm-empty" style="margin-top:10px">칭찬 항목이 없어요.' +
@@ -2918,7 +2918,7 @@
           '<div class="praise-items minus">' + minusItems.map(function (m) {
             var n = praiseItemStar(m);
             return '<button type="button" class="praise-item minus" data-act="praise-minus" data-child="' + c.id + '" data-item="' + esc(m.id) + '">' +
-              '<span>' + esc(m.emoji) + '</span>' + esc(praiseLabel(m, c.id)) +
+              '<span>' + esc(m.emoji) + '</span><span class="pi-label">' + esc(praiseLabel(m, c.id)) + '</span>' +
               '<i class="pi-cut">-' + n + '</i></button>';
           }).join('') + '</div>' +
         '</div>'
@@ -7897,7 +7897,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 100;            /* index.html 의 ?v=100 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 101;            /* index.html 의 ?v=101 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
