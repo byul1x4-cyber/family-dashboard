@@ -61,7 +61,8 @@ window.APP_DATA = {
     }
   },
 
-  /* 칭찬 항목 */
+  /* 칭찬 항목
+     target 을 적으면 누구에게 보여 줄지 정할 수 있어요 — 'both'(기본 · 생략하면 둘 다) / 'minguk' / 'ijun' */
   praiseItems: [
     { id: 'p-self',    label: '스스로 했어요',      emoji: '🙌' },
     { id: 'p-greet',   label: '인사를 잘했어요',    emoji: '🙇' },
@@ -76,8 +77,8 @@ window.APP_DATA = {
     { id: 'p-awesome', label: '오늘 아주 멋졌어요', emoji: '✨' }
   ],
 
-  /* ➖ 별 빼기(감점) 기본 항목 — 부모님이 칭찬하기 탭에서 문구·이모지·별 개수를 고치고
-     넣고 뺄 수 있어요. star = 누를 때 빼는 별 개수(기본 1개) */
+  /* ➖ 별 빼기(감점) 기본 항목 — 부모님이 칭찬하기 탭에서 문구·이모지·별 개수·보이는 아이를 고치고
+     넣고 뺄 수 있어요. star = 누를 때 빼는 별 개수(기본 1개), target = 'both'(기본)/'minguk'/'ijun' */
   praiseMinusItems: [
     { id: 'm-badword', label: '나쁜 말을 했어요', emoji: '🙊', star: 1 },
     { id: 'm-hit',     label: '형제를 때렸어요', emoji: '✋', star: 1 },

@@ -142,7 +142,10 @@
             id: id,
             label: label,
             emoji: String(it.emoji || '').trim().slice(0, 8) || (isMinus ? '➖' : '⭐'),
-            star: clampNum(it.star, 1, 10, 1)
+            star: clampNum(it.star, 1, 10, 1),
+            /* 누구에게 보여 줄 항목인지 — 'both'(둘 다) · 'minguk' · 'ijun'.
+               target 이 없던 예전 항목은 그대로 'both' 로 살려 둡니다(v103). */
+            target: (it.target === 'minguk' || it.target === 'ijun') ? it.target : 'both'
           };
           /* 아이마다 다른 문구(이준은 '형을 도와줬어요')는 살려 둡니다 */
           if (it.labels && typeof it.labels === 'object') {
@@ -2864,8 +2867,35 @@
     if (!isFinite(n) || n < 1) n = 1;
     return Math.min(10, n);
   }
+  /* ---------------- 적용 대상 (둘 다 / 민국이만 / 이준이만 · v103) ----------------
+     항목마다 target 하나를 가집니다 — 'both'(기본) · 'minguk' · 'ijun'.
+     target 이 없는 예전 항목은 'both' 로 읽혀서 민국·이준 두 카드에 그대로 나옵니다. */
+  function praiseTargetOf(it) {
+    var t = it && it.target;
+    return (t === 'minguk' || t === 'ijun') ? t : 'both';
+  }
+  function praiseTargetTitle(t) {            /* '둘 다' · '민국' · '이준' */
+    if (t !== 'minguk' && t !== 'ijun') return '둘 다';
+    var k = childById(t);
+    return k ? k.name : '아이';
+  }
+  function praiseTargetOnly(t) {             /* '둘 다' · '민국이만' · '이준이만' */
+    if (t !== 'minguk' && t !== 'ijun') return '둘 다';
+    var k = childById(t);
+    if (!k) return '둘 다';
+    var code = k.name.charCodeAt(k.name.length - 1) - 0xAC00;
+    var hasFinal = code >= 0 && (code % 28) !== 0;   /* 받침이 있으면 '이만', 없으면 '만' */
+    return k.name + (hasFinal ? '이만' : '만');
+  }
+  function praiseApplies(it, childId) {
+    var t = praiseTargetOf(it);
+    return t === 'both' || t === childId;
+  }
+  function praiseItemsFor(kind, childId) {   /* 그 아이 카드에 보여 줄 항목만 */
+    return praiseList(kind).filter(function (it) { return praiseApplies(it, childId); });
+  }
   function praiseListCopy(it) {
-    var o = { id: it.id, label: it.label, emoji: it.emoji, star: praiseItemStar(it) };
+    var o = { id: it.id, label: it.label, emoji: it.emoji, star: praiseItemStar(it), target: praiseTargetOf(it) };
     if (it.labels) o.labels = Object.assign({}, it.labels);
     return o;
   }
@@ -2925,32 +2955,44 @@
     var isMinus = kind === 'minus';
     var editing = S.mode === 'parent' && !!praiseEdit[kind];
     var n = praiseItemStar(it);
+    var scope = praiseTargetOf(it);
     var act = editing ? 'praise-item-edit' : (isMinus ? 'praise-minus' : 'praise');
+    /* ✏️ 수정 중에는 이 항목이 누구 것인지 배지로 보여 줍니다 (둘 다면 ✏️ 그대로) */
+    var editBadge = scope === 'both'
+      ? '<i class="pi-edit" aria-hidden="true">✏️</i>'
+      : '<i class="pi-scope ' + esc(scope) + '" title="' + esc(praiseTargetOnly(scope)) + '">' +
+        esc(praiseTargetTitle(scope)) + '</i>';
     return '<button type="button" class="praise-item' + (isMinus ? ' minus' : '') + (editing ? ' edit' : '') + '"' +
       ' data-act="' + act + '" data-child="' + c.id + '" data-item="' + esc(it.id) + '"' +
       (editing ? ' data-kind="' + kind + '"' : '') +
-      ' aria-label="' + esc(praiseLabel(it, c.id)) + ' ' + (editing ? '고치기' : (isMinus ? '별 빼기' : '칭찬하기')) + '">' +
+      ' aria-label="' + (scope === 'both' ? '' : esc(praiseTargetOnly(scope)) + ' · ') +
+        esc(praiseLabel(it, c.id)) + ' ' + (editing ? '고치기' : (isMinus ? '별 빼기' : '칭찬하기')) + '">' +
       '<span aria-hidden="true">' + esc(it.emoji) + '</span>' +
       '<span class="pi-label">' + esc(praiseLabel(it, c.id)) + '</span>' +
       (editing
-        ? '<i class="pi-edit" aria-hidden="true">✏️</i>'
+        ? editBadge
         : (isMinus ? '<i class="pi-cut">-' + n + '</i>' : (n > 1 ? '<i class="pi-gain">+' + n + '</i>' : ''))) +
       '</button>';
   }
 
   function praiseKidCardHTML(c) {
-    var plusItems = praiseList('plus');
-    var minusItems = praiseList('minus');
+    /* 이 아이에게 보여 줄 항목만 — '둘 다' + 이 아이 전용(v103) */
+    var plusItems = praiseItemsFor('plus', c.id);
+    var minusItems = praiseItemsFor('minus', c.id);
     var parent = S.mode === 'parent';
     var plusHTML = '<div class="praise-plus">' + praiseSectionHeadHTML('plus') +
       (plusItems.length
         ? '<div class="praise-items">' + plusItems.map(function (p) { return praiseItemBtnHTML(c, 'plus', p); }).join('') + '</div>'
-        : '<div class="pm-empty">' + (parent ? '칭찬 항목이 없어요. 옆의 <b>＋ 추가</b>로 넣어 보세요.' : '칭찬 항목이 없어요.') + '</div>') +
+        : '<div class="pm-empty">' + (parent
+            ? esc(c.name) + '에게 보여 줄 칭찬 항목이 없어요. 옆의 <b>＋ 추가</b>로 넣어 보세요.'
+            : esc(c.name) + ' 칭찬 항목이 없어요.') + '</div>') +
       '</div>';
     var minusHTML = '<div class="praise-minus">' + praiseSectionHeadHTML('minus') +
       (minusItems.length
         ? '<div class="praise-items minus">' + minusItems.map(function (m) { return praiseItemBtnHTML(c, 'minus', m); }).join('') + '</div>'
-        : '<div class="pm-empty">' + (parent ? '별 빼기 항목이 없어요. 옆의 <b>＋ 추가</b>로 넣어 보세요.' : '별 빼기 항목이 없어요.') + '</div>') +
+        : '<div class="pm-empty">' + (parent
+            ? esc(c.name) + '에게 보여 줄 별 빼기 항목이 없어요. 옆의 <b>＋ 추가</b>로 넣어 보세요.'
+            : esc(c.name) + ' 별 빼기 항목이 없어요.') + '</div>') +
       '</div>';
     return '<div class="card praise-kid ' + c.color + '">' +
       '<div class="rk-head">' +
@@ -3103,6 +3145,7 @@
     if (!label) { UI.toast('문구를 적어 주세요', { emoji: '✏️', kind: 'warn' }); return false; }
     var emoji = String((data && data.emoji) || '').trim().slice(0, 8) || (isMinus ? '🙊' : '✨');
     var star = clampNum(data && data.star, 1, 10, 1);
+    var target = praiseTargetOf({ target: data && data.target });
     var cfg = ensurePraiseCfg();
     var list = isMinus ? cfg.minus : cfg.plus;
     if (itemId) {
@@ -3111,9 +3154,12 @@
       if (hit.label !== label) { hit.label = label; delete hit.labels; }
       hit.emoji = emoji;
       hit.star = star;
+      hit.target = target;
+      /* 문구를 그대로 두면 그 아이의 예전 문구(labels)는 그대로 살립니다 —
+         문구를 바꿀 때만 위에서 labels 를 정리합니다. */
     } else {
       if (list.length >= 30) { UI.toast('항목은 30개까지 넣을 수 있어요', { emoji: '🧩', kind: 'warn' }); return false; }
-      list.push({ id: UI.uid(isMinus ? 'pm' : 'pp'), label: label, emoji: emoji, star: star });
+      list.push({ id: UI.uid(isMinus ? 'pm' : 'pp'), label: label, emoji: emoji, star: star, target: target });
     }
     save();
     render({ keepScroll: true });
@@ -3138,6 +3184,38 @@
       });
   }
 
+  /* ---------------- 누구에게 보여 줄지 고르기 (v103) ---------------- */
+  function praiseTargetSegHTML(sel) {
+    var opts = [{ key: 'both', emoji: '', label: '둘 다' }];
+    (D.children || []).forEach(function (k) { opts.push({ key: k.id, emoji: k.emoji || '', label: praiseTargetOnly(k.id) }); });
+    return opts.map(function (o) {
+      var on = o.key === sel;
+      return '<button type="button" class="pt-btn' + (on ? ' on' : '') + '" data-ptarget="' + esc(o.key) + '"' +
+        ' aria-pressed="' + (on ? 'true' : 'false') + '">' +
+        (o.emoji ? '<span class="pt-emoji" aria-hidden="true">' + esc(o.emoji) + '</span>' : '') +
+        esc(o.label) + '</button>';
+    }).join('');
+  }
+  function praiseTargetHelp(t) {
+    if (t !== 'minguk' && t !== 'ijun') return '민국·이준 두 아이 카드에 함께 보여요.';
+    return praiseTargetTitle(t) + ' 카드에만 따로 보여요.';
+  }
+  function praiseLabelHelp(t, cur) {
+    if (t !== 'minguk' && t !== 'ijun') {
+      if (cur && cur.labels) {
+        var otherNames = D.children.filter(function (k) { return cur.labels[k.id]; })
+          .map(function (k) { return esc(k.name + '에게는 “' + cur.labels[k.id] + '”'); }).join(' · ');
+        if (otherNames) return '바꾼 문구는 민국·이준 화면에 함께 보여요. (' + otherNames + '로 보이던 항목이에요)';
+      }
+      return '바꾼 문구는 민국·이준 두 아이 화면에 함께 보여요.';
+    }
+    var nm = esc(praiseTargetTitle(t));
+    if (cur && cur.labels && cur.labels[t]) {
+      return '바꾼 문구는 ' + nm + ' 카드에만 보여요. (원래 “' + esc(cur.labels[t]) + '”로 보이던 항목이에요)';
+    }
+    return '바꾼 문구는 ' + nm + ' 카드에만 보여요.';
+  }
+
   function praiseItemModal(kind, itemId) {
     if (!needParent('칭찬·별 빼기 항목은 부모님 모드에서 고칠 수 있어요')) return;
     var isMinus = kind === 'minus';
@@ -3146,22 +3224,13 @@
     var label0 = cur ? cur.label : '';
     var emoji0 = cur ? cur.emoji : (isMinus ? '🙊' : '✨');
     var star0 = praiseItemStar(cur || { star: 1 });
+    var targetSel = cur ? praiseTargetOf(cur) : 'both';   /* 새 항목은 예전처럼 둘 다로 시작 */
     var emojis = isMinus ? PRAISE_MINUS_EMOJIS : PRAISE_EMOJIS;
     var starOpts = '';
     for (var n = 1; n <= 10; n++) {
       starOpts += '<option value="' + n + '"' + (n === star0 ? ' selected' : '') + '>' + n + '개</option>';
     }
-    /* 민국·이준은 같은 항목 목록을 함께 쓰므로, 문구를 바꾸면 두 아이 화면에 같이 바뀝니다 */
-    var labelNote = '';
-    if (cur && cur.labels) {
-      var otherNames = Object.keys(cur.labels).map(function (cid) {
-        var k = childById(cid);
-        return (k ? k.name : cid) + '에게는 “' + cur.labels[cid] + '”';
-      }).join(' · ');
-      labelNote = '바꾼 문구는 민국·이준 화면에 함께 보여요. (' + esc(otherNames) + '로 보이던 항목이에요)';
-    } else {
-      labelNote = '바꾼 문구는 민국·이준 두 아이 화면에 함께 보여요.';
-    }
+    var labelNote = praiseLabelHelp(targetSel, cur);
     var actions = [];
     if (cur) {
       actions.push({
@@ -3177,8 +3246,9 @@
         var label = (document.getElementById('piLabel') || {}).value || '';
         var emoji = (document.getElementById('piEmoji') || {}).value || '';
         var star = Number((document.getElementById('piStar') || {}).value || 1);
-        if (!savePraiseItem(kind, itemId, { label: label, emoji: emoji, star: star })) return false;
-        UI.toast((isMinus ? '별 빼기' : '칭찬') + ' 항목을 ' + (cur ? '고쳤어요' : '넣었어요') + ' · ' + emoji + ' ' + label.trim(),
+        if (!savePraiseItem(kind, itemId, { label: label, emoji: emoji, star: star, target: targetSel })) return false;
+        UI.toast((isMinus ? '별 빼기' : '칭찬') + ' 항목을 ' + (cur ? '고쳤어요' : '넣었어요') + ' · ' + emoji + ' ' + label.trim() +
+            (targetSel === 'both' ? '' : ' (' + praiseTargetOnly(targetSel) + ')'),
           { emoji: '✅', kind: 'good' });
       }
     });
@@ -3189,7 +3259,11 @@
         '<div class="field"><label>문구 (아이 화면에 그대로 보여요)</label>' +
           '<input class="input pi-input" id="piLabel" maxlength="16" value="' + esc(label0) + '" placeholder="' +
             (isMinus ? '예: 욕을 했어요' : '예: 동생을 도와줬어요') + '" autocomplete="off">' +
-          '<p class="help">' + labelNote + '</p>' +
+          '<p class="help" id="piLabelHelp">' + labelNote + '</p>' +
+        '</div>' +
+        '<div class="field"><label>누구에게 보여 줄까요?</label>' +
+          '<div class="pt-seg" role="group" aria-label="적용 대상">' + praiseTargetSegHTML(targetSel) + '</div>' +
+          '<p class="help" id="piTargetHelp">' + praiseTargetHelp(targetSel) + '</p>' +
         '</div>' +
         '<div class="field"><label>이모지 (골라도 되고 직접 적어도 돼요)</label>' +
           '<div class="rt-emoji-row pm-emoji-row">' + emojis.map(function (e) {
@@ -3207,10 +3281,26 @@
       onOpen: function (wrap) {
         wrap.addEventListener('click', function (e) {
           var b = e.target.closest('[data-emoji]');
-          if (!b) return;
+          if (b) {
+            e.preventDefault();
+            var inp = document.getElementById('piEmoji');
+            if (inp) inp.value = b.getAttribute('data-emoji');
+            return;
+          }
+          var tb = e.target.closest('[data-ptarget]');
+          if (!tb) return;
           e.preventDefault();
-          var inp = document.getElementById('piEmoji');
-          if (inp) inp.value = b.getAttribute('data-emoji');
+          var t = tb.getAttribute('data-ptarget') || 'both';
+          targetSel = (t === 'minguk' || t === 'ijun') ? t : 'both';
+          Array.prototype.forEach.call(wrap.querySelectorAll('[data-ptarget]'), function (btn) {
+            var on = btn.getAttribute('data-ptarget') === targetSel;
+            if (on) btn.classList.add('on'); else btn.classList.remove('on');
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+          });
+          var th = document.getElementById('piTargetHelp');
+          if (th) th.innerHTML = praiseTargetHelp(targetSel);
+          var lh = document.getElementById('piLabelHelp');
+          if (lh) lh.innerHTML = praiseLabelHelp(targetSel, cur);
         });
         setTimeout(function () {
           var l = document.getElementById('piLabel');
@@ -7920,7 +8010,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 102;            /* index.html 의 ?v=102 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 103;            /* index.html 의 ?v=103 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 

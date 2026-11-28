@@ -1231,6 +1231,34 @@ button.routine-item:hover .routine-check { border-color: var(--mint); transform:
 .pi-edit { padding: 3px 5px; font-size: 10.5px; background: #FFF1CC; color: #8A6A16; }
 .pm-empty { font-size: 12px; color: var(--ink-faint); line-height: 1.65; }
 .pm-emoji-row { gap: 4px; }
+
+/* 누구에게 보여 줄지 고르기 — 둘 다 / 민국이만 / 이준이만 (v103)
+   항목 추가·수정 창 안에서 3칸을 꽉 채우는 칩 버튼입니다. */
+.pt-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.pt-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+  padding: 9px 4px; min-width: 0;
+  border: 2px solid #F0E2CC; border-radius: 14px;
+  background: #fff;
+  font-size: 13px; font-weight: 900; line-height: 1.15;
+  color: #8A7358;
+  white-space: nowrap;
+  transition: background .16s, border-color .16s, color .16s, transform .12s;
+}
+.pt-btn .pt-emoji { font-size: 14px; line-height: 1; }
+.pt-btn:hover { background: #FFF9EE; transform: translateY(-1px); }
+.pt-btn.on[data-ptarget="both"] { background: #4A3F35; border-color: #4A3F35; color: #FFF8EA; }
+.pt-btn.on[data-ptarget="minguk"] { background: var(--mint); border-color: var(--mint); color: #fff; }
+.pt-btn.on[data-ptarget="ijun"] { background: #FFA98F; border-color: #FFA98F; color: #fff; }
+/* ✏️ 수정 중 — 이 항목이 한 아이에게만 보일 때 ✏️ 대신 붙는 작은 배지 */
+.pi-scope {
+  margin-left: auto; flex: none;
+  padding: 3px 5.5px; border-radius: 999px;
+  font-style: normal; font-weight: 900; font-size: 10.5px; line-height: 1.1;
+  white-space: nowrap;
+}
+.pi-scope.minguk { background: #E6F8EF; color: #2F7A5B; }
+.pi-scope.ijun { background: #FFEFE8; color: #A8552F; }
 .l-cut { color: #B4463C; font-weight: 900; font-size: 11px; }
 .l-gain { color: #A2761A; font-weight: 900; font-size: 11px; }
 /* 별 빼기 기록에서 어디서 빠졌는지 — 가진 별 / 포켓몬에게 먹인 별 */
@@ -2328,6 +2356,8 @@ select {
   .settings-grid { grid-template-columns: 1fr; }
   .field-row { grid-template-columns: 1fr; }
   .pm-head-btn { padding: 5px 8px; font-size: 11px; }
+  .pt-btn { padding: 9px 3px; font-size: 12px; }
+  .pt-btn .pt-emoji { font-size: 13px; }
   .modal { padding: 17px; border-radius: 26px; }
   .bigpop { padding: 26px 18px 20px; border-radius: 32px; }
   .bp-ico { width: 78px; height: 78px; font-size: 42px; }
