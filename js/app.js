@@ -61,6 +61,9 @@
 
   /* 이 기기 이름 · 알림 설정 · 날씨 · 팝업 상태 */
   var DEV_KEY = 'family-dashboard-device';
+  /* ?role=child 패드: ⚙️ 설정을 열 때 가족 입장 코드를 받고 연 동안만 잠금 해제 */
+  var settingsUnlocked = false;
+  var settingsAsking = false;
   var ALERT_KEY = 'family-dashboard-alerts';
   var ALERT_DEFAULT = { sound: true, speak: true, push: false };
   var homeWeather = null;
@@ -458,10 +461,8 @@
   /* 전용 주소(?role=)에서는 저장된 기록의 모드와 상관없이 그 주소의 모드로 맞춥니다 */
   function applyRoleMode(opts) {
     if (childOnly()) { S.mode = 'child'; S.actor = null; return; }
-    if (parentOnly() && !(opts && opts.keepMode)) {
-      S.mode = 'parent';
-      if (!S.actor) S.actor = savedParentActor();
-    }
+    /* ?role=parent 는 언제나 부모님 모드 — 누구인지는 열 때 팝업으로 다시 묻습니다 */
+    if (parentOnly() && !(opts && opts.keepMode)) S.mode = 'parent';
   }
 
   function applyState(raw, opts) {
@@ -475,6 +476,8 @@
 
   function needParent(message) {
     if (S.mode === 'parent') return true;
+    /* ?role=child 패드에서 가족 입장 코드를 넣고 연 설정 화면은 부모님 권한으로 */
+    if (settingsUnlocked) return true;
     UI.toast(message || '부모님 모드에서 할 수 있어요', { emoji: '🔒', kind: 'warn' });
     return false;
   }
@@ -1547,8 +1550,7 @@
   }
 
   function setMode(mode) {
-    if (mode === 'parent') {
-      /* ?role=child (패드·아이 전용 주소)에서는 부모님 모드로 바꿀 수 없어요 */
+    if (mode === 'parent') {      /* ?role=child (패드·아이 전용 주소)에서는 부모님 모드로 바꿀 수 없어요 */
       if (childOnly()) return;
       /* 아이 모드 → 부모님 모드: 매번 새로 나오는 곱셈 문제를 맞혀야 열립니다 */
       if (S.mode === 'parent') { askActor(); return; }
@@ -1557,6 +1559,7 @@
     }
     S.mode = 'child';
     S.actor = null;
+    settingsUnlocked = false;
     /* 설정은 부모님 모드 전용이라, 설정 화면에 있었다면 홈으로 돌아갑니다 */
     if (view === 'settings') view = 'home';
     save();
@@ -1566,17 +1569,20 @@
 
   function askActor(opts) {
     var boot = !!(opts && opts.boot);
+    var last = savedParentActor();
     var whatFor = boot
-      ? '이 기기는 <b>부모님 전용 주소</b>로 열렸어요. 누구신지 한 번만 고르면 다음부터는 부모님 모드로 바로 열려요.'
+      ? '이 기기는 <b>부모님 전용 주소</b>로 열렸어요. 지금은 누구신가요?'
       : '부모님 모드로 바꾸면 루틴 완료 확인, 칭찬, 일정·식판·성장 기록을 관리할 수 있어요.';
     UI.modal({
       title: '누구세요?',
       bodyHTML: '<p class="modal-text">' + whatFor + '</p>' +
         '<div class="pick-child" style="margin-top:14px">' +
         D.parents.map(function (p) {
-          return '<button type="button" data-actor="' + p.id + '"><span class="avatar sm ' + p.color + '">' + p.emoji + '</span>' + esc(p.name) + '</button>';
+          var on = last && p.name === last;
+          return '<button type="button"' + (on ? ' class="active"' : '') + ' data-actor="' + p.id + '"><span class="avatar sm ' + p.color + '">' + p.emoji + '</span>' + esc(p.name) + '</button>';
         }).join('') +
-        '</div>',
+        '</div>' +
+        (boot && last ? '<p class="help">지난번엔 <b>' + esc(last) + '</b>로 열었어요. 같은 분이면 그대로 눌러 주세요.</p>' : ''),
       actions: [{ label: '취소', kind: 'ghost' }],
       onOpen: function (wrap, close) {
         wrap.addEventListener('click', function (e) {
@@ -1618,7 +1624,18 @@
 
   /* ---------------- 화면 전환 ---------------- */
   function setView(name) {
-    if (name === 'settings' && S.mode !== 'parent') name = 'home';   /* ⚙️ 설정 탭은 부모님 모드에서만 */
+    /* ⚙️ 설정 탭
+       · 부모님 모드: 그대로 열림
+       · ?role=child 패드: 가족 입장 코드를 넣어야 열림(한 번 들어갔다 나오면 다시 잠금)
+       · 그 밖의 아이 모드: 예전처럼 홈으로 */
+    if (name === 'settings' && S.mode !== 'parent' && !(childOnly() && settingsUnlocked)) {
+      if (childOnly()) { askSettingsCode(); return; }
+      name = 'home';
+    }
+    /* 설정에서 다른 탭으로 나가면 바로 다시 잠그기 */
+    if (childOnly() && settingsUnlocked && view === 'settings' && name !== 'settings') {
+      settingsUnlocked = false;
+    }
     /* ☀️ 08:00~08:30 아이 모드: 아침 준비를 다 하기 전엔 포켓몬 탭에 못 들어가요 */
     if (name === 'pokemon' && schoolPokemonLocked()) { schoolPokemonLockToast(); return; }
     view = name;
@@ -1719,9 +1736,9 @@
     paintWeather();
     var mailTabBtn = document.querySelector('.tab[data-view="mailbox"]');
     if (mailTabBtn) mailTabBtn.classList.toggle('has-dot', unreadTotal() > 0);
-    /* ⚙️ 설정 탭은 부모님 모드에서만 보입니다 (아이 모드에서는 숨김) */
+    /* ⚙️ 설정 탭은 부모님 모드에서만 보입니다 — ?role=child 패드는 코드를 받고 열기 위해 보여 둡니다 */
     var setTabBtn = document.querySelector('.tab[data-view="settings"]');
-    if (setTabBtn) setTabBtn.style.display = S.mode === 'parent' ? '' : 'none';
+    if (setTabBtn) setTabBtn.style.display = (S.mode === 'parent' || childOnly()) ? '' : 'none';
     var bb = document.getElementById('bannerBtn');
     if (bb) bb.hidden = S.mode !== 'parent';
     /* ☀️ 08:00~08:30 아이 모드: 포켓몬 탭 자물쇠 표시 */
@@ -4676,6 +4693,71 @@
     } else {
       fail();
     }
+  }
+
+  /* ---- ⚙️ ?role=child 패드: 설정을 가족 입장 코드로 잠그기 ---- */
+  /* 넣은 코드가 지금 이 집의 가족 입장 코드와 같은지 — 코드는 기기 밖으로 나가지 않고,
+     storage.js 의 docIdFor(입장 코드 → 열쇠 ID 해시)로 이 기기에 저장된 열쇠 ID 와 비교만 합니다.
+     (Firebase 를 건드리지 않는 로붠 계산이라 오프라인에서도 맞아요. 1111 같은 임의 번호는 없습니다.) */
+  async function matchesFamilyCode(code) {
+    var norm = String(code == null ? '' : code).replace(/\s+/g, '');
+    if (norm.length < Storage.MIN_CODE_LEN) return false;
+    var gid = Storage.familyId();
+    if (!gid) return false;
+    try {
+      var id = await Storage.docIdFor(code);
+      return id === gid;
+    } catch (e) { return false; }
+  }
+
+  function askSettingsCode() {
+    if (settingsAsking) return null;
+    settingsAsking = true;
+    var busy = false;
+    var m = UI.modal({
+      title: '⚙️ 설정 열기',
+      bodyHTML: '<p class="modal-text">설정은 부모님만 열 수 있어요.<br><b>가족 입장 코드</b>를 넣어 주세요.</p>' +
+        '<div class="field" style="margin-top:12px"><label for="settingsCode">가족 입장 코드</label>' +
+        '<input class="input" id="settingsCode" type="password" inputmode="text" autocomplete="off" placeholder="가족 입장 코드"></div>' +
+        '<p class="help err-text" id="settingsCodeErr" hidden></p>',
+      actions: [
+        { label: '취소', kind: 'ghost' },
+        { label: '열기', kind: 'primary', onClick: function (close) { submit(close); return false; } }
+      ],
+      onOpen: function (wrap, close) {
+        var inp = wrap.querySelector('#settingsCode');
+        if (inp) inp.addEventListener('keydown', function (e) {
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          submit(close);
+        });
+      },
+      onClose: function () { settingsAsking = false; }
+    });
+
+    async function submit(close) {
+      if (busy) return;
+      var inp = document.getElementById('settingsCode');
+      var errEl = document.getElementById('settingsCodeErr');
+      var code = ((inp && inp.value) || '').trim();
+      function err(text) {
+        if (errEl) { errEl.textContent = text; errEl.hidden = false; }
+        if (inp) { inp.focus(); inp.select(); }
+      }
+      if (!code) { err('가족 입장 코드를 넣어 주세요'); return; }
+      busy = true;
+      var ok = await matchesFamilyCode(code);
+      busy = false;
+      if (!ok) { err('코드가 맞지 않아요. 다시 넣어 주세요.'); return; }
+      settingsAsking = false;
+      close(null);
+      settingsUnlocked = true;
+      S.mode = 'child';            /* 화면은 아이 모드 그대로, 설정만 열어 줍니다 */
+      view = 'settings';
+      render({ scrollTop: true });
+      UI.toast('설정을 열었어요 · 나가면 다시 잠겨요', { emoji: '⚙️', kind: 'good', duration: 2600 });
+    }
+    return m;
   }
 
   function changeGateCode() {
@@ -8123,8 +8205,10 @@
        단, ?role=parent (폰·부모 전용 주소)는 입장 코드를 통과하면 바로 부모님 모드로 열립니다. */
     applyState(res.state);
     if (parentOnly()) {
+      /* 폰·부모 전용 주소: 곱셈 문제 없이 바로 부모님 모드.
+         누구인지(엄마/아빠)는 저장된 값으로 건너뛰지 않고 열 때마다 팝업으로 묻습니다. */
       S.mode = 'parent';
-      S.actor = savedParentActor();
+      S.actor = null;
     } else {
       S.mode = 'child';
       S.actor = null;
@@ -8153,8 +8237,8 @@
       if (ROLE) S.introSeen = true;
       else showIntro();
     }
-    /* ?role=parent 기기에 부모님 이름이 아직 없으면 한 번만 물어보고 기억합니다 */
-    if (parentOnly() && !S.actor) setTimeout(function () { askActor({ boot: true }); }, 350);
+    /* ?role=parent 기기는 열 때마다 누구인지(엄마/아빠) 묻는 팝업을 띄웁니다 */
+    if (parentOnly()) setTimeout(function () { askActor({ boot: true }); }, 350);
     save();
     tidyBooted = true;
     maybeShowBanner();
