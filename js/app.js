@@ -28,6 +28,37 @@
   var STATUS_CUSTOM_KEY = 'custom';   // 엄마·아빠 상태: 프리셋 대신 직접 적은 문구
   var STATUS_TEXT_MAX = 24;           // 직접 적는 상태 문구 최대 글자 수
 
+  /* ---------------- 🔗 기기별 전용 주소 ----------------
+     ?role=child  → 패드·아이 전용: 언제나 아이 모드, 부모님 전환 버튼 숨김
+     ?role=parent → 폰·부모 전용: 가족 입장 코드만 통과하면 바로 부모님 모드
+     (파라미터가 없으면 예전처럼 아이 모드로 시작하고 부모님 버튼으로 전환) */
+  var ROLE = null;
+  try {
+    var roleQ = new URLSearchParams(location.search).get('role');
+    if (roleQ === 'child' || roleQ === 'parent') ROLE = roleQ;
+  } catch (e) {}
+  function childOnly() { return ROLE === 'child'; }
+  function parentOnly() { return ROLE === 'parent'; }
+
+  /* ?role=parent 기기에만 기억해 두는 부모님 이름(엄마·아빠)
+     — 가족 클라우드에는 저장하지 않습니다(stateForSave 가 actor 를 지움) */
+  var PARENT_ACTOR_KEY = 'damoa:parent-actor';
+  function savedParentActor() {
+    try {
+      var v = String(localStorage.getItem(PARENT_ACTOR_KEY) || '').trim();
+      if (!v) return null;
+      for (var i = 0; i < D.parents.length; i++) if (D.parents[i].name === v) return v;
+      return null;
+    } catch (e) { return null; }
+  }
+  function rememberParentActor(name) {
+    try {
+      var v = String(name || '').trim();
+      if (v) localStorage.setItem(PARENT_ACTOR_KEY, v);
+      else localStorage.removeItem(PARENT_ACTOR_KEY);
+    } catch (e) {}
+  }
+
   /* 이 기기 이름 · 알림 설정 · 날씨 · 팝업 상태 */
   var DEV_KEY = 'family-dashboard-device';
   var ALERT_KEY = 'family-dashboard-alerts';
@@ -105,6 +136,10 @@
       pokemon: {},
       /* 🧹 정리시간 설정 (부모님이 바꿔요) */
       tidyCfg: { mins: [5, 10, 15], reward: 3, rewardLate: 1, music: true },
+      /* 🧹 정리시간 타이머 — 기기끼리 함께 보는 공유 상태
+         { status:'running'|'paused', totalSec, endAt, remainSec, childId, updatedAt, by }
+         끄면 null (아무도 정리시간을 돌리고 있지 않음) */
+      tidyTimer: null,
       /* ⚡ 포켓몬 설정 */
       pkCfg: { perLevel: 100 },
       /* ☀️ 등교 준비 다 끝냈을 때 보너스 별 (기본 1개) */
@@ -297,6 +332,37 @@
       music: tc.music === false ? false : true
     };
 
+    /* 🧹 정리시간 타이머 (패드·폰이 함께 보는 값)
+       — 오래 남은 타이머(하루 지난 일시정지·10분 넘게 지난 종료 시각)는
+         새로 열 때 저절도 정리해서 남은 시간 바가 유령처럼 뜨지 않게 합니다. */
+    s.tidyTimer = null;
+    var tt = raw.tidyTimer;
+    if (tt && typeof tt === 'object') {
+      var tStatus = (tt.status === 'running' || tt.status === 'paused') ? tt.status : 'idle';
+      if (tStatus !== 'idle') {
+        var tTotal = clampNum(tt.totalSec, 60, 3600, 600);
+        var tEndAt = Math.max(0, Math.round(Number(tt.endAt) || 0));
+        var tRemain = clampNum(tt.remainSec, 0, 3600, tTotal);
+        var tUpdated = Math.max(0, Math.round(Number(tt.updatedAt) || 0));
+        if (tStatus === 'running' && !tEndAt) tEndAt = Date.now() + (tRemain || tTotal) * 1000;
+        if (tStatus === 'paused' && !tRemain) tRemain = tTotal;
+        var stale = tStatus === 'running'
+          ? (tEndAt + 10 * 60000 < Date.now())
+          : (tUpdated + 12 * 3600 * 1000 < Date.now());
+        if (!stale) {
+          s.tidyTimer = {
+            status: tStatus,
+            totalSec: tTotal,
+            endAt: tStatus === 'running' ? tEndAt : 0,
+            remainSec: tStatus === 'paused' ? tRemain : 0,
+            childId: String(tt.childId || '') || (D.children[0] && D.children[0].id) || 'family',
+            updatedAt: tUpdated,
+            by: String(tt.by || '').slice(0, 12)
+          };
+        }
+      }
+    }
+
     /* ⚡ 포켓몬 설정 */
     var pc = (raw.pkCfg && typeof raw.pkCfg === 'object') ? raw.pkCfg : {};
     s.pkCfg = { perLevel: clampNum(pc.perLevel, 10, 1000, base.pkCfg.perLevel) };
@@ -389,10 +455,21 @@
   /* 저장된 기록을 화면 상태로 옮깁니다.
      opts.keepMode 가 참이면 지금 열려 있는 화면에서 고른 모드(아이 / 부모님)를
      그대로 유지합니다 — 실시간 동기화·다른 탭 저장으로 모드가 바뀌지 않게 할 때 씁니다. */
+  /* 전용 주소(?role=)에서는 저장된 기록의 모드와 상관없이 그 주소의 모드로 맞춥니다 */
+  function applyRoleMode(opts) {
+    if (childOnly()) { S.mode = 'child'; S.actor = null; return; }
+    if (parentOnly() && !(opts && opts.keepMode)) {
+      S.mode = 'parent';
+      if (!S.actor) S.actor = savedParentActor();
+    }
+  }
+
   function applyState(raw, opts) {
     var keep = (opts && opts.keepMode && S) ? { mode: S.mode, actor: S.actor } : null;
     S = normalize(raw);
     if (keep) { S.mode = keep.mode; S.actor = keep.actor; }
+    applyRoleMode(opts);
+    syncTidyFromState();      /* 다른 기기에서 시작·정지한 정리시간을 이 화면에도 반영 */
     return S;
   }
 
@@ -1471,6 +1548,8 @@
 
   function setMode(mode) {
     if (mode === 'parent') {
+      /* ?role=child (패드·아이 전용 주소)에서는 부모님 모드로 바꿀 수 없어요 */
+      if (childOnly()) return;
       /* 아이 모드 → 부모님 모드: 매번 새로 나오는 곱셈 문제를 맞혀야 열립니다 */
       if (S.mode === 'parent') { askActor(); return; }
       askQuiz(function () { askActor(); }, '부모님 모드로 들어가려면<br>정답을 맞혀 주세요.');
@@ -1485,10 +1564,14 @@
     UI.toast('아이 모드로 바꿨어요', { emoji: '🧒' });
   }
 
-  function askActor() {
+  function askActor(opts) {
+    var boot = !!(opts && opts.boot);
+    var whatFor = boot
+      ? '이 기기는 <b>부모님 전용 주소</b>로 열렸어요. 누구신지 한 번만 고르면 다음부터는 부모님 모드로 바로 열려요.'
+      : '부모님 모드로 바꾸면 루틴 완료 확인, 칭찬, 일정·식판·성장 기록을 관리할 수 있어요.';
     UI.modal({
       title: '누구세요?',
-      bodyHTML: '<p class="modal-text">부모님 모드로 바꾸면 루틴 완료 확인, 칭찬, 일정·식판·성장 기록을 관리할 수 있어요.</p>' +
+      bodyHTML: '<p class="modal-text">' + whatFor + '</p>' +
         '<div class="pick-child" style="margin-top:14px">' +
         D.parents.map(function (p) {
           return '<button type="button" data-actor="' + p.id + '"><span class="avatar sm ' + p.color + '">' + p.emoji + '</span>' + esc(p.name) + '</button>';
@@ -1502,6 +1585,7 @@
           var p = D.parents.filter(function (x) { return x.id === b.getAttribute('data-actor'); })[0];
           S.mode = 'parent';
           S.actor = p ? p.name : '부모님';
+          if (parentOnly()) rememberParentActor(S.actor);   /* 이 폰은 다음부터 바로 부모님 모드 */
           mailParentPick = null;   /* 편지 발신자도 지금 들어온 분(엄마/아빠)으로 */
           save();
           close();
@@ -1622,7 +1706,11 @@
     var mc = document.getElementById('modeChild');
     var mp = document.getElementById('modeParent');
     if (mc) mc.classList.toggle('active', S.mode !== 'parent');
-    if (mp) mp.classList.toggle('active', S.mode === 'parent');
+    if (mp) {
+      /* ?role=child (아이 전용 주소)에서는 부모님 전환 버튼 자체를 감춥니다 */
+      mp.hidden = childOnly();
+      mp.classList.toggle('active', S.mode === 'parent');
+    }
     var sub = document.getElementById('brandSub');
     if (sub) sub.textContent = S.mode === 'parent' ? ((S.actor || '부모님') + ' 모드 · 관리 중') : '아이 모드 · 오늘도 다 같이!';
     /* 패드: 홈에서만 큰 시계·날씨 줄(#hero)을 보입니다 */
@@ -5460,6 +5548,111 @@
     tidyTick();
   }
 
+  /* ================= 🧹 정리시간을 기기끼리 함께 보게 (공유 상태) =================
+     로컬 모델(tidy)은 화면을 그리는 데만 쓰고, 진짜 값은 S.tidyTimer 를 거칩니다.
+     · 어느 기기에서 시작·일시정지·이어서·그만하기를 해도 save() → Firestore 로 가서
+       다른 기기의 #tidyBar·정리시간 화면에 같은 남은 시간이 바로 나타나요.
+     · 노래·음소거는 이 기기 설정대로라서 공유하지 않습니다. */
+  var lastTidyShared = null;   /* 마지막으로 화면에 반영한 S.tidyTimer */
+  var tidyBooted = false;      /* 앱을 여는 중인지(첫 반영에는 알림을 띄우지 않음) */
+  function tidySig(t) {
+    return t ? [t.status, t.totalSec, t.endAt, t.remainSec, t.childId, t.updatedAt, t.by].join('|') : '';
+  }
+  function tidyBy() {
+    if (S && S.actor) return String(S.actor).slice(0, 12);
+    return '가족';
+  }
+  /* 공유 값을 이 기기 화면 모델(tidy)로 */
+  function tidyFromShared(t) {
+    var totalMs = Math.max(60000, (Number(t.totalSec) || 600) * 1000);
+    var leftMs = t.status === 'paused'
+      ? Math.max(0, (Number(t.remainSec) || 0) * 1000)
+      : Math.max(0, (Number(t.endAt) || 0) - Date.now());
+    var endsAt = Date.now() + leftMs;
+    var elapsed = Math.max(0, totalMs - Math.min(totalMs, leftMs));
+    return {
+      minutes: Math.max(1, Math.round(totalMs / 60000)),
+      startedAt: endsAt - totalMs,
+      endsAt: endsAt,
+      childId: t.childId || (D.children[0] && D.children[0].id),
+      paused: t.status === 'paused',
+      pausedAt: t.status === 'paused' ? Date.now() : 0,
+      rang: t.status === 'paused' ? false : leftMs <= 0,
+      cheerIdx: Math.floor(elapsed / 3600) % TIDY_CHEERS.length
+    };
+  }
+  /* 지금 로컬 모델을 공유 상태로 올리고 바로 저장(Firestore까지) */
+  function pushTidyShared() {
+    if (!S) return;
+    if (!tidy) {
+      S.tidyTimer = null;
+      lastTidyShared = null;
+      pruneHandwriting();
+      Storage.save(stateForSave(S), { immediate: true });
+      return;
+    }
+    var totalSec = Math.max(60, Math.round(tidy.minutes * 60));
+    S.tidyTimer = tidy.paused
+      ? {
+        status: 'paused', totalSec: totalSec, endAt: 0,
+        remainSec: Math.max(0, Math.min(totalSec, Math.ceil(tidyLeftMs() / 1000))),
+        childId: tidy.childId || (D.children[0] && D.children[0].id),
+        updatedAt: Date.now(), by: tidyBy()
+      }
+      : {
+        status: 'running', totalSec: totalSec, endAt: tidy.endsAt || (Date.now() + totalSec * 1000),
+        remainSec: 0,
+        childId: tidy.childId || (D.children[0] && D.children[0].id),
+        updatedAt: Date.now(), by: tidyBy()
+      };
+    lastTidyShared = Object.assign({}, S.tidyTimer);
+    pruneHandwriting();
+    Storage.save(stateForSave(S), { immediate: true });
+  }
+  /* 저장된 S.tidyTimer 가 바뀌었으면 화면도 따라가게 (수신·불러오기 공통) */
+  function syncTidyFromState() {
+    var t = (S && S.tidyTimer) || null;
+    if (t && t.status !== 'running' && t.status !== 'paused') t = null;
+    var sig = tidySig(t);
+    if (sig === tidySig(lastTidyShared)) return;
+    var prev = lastTidyShared;
+    lastTidyShared = t ? Object.assign({}, t) : null;
+
+    if (!t) {
+      if (!tidyActive && !tidy) return;
+      clearInterval(tidyInt); tidyInt = null;
+      tmStop();
+      tidy = null; tidyActive = false;
+      var bar = tidyBarEl();
+      if (bar) bar.hidden = true;
+      document.body.classList.remove('tidy-on');
+      if (view === 'routine') render({ keepScroll: true });
+      if (prev) UI.toast('정리시간이 끝났어요', { emoji: '🧹', duration: 2400 });
+      return;
+    }
+
+    var fresh = !prev || prev.status !== t.status;
+    tidy = tidyFromShared(t);
+    tidyActive = true;
+    document.body.classList.add('tidy-on');
+    if (!prev && tidyBooted) {
+      /* 다른 기기에서 시작된 정리시간: 이 기기에서도 노래를 틀어 봅니다
+         (브라우저가 막으면 조용히 넘어가고, 음소거 여부는 각 기기 설정대로 둡니다) */
+      try { tmStart(); } catch (e) {}
+      UI.toast('정리 시간이 시작됐어요 · ' + tidy.minutes + '분', { emoji: '🧹', kind: 'good', duration: 2800 });
+    } else if (fresh && t.status === 'paused') {
+      try { tmSetPaused(true); } catch (e) {}
+      UI.toast('정리시간을 잠깐 멈췄어요', { emoji: '⏸', duration: 2000 });
+    } else if (fresh && t.status === 'running') {
+      try { tmSetPaused(false); } catch (e) {}
+    }
+    clearInterval(tidyInt);
+    tidyInt = setInterval(tidyTick, 250);
+    paintTidyBar();
+    if (view === 'routine') render({ keepScroll: true });
+    tidyTick();
+  }
+
   /* ---------------- 켜기 / 잠깐 멈추기 / 끄기 ---------------- */
   function startTidy(minutes, childId) {
     minutes = Number(minutes) || 10;
@@ -5494,6 +5687,7 @@
     clearInterval(tidyInt);
     tidyInt = setInterval(tidyTick, 250);
     tidyTick();
+    pushTidyShared();      /* 폰·패드 어느 쪽에서 시작해도 서로 바로 보이게 */
     UI.toast('🧹 정리 시작! ' + minutes + '분 동안 다 같이 정리해요', { emoji: '🎵', kind: 'good', duration: 3000 });
   }
   function tidyPauseToggle() {
@@ -5511,6 +5705,7 @@
       tmSetPaused(true);
       UI.toast('잠깐 멈췄어요 · [▶️ 계속하기]로 이어가요', { emoji: '⏸', duration: 2000 });
     }
+    pushTidyShared();      /* 멈춤·이어서도 다른 기기에 바로 */
     tidyRepaint();
   }
   function closeTidyMode(msg) {
@@ -5519,6 +5714,13 @@
     tmStop();
     tidy = null;
     tidyActive = false;
+    /* 공유 타이머도 꺼 두어야 다른 기기의 남은 시간 바도 같이 사라집니다 */
+    if (S && S.tidyTimer) {
+      S.tidyTimer = null;
+      lastTidyShared = null;
+      pruneHandwriting();
+      Storage.save(stateForSave(S), { immediate: true });
+    }
     var el = tidyBarEl();
     if (el) el.hidden = true;
     document.body.classList.remove('tidy-on');
@@ -5545,6 +5747,7 @@
   function tidyWhoPick(id) {
     if (!tidy) return;
     tidy.childId = id || D.children[0].id;
+    pushTidyShared();
     tidyRepaint();
   }
   /* 상단 [🧹 정리] 바로가기 — 몇 분 정리할지 고르고 바로 시작 */
@@ -7916,10 +8119,16 @@
   async function startApp() {
     var res = await Storage.init(onRemoteState);
     /* 🧒 새로 열기 · 새로고침 · 버전 업데이트 리로드 · 입장 코드 입력 후 진입 —
-       이 기기나 가족 클라우드에 부모님 모드가 저장돼 있어도 언제나 아이 모드로 시작합니다. */
+       이 기기나 가족 클라우드에 부모님 모드가 저장돼 있어도 언제나 아이 모드로 시작합니다.
+       단, ?role=parent (폰·부모 전용 주소)는 입장 코드를 통과하면 바로 부모님 모드로 열립니다. */
     applyState(res.state);
-    S.mode = 'child';
-    S.actor = null;
+    if (parentOnly()) {
+      S.mode = 'parent';
+      S.actor = savedParentActor();
+    } else {
+      S.mode = 'child';
+      S.actor = null;
+    }
     var bootEv = newestMessageEvent();
     lastMsgAt = bootEv ? bootEv.ts : Date.now();
     if (res.error) {
@@ -7939,8 +8148,15 @@
       if (wanted && VIEWS[wanted]) view = wanted;
     } catch (e) {}
     render();
-    if (!S.introSeen) showIntro();
+    if (!S.introSeen) {
+      /* 전용 주소(?role=)로 여는 기기는 이미 앱을 아는 기기라 소개 창은 건너뜁니다 */
+      if (ROLE) S.introSeen = true;
+      else showIntro();
+    }
+    /* ?role=parent 기기에 부모님 이름이 아직 없으면 한 번만 물어보고 기억합니다 */
+    if (parentOnly() && !S.actor) setTimeout(function () { askActor({ boot: true }); }, 350);
     save();
+    tidyBooted = true;
     maybeShowBanner();
     startSchoolAutoWatch();
     maybeAutoOpenSchool();
@@ -8010,7 +8226,7 @@
      index.html 의 에셋 쿼리(?v=)와 아래 APP_ASSET_VERSION 은 항상 함께 올립니다.
      앱을 켜거나 다시 앞으로 가져오면 서버의 index.html 을 캐시 없이 한 번 받아 보고,
      최신 버전 번호가 지금 도는 버전보다 높으면 스스로 새로고침해 새 코드를 불러옵니다. */
-  var APP_ASSET_VERSION = 103;            /* index.html 의 ?v=103 과 같아야 합니다 */
+  var APP_ASSET_VERSION = 104;            /* index.html 의 ?v=104 과 같아야 합니다 */
   var UPDATE_CHECK_GAP = 60 * 1000;       /* 확인은 60초에 한 번만 */
   var UPDATE_GUARD_KEY = 'damoa:auto-reload';  /* 무한 새로고침 방지(세션당 1회) */
 
@@ -8042,7 +8258,16 @@
         try { guard = sessionStorage.getItem(UPDATE_GUARD_KEY); } catch (e) {}
         if (guard === String(latest)) return;    /* 이미 이 버전으로 새로고침함 */
         try { sessionStorage.setItem(UPDATE_GUARD_KEY, String(latest)); } catch (e) {}
-        window.location.replace(window.location.pathname + '?v=' + latest + window.location.hash);
+        /* 🔗 ?role=child · ?role=parent 같은 주소의 파라미터는 새로고침 뒤에도 그대로 남깁니다 */
+        try {
+          var next = new URL(window.location.href);
+          next.searchParams.set('v', String(latest));
+          if (ROLE) next.searchParams.set('role', ROLE);
+          window.location.replace(next.pathname + next.search + next.hash);
+        } catch (e) {
+          window.location.replace(window.location.pathname + '?v=' + latest +
+            (ROLE ? '&role=' + encodeURIComponent(ROLE) : '') + window.location.hash);
+        }
       })
       .catch(function () { /* 네트워크·캐시 오류는 조용히 무시 */ })
       .then(function () { updateChecking = false; });
@@ -8057,6 +8282,7 @@
   }
 
   async function init() {
+    if (ROLE) document.body.classList.add('role-' + ROLE);
     bindChrome();
     startClock();
     initStopTimer();

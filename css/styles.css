@@ -158,6 +158,8 @@ img { max-width: 100%; }
 .clock-time { font-size: 17px; font-weight: 800; color: #6B4B22; letter-spacing: 0.01em; }
 
 .mode-bar { display: flex; align-items: center; gap: 6px; min-width: 0; }
+/* 🔗 ?role=child (패드·아이 전용 주소)에서는 부모님 전환 버튼을 아예 감춥니다 */
+body.role-child #modeParent { display: none !important; }
 .mode-switch {
   display: flex;
   gap: 4px;
